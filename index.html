@@ -125,8 +125,17 @@ function entry(st,d,create){
   return e;
 }
 const price=(e,p)=>e.prices&&e.prices[p.id]!=null?e.prices[p.id]:p.price;
-const qtyOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0),0);
-const revOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*price(e,p),0);
+const ex=e=>e.extra||[];
+const qtyOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0),0)+ex(e).length;
+const revOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*price(e,p),0)+ex(e).reduce((a,x)=>a+x.price,0);
+const pname=id=>(S.products.find(p=>p.id===id)||{name:'?'}).name;
+function recentPrices(pid){
+  const seen=[];Object.keys(S.entries).sort().reverse().forEach(k=>ex(S.entries[k]).slice().reverse().forEach(x=>{
+    if(x.pid===pid&&!seen.includes(x.price))seen.push(x.price)}));return seen.slice(0,8);
+}
+function addExtra(pid,pr){
+  const e=entry(cur.stand,cur.date,true);(e.extra=e.extra||[]).push({id:uid(),pid,price:pr});save();render();
+}
 function shiftDate(d,n){const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)}
 const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
 
@@ -159,6 +168,14 @@ function vErfassen(){
   <div class="card">${rows}
     <div class="sum"><span>${qtyOf(e)} Stück</span><span>${eur(revOf(e))}</span></div></div>
   <div class="card pad">
+    <label class="f">Einzelpreis-Verkauf (z. B. Nordmann mit eigenem Preis)</label>
+    <div class="edit"><select class="t" id="xp">${S.products.map(p=>`<option value="${p.id}" ${p.id===cur.xp?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+    <input class="t" style="width:100px" id="xprice" inputmode="decimal" placeholder="Preis €"></div>
+    <button class="btn" id="addX" style="margin-top:0">Verkauf hinzufügen</button>
+    ${(()=>{const r=recentPrices(cur.xp||S.products[0].id);return r.length?`<div class="hint">Zuletzt genutzte Preise, Tippen fügt sofort hinzu:</div><div class="chips">${r.map(v=>`<button class="chip" data-xchip="${v}">${eur(v)}</button>`).join('')}</div>`:''})()}
+    ${ex(e).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div></div><div class="ctr"><b>${eur(x.price)}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}
+  </div>
+  <div class="card pad">
     <label class="f">Restbestand (Stück)</label>
     <input class="t" type="number" inputmode="numeric" id="rest" value="${esc(e.rest)}" placeholder="optional">
     <label class="f">Notiz (Wetter, Besonderheiten, Nachlieferung …)</label>
@@ -167,6 +184,13 @@ function vErfassen(){
 document.addEventListener('click',ev=>{
   const t=ev.target.closest('button,[data-a]');if(!t)return;
   if(t.dataset.stand){cur.stand=t.dataset.stand;try{localStorage.setItem(KEY+'-ui',JSON.stringify({stand:cur.stand}))}catch(e){}return render()}
+  if(t.id==='addX'){
+    const pr=parseFloat(($('#xprice').value||'').replace(',','.'));
+    if(!(pr>=0)||$('#xprice').value==='')return alert('Bitte einen Preis eingeben.');
+    return addExtra($('#xp').value,pr);
+  }
+  if(t.dataset.xchip)return addExtra($('#xp').value,parseFloat(t.dataset.xchip));
+  if(t.dataset.delx){const e=entry(cur.stand,cur.date);e.extra=ex(e).filter(x=>x.id!==t.dataset.delx);save();return render()}
   if(t.dataset.d){cur.date=shiftDate(cur.date,+t.dataset.d);return render()}
   if(t.dataset.a==='plus'||t.dataset.a==='minus'){
     const e=entry(cur.stand,cur.date,true),p=t.dataset.p;
@@ -176,6 +200,7 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
+  if(t.id==='xp'){cur.xp=t.value;return render()}
   if(t.id==='date'&&t.value){cur.date=t.value;return render()}
   if(t.dataset.a==='set'){const e=entry(cur.stand,cur.date,true);e.counts[t.dataset.p]=Math.max(0,parseInt(t.value)||0);save();render()}
 });
@@ -250,7 +275,8 @@ function csv(){
   Object.keys(S.entries).sort().forEach(k=>{
     const [sid,d]=k.split('|'),e=S.entries[k],st=S.stands.find(s=>s.id===sid);
     const act=S.products.filter(p=>+e.counts[p.id]>0);
-    (act.length?act:[null]).forEach((p,i)=>{
+    ex(e).forEach(x=>L.push([d,q(st?st.name:sid),q(pname(x.pid)+' (Einzelpreis)'),1,nf(x.price),nf(x.price),'',''].join(';')));
+    (act.length?act:(ex(e).length&&!e.rest&&!e.note?[]:[null])).forEach((p,i)=>{
       L.push([d,q(st?st.name:sid),p?q(p.name):'',p?e.counts[p.id]:0,p?nf(price(e,p)):'',p?nf(+e.counts[p.id]*price(e,p)):0,
         i===0?e.rest:'',i===0?q(e.note):''].join(';'));
     });
