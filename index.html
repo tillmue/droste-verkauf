@@ -14,7 +14,7 @@
 <style>
 :root{
   --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --mut:#6e6e73; --line:#d2d2d7;
-  --green:#2e8b3d; --red:#e0381b; --blue:#0071e3; --panel:#e8f2fe;
+  --green:#2e8b3d; --red:#e0381b; --blue:#0071e3; --panel:#e8f2fe; --orange:#e67e22;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#000; --card:#1c1c1e; --text:#f5f5f7; --mut:#98989d; --line:#38383a; --panel:#10243d}
@@ -22,37 +22,40 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
-  padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+  padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 header{background:var(--card);padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
-main{max-width:560px;margin:0 auto;padding:12px 16px}
+main{max-width:600px;margin:0 auto;padding:12px 16px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:8px 14px;font-size:15px}
 .chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .datebar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .datebar button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:20px}
-.datebar input{flex:1;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);
+.datebar input{flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);
   font-size:16px;text-align:center;padding:0 8px}
-.card{background:var(--card);border-radius:16px;padding:4px 16px;margin-bottom:12px}
-.row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);gap:10px}
+.card{background:var(--card);border-radius:16px;padding:4px 16px;margin-bottom:12px;overflow:hidden}
+.card.pad{padding:12px 16px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);gap:10px}
 .row:last-child{border-bottom:0}
 .row .n{font-weight:600}.row .p{color:var(--mut);font-size:13px}
-.ctr{display:flex;align-items:center;gap:6px}
-.ctr button{width:44px;height:44px;border-radius:12px;border:0;font-size:24px;background:var(--bg);color:var(--text)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;border:1px solid rgba(0,0,0,.2)}
+.ctr{display:flex;align-items:center;gap:4px}
+.ctr button{width:42px;height:42px;border-radius:12px;border:0;font-size:24px;background:var(--bg);color:var(--text)}
 .ctr button.plus{background:var(--green);color:#fff}
-.ctr input{width:56px;height:44px;text-align:center;font-size:20px;font-weight:600;border:0;background:transparent;color:var(--text)}
+.ctr input{width:46px;height:42px;text-align:center;font-size:19px;font-weight:600;border:0;background:transparent;color:var(--text)}
 .sum{display:flex;justify-content:space-between;padding:14px 0;font-weight:700;font-size:18px}
 .sum span:last-child{color:var(--blue)}
 label.f{display:block;color:var(--mut);font-size:13px;margin:12px 0 4px}
-input.t,textarea.t,select.t{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;background:var(--bg);color:var(--text);font-family:inherit}
-textarea.t{min-height:80px}
-.pad{padding-bottom:12px}
-.btn{display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;margin:8px 0}
+label.f:first-child{margin-top:0}
+input.t,textarea.t,select.t{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;font-size:16px;background:var(--bg);color:var(--text);font-family:inherit}
+textarea.t{min-height:76px}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;margin:8px 0}
 .btn.sec{background:var(--card);color:var(--blue);border:1px solid var(--line)}
 .btn.red{background:var(--red)}
-.hint{color:var(--mut);font-size:13px;margin:6px 2px 12px}
+.btn.green{background:var(--green)}
+.hint{color:var(--mut);font-size:13px;margin:6px 2px 8px}
 .warn{background:#fff3e0;color:#8a4b00;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 @media (prefers-color-scheme:dark){.warn{background:#3a2a10;color:#ffb74d}}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -60,18 +63,40 @@ th{background:var(--panel);color:var(--blue);text-align:left;padding:8px 6px;fon
 td{padding:8px 6px;border-bottom:1px solid var(--line)}
 td.r,th.r{text-align:right}
 tr.tot td{font-weight:700;border-top:2px solid var(--text)}
-h2{font-size:20px;margin:16px 0 8px}
+h2{font-size:20px;margin:18px 0 8px;letter-spacing:-.01em}
+h3{font-size:15px;margin:14px 0 4px;color:var(--mut);font-weight:600}
 .mini{display:flex;gap:8px}.mini>*{flex:1}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom);z-index:6}
-nav button{flex:1;border:0;background:none;padding:12px 4px 10px;font-size:12px;color:var(--mut)}
+nav button{flex:1;border:0;background:none;padding:10px 2px 8px;font-size:11px;color:var(--mut)}
 nav button b{display:block;font-size:20px;font-weight:400}
 nav button.on{color:var(--blue)}
-.saved{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));background:#1d1d1f;color:#fff;
+.saved{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));background:#1d1d1f;color:#fff;
   padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .saved.show{opacity:.92}
-.edit{display:flex;gap:8px;margin-bottom:8px}.edit input{min-width:0}
-.edit .x{flex:none;width:44px;border:0;border-radius:12px;background:var(--bg);color:var(--red);font-size:20px}
+.edit{display:flex;gap:8px;margin-bottom:8px;align-items:center}.edit input{min-width:0}
+.edit .x{flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--bg);color:var(--red);font-size:20px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tile{background:var(--card);border-radius:16px;padding:12px 14px}
+.tile small{display:block;color:var(--mut);font-size:12px}
+.tile b{font-size:22px;letter-spacing:-.02em}
+.tile.g b{color:var(--green)}.tile.r b{color:var(--red)}.tile.b b{color:var(--blue)}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+.kv:last-child{border-bottom:0}.kv span:last-child{font-weight:600}
+.kv.hl{font-weight:700;background:var(--panel);margin:0 -16px;padding:9px 16px}
+.neg{color:var(--red)}.pos{color:var(--green)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.hb{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}
+.hb .l{width:96px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .bar{flex:1;background:var(--bg);border-radius:6px;height:20px;position:relative;overflow:hidden}
+.hb .bar i{display:block;height:100%;background:var(--blue);border-radius:6px}
+.hb .v{width:78px;flex:none;text-align:right;font-weight:600}
+svg text{fill:var(--mut);font-size:10px;font-family:inherit}
+svg .val{fill:var(--text)}
+.qrow{border-bottom:1px solid var(--line);padding:8px 0}.qrow:last-child{border-bottom:0}
+.qrow small{color:var(--mut);display:block;margin-bottom:4px}
+.qrow.amb small{color:var(--orange)}
+.qrow .edit{margin:0}
 </style>
 </head>
 <body>
@@ -79,7 +104,8 @@ nav button.on{color:var(--blue)}
 <main id="app"></main>
 <nav id="nav">
   <button data-t="erfassen"><b>✎</b>Erfassen</button>
-  <button data-t="uebersicht"><b>▤</b>Übersicht</button>
+  <button data-t="stand"><b>▦</b>Stand</button>
+  <button data-t="gesamt"><b>▤</b>Gesamt</button>
   <button data-t="einstellungen"><b>⚙︎</b>Daten</button>
 </nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -89,22 +115,46 @@ const KEY='droste-verkauf-v1';
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
 const todayStr=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
-const eur=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+const eur=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:2});
+const eur0=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const num=n=>(n||0).toLocaleString('de-DE');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pf=v=>{const x=parseFloat(String(v).replace(',','.'));return isNaN(x)?0:x};
 
-const DEFAULT={
-  stands:[
-    {id:'media',name:'Media Markt'},{id:'schmidt',name:'Schmidt Ankum'},{id:'kallmeyer',name:'Kallmeyer'},
-    {id:'porta',name:'Porta'},{id:'hasbergen',name:'Hasbergen'},{id:'quick',name:'Quick'}],
+const mkStand=(id,name)=>({id,name,fee:0,staff:0,setup:0,freight:0});
+const DEFAULT=()=>({
+  v:2,
+  stands:[mkStand('media','Media Markt'),mkStand('schmidt','Schmidt Ankum'),mkStand('kallmeyer','Kallmeyer'),
+          mkStand('porta','Porta'),mkStand('hasbergen','Hasbergen'),mkStand('quick','Quick')],
   products:[
-    {id:'p1',name:'Nordmanntanne',price:0},{id:'p2',name:'Blaufichte',price:0},{id:'p3',name:'Fichte',price:0},
-    {id:'p4',name:'Sonstiges',price:0}],
-  entries:{}, lastExport:0, lastChange:0
-};
+    {id:'p1',name:'Nordmann Holzscheibe',price:20,cost:0},
+    {id:'p2',name:'Nordmann Topf',price:18,cost:0},
+    {id:'p3',name:'Blaufichte',price:0,cost:0},
+    {id:'p4',name:'Nobilis Handbund',price:3,cost:0},
+    {id:'p5',name:'Nobilis 2,5kg',price:7,cost:0},
+    {id:'p6',name:'Nordmann Handbund',price:3,cost:0},
+    {id:'p7',name:'Nordmann 2,5kg',price:6,cost:0},
+    {id:'p8',name:'Nordmann 17 €',price:17,cost:0},
+    {id:'p9',name:'Nordmann Blau',price:20,cost:6,color:'#1ea7e8'},
+    {id:'p10',name:'Nordmann Gelb',price:27,cost:8,color:'#ffe600'},
+    {id:'p11',name:'Nordmann Orange',price:35,cost:10,color:'#f0a07c'},
+    {id:'p12',name:'Nordmann Grün',price:40,cost:14,color:'#8fce3c'},
+    {id:'p13',name:'Nordmann Lila/Gelb',price:45,cost:0,color:'#d96cc8'},
+    {id:'p14',name:'Nordmann Lila',price:45,cost:7,color:'#b04fd6'},
+    {id:'p15',name:'Nordmann Rot',price:25,cost:13,color:'#ff2d2d'},
+    {id:'p16',name:'Nordmann 25 €',price:25,cost:0},
+    {id:'p17',name:'Nordmann 26 €',price:26,cost:0},
+    {id:'f1',name:'Nordmann (Einzelpreis)',price:0,cost:0,free:true}],
+  entries:{}, moves:[], lastExport:0, lastChange:0
+});
 let S;
 function load(){
-  try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-  if(!S||!S.stands)S=JSON.parse(JSON.stringify(DEFAULT));
+  let raw=null;
+  try{raw=localStorage.getItem(KEY);S=JSON.parse(raw)}catch(e){S=null}
+  if(!S||S.v!==2){
+    if(raw){try{localStorage.setItem(KEY+'-v1-alt',raw)}catch(e){}}
+    S=DEFAULT();
+  }
 }
 let saveT;
 function save(){
@@ -115,82 +165,227 @@ function save(){
 load();
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 
-let tab='erfassen', cur={stand:null,date:todayStr()};
+let tab='erfassen', cur={stand:null,date:todayStr(),xp:null,parsed:null,qtext:''};
 try{const c=JSON.parse(localStorage.getItem(KEY+'-ui'));if(c&&S.stands.some(s=>s.id===c.stand))cur.stand=c.stand}catch(e){}
 if(!cur.stand)cur.stand=S.stands[0].id;
 const keyOf=(st,d)=>st+'|'+d;
+const prod=id=>S.products.find(p=>p.id===id);
+const pname=id=>(prod(id)||{name:'?'}).name;
 function entry(st,d,create){
   const k=keyOf(st,d);let e=S.entries[k];
-  if(!e&&create){e=S.entries[k]={counts:{},prices:{},rest:'',note:''};S.products.forEach(p=>e.prices[p.id]=p.price)}
+  if(!e&&create){e=S.entries[k]={counts:{},prices:{},extra:[],rest:'',note:''};S.products.forEach(p=>e.prices[p.id]=p.price)}
+  if(e&&!e.extra)e.extra=[];
   return e;
 }
 const price=(e,p)=>e.prices&&e.prices[p.id]!=null?e.prices[p.id]:p.price;
-const ex=e=>e.extra||[];
-const qtyOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0),0)+ex(e).length;
-const revOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*price(e,p),0)+ex(e).reduce((a,x)=>a+x.price,0);
-const pname=id=>(S.products.find(p=>p.id===id)||{name:'?'}).name;
-function recentPrices(pid){
-  const seen=[];Object.keys(S.entries).sort().reverse().forEach(k=>ex(S.entries[k]).slice().reverse().forEach(x=>{
-    if(x.pid===pid&&!seen.includes(x.price))seen.push(x.price)}));return seen.slice(0,8);
+const exq=x=>x.qty||1;
+const qtyOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0),0)+(e.extra||[]).reduce((a,x)=>a+exq(x),0);
+const revOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*price(e,p),0)+(e.extra||[]).reduce((a,x)=>a+x.price*exq(x),0);
+const costOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*(p.cost||0),0)+(e.extra||[]).reduce((a,x)=>a+exq(x)*((prod(x.pid)||{}).cost||0),0);
+function prodQty(e,acc){
+  S.products.forEach(p=>{const c=+e.counts[p.id]||0;if(c)acc[p.id]=(acc[p.id]||0)+c});
+  (e.extra||[]).forEach(x=>acc[x.pid]=(acc[x.pid]||0)+exq(x));
 }
-function addExtra(pid,pr){
-  const e=entry(cur.stand,cur.date,true);(e.extra=e.extra||[]).push({id:uid(),pid,price:pr});save();render();
-}
-function shiftDate(d,n){const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)}
+const shiftDate=(d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
 const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+const shortD=d=>d.slice(8)+'.'+d.slice(5,7)+'.';
+const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
 
+/* ---------- Auswertung ---------- */
+function stats(sids){
+  sids=[].concat(sids);
+  const R={verk:0,umsatz:0,pcost:0,lief:0,ret:0,fee:0,staff:0,setup:0,freight:0,byDay:{},byProd:{},byWd:[0,0,0,0,0,0,0],ist:null,istDate:'',dayMoves:{}};
+  const dset=new Set();
+  sids.forEach(sid=>{
+    const st=S.stands.find(s=>s.id===sid)||{};
+    ['fee','staff','setup','freight'].forEach(k=>R[k]+=(+st[k]||0));
+    let latest='';
+    Object.keys(S.entries).forEach(k=>{
+      const [s,d]=k.split('|');if(s!==sid)return;
+      const e=entry(s,d),q=qtyOf(e),r=revOf(e);
+      R.verk+=q;R.umsatz+=r;R.pcost+=costOf(e);
+      const o=R.byDay[d]||(R.byDay[d]={q:0,r:0});o.q+=q;o.r+=r;dset.add(d);
+      R.byWd[new Date(d+'T12:00:00').getDay()]+=r;
+      prodQty(e,R.byProd);
+      if(e.rest!==''&&e.rest!=null&&d>=latest){latest=d;R.istSid=R.istSid||{};R.istSid[sid]={d,v:parseInt(e.rest)||0}}
+    });
+    S.moves.forEach(m=>{if(m.stand!==sid)return;
+      const o=R.dayMoves[m.date]||(R.dayMoves[m.date]={l:0,r:0});
+      if(m.type==='L'){R.lief+=m.qty;o.l+=m.qty}else{R.ret+=m.qty;o.r+=m.qty}dset.add(m.date)});
+  });
+  if(R.istSid){const v=Object.values(R.istSid);R.ist=v.reduce((a,x)=>a+x.v,0);R.istAll=v.length===sids.length}
+  R.fixed=R.fee+R.staff+R.setup+R.freight;
+  R.gewinn=R.umsatz-R.pcost-R.fixed;
+  R.soll=R.lief-R.ret-R.verk;
+  R.diff=R.ist==null?null:R.ist-R.soll;
+  R.dates=[...dset].sort();
+  let cum=0;
+  R.bestand=R.dates.map(d=>{const q=(R.byDay[d]||{q:0}).q,m=R.dayMoves[d]||{l:0,r:0};cum+=m.l-m.r-q;return {l:shortD(d),v:cum}});
+  R.days=R.dates.filter(d=>R.byDay[d]).length;
+  const sd=R.dates.filter(d=>R.byDay[d]&&R.byDay[d].q>0);
+  R.avg=sd.length?R.verk/sd.length:0;
+  const last3=sd.slice(-3);R.avg3=last3.length?last3.reduce((a,d)=>a+R.byDay[d].q,0)/last3.length:0;
+  R.best=sd.reduce((b,d)=>!b||R.byDay[d].r>R.byDay[b].r?d:b,null);
+  return R;
+}
+
+/* ---------- Diagramme (SVG) ---------- */
+function barChart(items,o={}){
+  if(!items.length)return '<div class="hint">Noch keine Daten.</div>';
+  const H=o.h||130,bw=o.bw||30,W=Math.max(300,items.length*bw+16),pad=32,col=o.color||'var(--blue)';
+  const max=Math.max(...items.map(i=>i.v),1);
+  const bars=items.map((it,i)=>{
+    const h=Math.max(0,(it.v/max)*(H-pad-4)),x=8+i*bw,y=H-h-14;
+    return `<rect x="${x+3}" y="${y}" width="${bw-8}" height="${h}" rx="4" fill="${col}"/>
+      <text class="val" x="${x+bw/2-1}" y="${y-3}" text-anchor="middle">${o.fmt?o.fmt(it.v):it.v}</text>
+      <text x="${x+bw/2-1}" y="${H-2}" text-anchor="middle">${it.l}</text>`}).join('');
+  return `<div class="scroll"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${bars}</svg></div>`;
+}
+function lineChart(items,o={}){
+  if(!items.length)return '<div class="hint">Noch keine Daten.</div>';
+  const H=o.h||140,bw=o.bw||34,W=Math.max(300,items.length*bw+24),top=14,bot=18;
+  const vs=items.map(i=>i.v),mx=Math.max(...vs,0),mn=Math.min(...vs,0),rng=(mx-mn)||1;
+  const Y=v=>top+(mx-v)/rng*(H-top-bot),X=i=>16+i*bw;
+  const pts=items.map((it,i)=>`${X(i)},${Y(it.v)}`).join(' ');
+  const dots=items.map((it,i)=>`<circle cx="${X(i)}" cy="${Y(it.v)}" r="3.5" fill="${it.v<0?'var(--red)':'var(--green)'}"/>
+    <text class="val" x="${X(i)}" y="${Y(it.v)-7}" text-anchor="middle">${it.v}</text>
+    <text x="${X(i)}" y="${H-3}" text-anchor="middle">${it.l}</text>`).join('');
+  return `<div class="scroll"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="4 3"/>
+    <polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linejoin="round"/>${dots}</svg></div>`;
+}
+function hbars(rows,fmt){
+  if(!rows.length)return '<div class="hint">Noch keine Daten.</div>';
+  const max=Math.max(...rows.map(r=>r.v),1);
+  return rows.map(r=>`<div class="hb"><div class="l">${esc(r.l)}</div><div class="bar"><i style="width:${Math.max(2,r.v/max*100)}%"></i></div><div class="v">${fmt?fmt(r.v):r.v}</div></div>`).join('');
+}
+
+/* ---------- Rahmen ---------- */
 function backupWarn(){
-  const hasData=Object.keys(S.entries).length>0;
-  if(!hasData)return '';
+  if(!Object.keys(S.entries).length&&!S.moves.length)return '';
   const age=Date.now()-(S.lastExport||0);
   if(age>24*3600e3&&S.lastChange>S.lastExport)
     return `<div class="warn">Letztes Backup: ${S.lastExport?Math.floor(age/3600e3)+' Std. her':'noch nie'}. Unter „Daten" exportieren.</div>`;
   return '';
 }
-
+const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
   $('#hstat').textContent=S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup';
-  ({erfassen:vErfassen,uebersicht:vUebersicht,einstellungen:vDaten})[tab]();
+  ({erfassen:vErfassen,stand:vStand,gesamt:vGesamt,einstellungen:vDaten})[tab]();
 }
 
 /* ---------- Erfassen ---------- */
 function vErfassen(){
-  const e=entry(cur.stand,cur.date)||{counts:{},prices:{},rest:'',note:''};
-  const rows=S.products.map(p=>`
-    <div class="row"><div><div class="n">${esc(p.name)}</div><div class="p">${eur(price(e,p))}</div></div>
+  const e=entry(cur.stand,cur.date)||{counts:{},prices:{},extra:[],rest:'',note:''};
+  if(!cur.xp||!prod(cur.xp))cur.xp=S.products[0].id;
+  const rows=S.products.filter(p=>!p.free).map(p=>`
+    <div class="row"><div><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><div class="p">${eur(price(e,p))}</div></div>
     <div class="ctr"><button data-a="minus" data-p="${p.id}">−</button>
     <input type="number" inputmode="numeric" min="0" value="${+e.counts[p.id]||0}" data-a="set" data-p="${p.id}">
     <button class="plus" data-a="plus" data-p="${p.id}">+</button></div></div>`).join('');
-  $('#app').innerHTML=`${backupWarn()}
-  <div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>
+  const rp=(()=>{const seen=[];Object.keys(S.entries).sort().reverse().forEach(k=>(S.entries[k].extra||[]).slice().reverse().forEach(x=>{
+    if(x.pid===cur.xp&&!seen.includes(x.price))seen.push(x.price)}));return seen.slice(0,8)})();
+  const mv=S.moves.filter(m=>m.stand===cur.stand&&m.date===cur.date);
+  const sa=stats(cur.stand);
+  const parsed=cur.parsed?`<div class="hint">Prüfen, ggf. Produkt/Preis/Anzahl ändern, dann übernehmen:</div>
+    ${cur.parsed.map((r,i)=>`<div class="qrow ${r.amb?'amb':''}"><small>„${esc(r.txt)}“${r.amb?' · bitte prüfen':''}</small>
+      <div class="edit"><select class="t" data-qi="${i}" data-qf="pid"><option value="">– ignorieren</option>${S.products.map(p=>`<option value="${p.id}" ${p.id===r.pid?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+      <input class="t" style="width:74px" inputmode="decimal" data-qi="${i}" data-qf="price" value="${String(r.price).replace('.',',')}">
+      <input class="t" style="width:58px" inputmode="numeric" data-qi="${i}" data-qf="count" value="${r.count}"></div></div>`).join('')}
+    <button class="btn green" id="qApply">Übernehmen</button><button class="btn sec" id="qCancel">Verwerfen</button>`:'';
+  $('#app').innerHTML=`${backupWarn()}${standChips()}
   <div class="datebar"><button data-d="-1">‹</button><input type="date" id="date" value="${cur.date}"><button data-d="1">›</button></div>
+  <div class="card pad">
+    <label class="f">Schnell erfassen (z. B. „Nordmann Blau 7, Nordmann 43€ 3 mal, Handbunde 4“)</label>
+    <textarea class="t" id="qtext" placeholder="Liste vom Papier hier eintippen oder diktieren">${esc(cur.qtext)}</textarea>
+    <button class="btn" id="qParse" style="margin-bottom:0">Auslesen</button>${parsed}</div>
   <div class="card">${rows}
     <div class="sum"><span>${qtyOf(e)} Stück</span><span>${eur(revOf(e))}</span></div></div>
   <div class="card pad">
-    <label class="f">Einzelpreis-Verkauf (z. B. Nordmann mit eigenem Preis)</label>
+    <label class="f">Einzelpreis-Verkauf (Baum mit eigenem Preis)</label>
     <div class="edit"><select class="t" id="xp">${S.products.map(p=>`<option value="${p.id}" ${p.id===cur.xp?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
-    <input class="t" style="width:100px" id="xprice" inputmode="decimal" placeholder="Preis €"></div>
+    <input class="t" style="width:92px" id="xprice" inputmode="decimal" placeholder="Preis €">
+    <input class="t" style="width:56px" id="xqty" inputmode="numeric" value="1"></div>
     <button class="btn" id="addX" style="margin-top:0">Verkauf hinzufügen</button>
-    ${(()=>{const r=recentPrices(cur.xp||S.products[0].id);return r.length?`<div class="hint">Zuletzt genutzte Preise, Tippen fügt sofort hinzu:</div><div class="chips">${r.map(v=>`<button class="chip" data-xchip="${v}">${eur(v)}</button>`).join('')}</div>`:''})()}
-    ${ex(e).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div></div><div class="ctr"><b>${eur(x.price)}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}
+    ${rp.length?`<div class="hint">Zuletzt genutzte Preise (Tippen fügt Anzahl-Menge hinzu):</div><div class="chips">${rp.map(v=>`<button class="chip" data-xchip="${v}">${eur(v)}</button>`).join('')}</div>`:''}
+    ${(e.extra||[]).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div><div class="p">${exq(x)} × ${eur(x.price)}</div></div><div class="ctr"><b>${eur(x.price*exq(x))}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}
   </div>
   <div class="card pad">
-    <label class="f">Restbestand (Stück)</label>
+    <label class="f">Lieferung / Retoure (Stück) · Soll-Bestand jetzt: <b class="${sa.soll<0?'neg':''}">${sa.soll}</b></label>
+    <div class="edit"><input class="t" id="mqty" inputmode="numeric" placeholder="Anzahl"></div>
+    <div class="mini"><button class="btn green" data-mv="L" style="margin:0">+ Lieferung</button><button class="btn sec" data-mv="R" style="margin:0">+ Retoure</button></div>
+    ${mv.map(m=>`<div class="row"><div class="n">${m.type==='L'?'Lieferung':'Retoure'}</div><div class="ctr"><b>${m.qty} Stk.</b><button data-delm="${m.id}" style="color:var(--red)">×</button></div></div>`).join('')}
+  </div>
+  <div class="card pad">
+    <label class="f">Ist-Bestand heute (Stück, gezählt)</label>
     <input class="t" type="number" inputmode="numeric" id="rest" value="${esc(e.rest)}" placeholder="optional">
-    <label class="f">Notiz (Wetter, Besonderheiten, Nachlieferung …)</label>
+    <label class="f">Notiz (Wetter, Besonderheiten …)</label>
     <textarea class="t" id="note">${esc(e.note)}</textarea></div>`;
 }
+
+/* Schnell-Erfassung: Text -> Zeilen */
+const normT=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ß/g,'ss')
+  .replace(/(\d)[.,](\d)\s*kg/g,'$1$2kg').replace(/[^a-z0-9€\s]/g,' ').replace(/\s+/g,' ').trim();
+const tokMatch=(a,b)=>a===b||(a.length>=4&&b.length>=4&&Math.abs(a.length-b.length)<=2&&(a.startsWith(b)||b.startsWith(a)));
+const ptoks=p=>normT(p.name).split(' ').filter(t=>t&&t!=='€');
+function parseSeg(seg){
+  let raw=seg.replace(/(\d)[.,](\d)\s*kg/gi,'$1$2kg'),pr=null,cnt=null;
+  const pm=raw.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur\b|euro\b)/i);
+  if(pm){pr=pf(pm[1]);raw=raw.replace(pm[0],' ')}
+  const cm=raw.match(/(\d+)\s*(?:x\b|mal\b|stk\b|stück|stueck|st\b)/i)||raw.match(/\bx\s*(\d+)/i);
+  if(cm){cnt=+cm[1];raw=raw.replace(cm[0],' ')}
+  else{
+    const ints=[...raw.matchAll(/(?<![\w])\d+(?![\w])/g)].map(m=>m[0]);
+    if(ints.length){
+      cnt=+ints[ints.length-1];
+      if(pr==null&&ints.length>=2)pr=+ints[0];
+      ints.forEach(n=>{raw=raw.replace(new RegExp('(?<![\\w])'+n+'(?![\\w])'),' ')});
+    }
+  }
+  if(cnt==null)cnt=1;
+  const toks=normT(raw).split(' ').filter(t=>t&&!['mal','x','stk','stuck','st','€','euro','eur','je','a','à','und'].includes(t));
+  let cands=toks.length?S.products.filter(p=>{const pt=ptoks(p);return toks.every(t=>pt.some(b=>tokMatch(t,b)))}):[];
+  let amb=false,pid='';
+  let freeHit=false;
+  if(pr!=null){const f=cands.filter(p=>Math.abs(p.price-pr)<0.005&&!p.free);if(f.length)cands=f;else{const fr=cands.filter(p=>p.free);if(fr.length){cands=fr;freeHit=true}}}
+  cands.sort((a,b)=>ptoks(a).length-ptoks(b).length);
+  if(cands.length){
+    pid=cands[0].id;
+    if(!freeHit&&cands.length>1&&ptoks(cands[1]).length===ptoks(cands[0]).length&&!(pr!=null&&cands.filter(p=>Math.abs(p.price-pr)<0.005).length===1))amb=true;
+  }else amb=true;
+  const p=prod(pid);
+  return {txt:seg.trim(),pid,price:pr!=null?pr:(p?p.price:0),count:cnt,amb};
+}
+const parseText=t=>t.split(/\s*(?:[\n;]+|,(?!\d)|(?<!\d),)\s*/).map(s=>s.trim()).filter(Boolean).map(parseSeg);
+function addExtra(pid,pr,qty){
+  const e=entry(cur.stand,cur.date,true);
+  const ex=e.extra.find(x=>x.pid===pid&&Math.abs(x.price-pr)<0.005);
+  if(ex)ex.qty=exq(ex)+qty;else e.extra.push({id:uid(),pid,price:pr,qty});
+}
+
 document.addEventListener('click',ev=>{
   const t=ev.target.closest('button,[data-a]');if(!t)return;
   if(t.dataset.stand){cur.stand=t.dataset.stand;try{localStorage.setItem(KEY+'-ui',JSON.stringify({stand:cur.stand}))}catch(e){}return render()}
-  if(t.id==='addX'){
-    const pr=parseFloat(($('#xprice').value||'').replace(',','.'));
-    if(!(pr>=0)||$('#xprice').value==='')return alert('Bitte einen Preis eingeben.');
-    return addExtra($('#xp').value,pr);
+  if(t.id==='qParse'){cur.qtext=$('#qtext').value;cur.parsed=parseText(cur.qtext);if(!cur.parsed.length)alert('Nichts erkannt.');return render()}
+  if(t.id==='qCancel'){cur.parsed=null;return render()}
+  if(t.id==='qApply'){
+    const e=entry(cur.stand,cur.date,true);
+    cur.parsed.forEach(r=>{const p=prod(r.pid);if(!p||!(r.count>0))return;
+      if(Math.abs(r.price-p.price)<0.005)e.counts[p.id]=(+e.counts[p.id]||0)+r.count;else addExtra(p.id,r.price,r.count)});
+    cur.parsed=null;cur.qtext='';save();return render();
   }
-  if(t.dataset.xchip)return addExtra($('#xp').value,parseFloat(t.dataset.xchip));
-  if(t.dataset.delx){const e=entry(cur.stand,cur.date);e.extra=ex(e).filter(x=>x.id!==t.dataset.delx);save();return render()}
+  if(t.id==='addX'){
+    const v=$('#xprice').value;if(v===''||!(pf(v)>=0))return alert('Bitte einen Preis eingeben.');
+    addExtra($('#xp').value,pf(v),Math.max(1,parseInt($('#xqty').value)||1));save();return render();
+  }
+  if(t.dataset.xchip){addExtra($('#xp').value,parseFloat(t.dataset.xchip),Math.max(1,parseInt($('#xqty').value)||1));save();return render()}
+  if(t.dataset.delx){const e=entry(cur.stand,cur.date);e.extra=e.extra.filter(x=>x.id!==t.dataset.delx);save();return render()}
+  if(t.dataset.mv){
+    const q=parseInt($('#mqty').value);if(!(q>0))return alert('Bitte Anzahl eingeben.');
+    S.moves.push({id:uid(),stand:cur.stand,date:cur.date,type:t.dataset.mv,qty:q});save();return render();
+  }
+  if(t.dataset.delm){S.moves=S.moves.filter(m=>m.id!==t.dataset.delm);save();return render()}
   if(t.dataset.d){cur.date=shiftDate(cur.date,+t.dataset.d);return render()}
   if(t.dataset.a==='plus'||t.dataset.a==='minus'){
     const e=entry(cur.stand,cur.date,true),p=t.dataset.p;
@@ -203,59 +398,127 @@ document.addEventListener('change',ev=>{
   if(t.id==='xp'){cur.xp=t.value;return render()}
   if(t.id==='date'&&t.value){cur.date=t.value;return render()}
   if(t.dataset.a==='set'){const e=entry(cur.stand,cur.date,true);e.counts[t.dataset.p]=Math.max(0,parseInt(t.value)||0);save();render()}
+  if(t.dataset.qi!=null){
+    const r=cur.parsed[+t.dataset.qi],f=t.dataset.qf;
+    if(f==='pid'){r.pid=t.value;const p=prod(t.value);if(p)r.price=p.price;r.amb=false;render()}
+    else if(f==='price')r.price=pf(t.value);
+    else r.count=Math.max(0,parseInt(t.value)||0);
+  }
 });
 document.addEventListener('input',ev=>{
   const t=ev.target;
+  if(t.id==='qtext')cur.qtext=t.value;
   if(t.id==='rest'||t.id==='note'){const e=entry(cur.stand,cur.date,true);e[t.id]=t.value;save()}
 });
 
-/* ---------- Übersicht ---------- */
-function vUebersicht(){
-  const byStand=S.stands.map(s=>{
-    let q=0,r=0,days=0;
-    Object.entries(S.entries).forEach(([k,e])=>{if(k.startsWith(s.id+'|')){const n=qtyOf(e);if(n>0||e.rest!==''){days++}q+=n;r+=revOf(e)}});
-    return {s,q,r,days};
-  });
-  const Q=byStand.reduce((a,x)=>a+x.q,0),R=byStand.reduce((a,x)=>a+x.r,0);
-  const dates=[...new Set(Object.keys(S.entries).map(k=>k.split('|')[1]))].sort().reverse().slice(0,14);
-  const dayRows=dates.map(d=>{
-    let q=0,r=0;S.stands.forEach(s=>{const e=S.entries[keyOf(s.id,d)];if(e){q+=qtyOf(e);r+=revOf(e)}});
-    return `<tr><td>${fmtD(d)}</td><td class="r">${q}</td><td class="r">${eur(r)}</td></tr>`}).join('');
-  const stand=S.stands.find(s=>s.id===cur.stand);
-  const sdates=Object.keys(S.entries).filter(k=>k.startsWith(cur.stand+'|')).map(k=>k.split('|')[1]).sort().reverse();
-  const sRows=sdates.map(d=>{const e=S.entries[keyOf(cur.stand,d)];
-    return `<tr><td>${fmtD(d)}</td><td class="r">${qtyOf(e)}</td><td class="r">${eur(revOf(e))}</td><td class="r">${esc(e.rest)}</td></tr>`}).join('');
+/* ---------- Dashboard pro Stand ---------- */
+function kvList(a){
+  const s=a;
+  const row=(l,v,c,hl)=>`<div class="kv ${hl?'hl':''}"><span>${l}</span><span class="${c||''}">${v}</span></div>`;
+  return `<div class="card">
+    ${row('Soll-Bestand',num(s.soll)+' Stk.',s.soll<0?'neg':'',1)}
+    ${row('Verkäufe',num(s.verk)+' Stk.')}
+    ${row('Umsatz',eur0(s.umsatz))}
+    ${row('Gewinn',eur0(s.gewinn),s.gewinn<0?'neg':'pos',1)}
+    ${row('Retouren',num(s.ret)+' Stk.')}
+    ${row('Lieferung',num(s.lief)+' Stk.')}
+    ${row('Produktionskosten',eur0(s.pcost))}
+    ${row('Standgebühren',eur0(s.fee))}
+    ${row('Personalkosten',eur0(s.staff))}
+    ${row('Auf-/Abbaukosten',eur0(s.setup))}
+    ${row('Lieferkosten',eur0(s.freight))}
+    ${row('Ist-Bestand',s.ist==null?'–':num(s.ist)+' Stk.')}
+    ${row('Differenz (Ist − Soll)',s.diff==null?'–':num(s.diff)+' Stk.',s.diff==null?'':s.diff<0?'neg':'')}
+  </div>`;
+}
+function insights(a){
+  const out=[];
+  if(a.avg)out.push(['Ø Verkäufe pro Verkaufstag',a.avg.toLocaleString('de-DE',{maximumFractionDigits:1})+' Stk.']);
+  if(a.verk)out.push(['Ø Preis pro Baum',eur(a.umsatz/a.verk)]);
+  if(a.verk)out.push(['Ø Gewinn pro Baum (nach allen Kosten)',eur(a.gewinn/a.verk)]);
+  if(a.best)out.push(['Bester Tag',shortD(a.best)+' · '+eur0(a.byDay[a.best].r)]);
+  if(a.avg3&&a.soll>0)out.push(['Bestand reicht noch ca.',(a.soll/a.avg3).toLocaleString('de-DE',{maximumFractionDigits:1})+' Tage (Ø letzte 3 Tage)']);
+  if(a.fixed>0&&a.verk>0&&a.umsatz>a.pcost){const mg=(a.umsatz-a.pcost)/a.verk,m=(a.fixed-(a.umsatz-a.pcost))/mg;out.push(['Gewinnschwelle',m<=0?'erreicht':'noch ca. '+Math.ceil(m)+' Bäume'])}
+  return out.length?`<div class="card">${out.map(([l,v])=>`<div class="kv"><span>${l}</span><span>${v}</span></div>`).join('')}</div>`:'';
+}
+function prodChart(a){
+  const rows=Object.entries(a.byProd).map(([id,q])=>({l:pname(id),v:q})).sort((x,y)=>y.v-x.v).slice(0,12);
+  return hbars(rows,v=>v+' Stk.');
+}
+function vStand(){
+  const a=stats(cur.stand),st=S.stands.find(s=>s.id===cur.stand);
+  const days=a.dates.filter(d=>a.byDay[d]);
+  $('#app').innerHTML=`${backupWarn()}${standChips()}
+  <h2 style="margin-top:4px">${esc(st.name)}</h2>
+  <div class="tiles">
+    <div class="tile b"><small>Verkäufe</small><b>${num(a.verk)} Stk.</b></div>
+    <div class="tile b"><small>Umsatz</small><b>${eur0(a.umsatz)}</b></div>
+    <div class="tile ${a.gewinn<0?'r':'g'}"><small>Gewinn</small><b>${eur0(a.gewinn)}</b></div>
+    <div class="tile ${a.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(a.soll)} Stk.</b></div></div>
+  ${kvList(a)}
+  ${insights(a)}
+  <h2>Verkäufe pro Tag</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:a.byDay[d].q})))}</div>
+  <h2>Umsatz pro Tag</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:Math.round(a.byDay[d].r)})),{color:'var(--green)',fmt:v=>v})}</div>
+  <h2>Bestandsverlauf (Soll)</h2><div class="card pad">${lineChart(a.bestand)}</div>
+  <h2>Verkäufe nach Produkt</h2><div class="card pad">${prodChart(a)}</div>
+  <h2>Tage</h2><div class="card"><table><tr><th>Tag</th><th class="r">Stück</th><th class="r">Umsatz</th></tr>
+  ${days.slice().reverse().map(d=>`<tr><td>${fmtD(d)}</td><td class="r">${a.byDay[d].q}</td><td class="r">${eur(a.byDay[d].r)}</td></tr>`).join('')||'<tr><td colspan=3>Noch keine Daten</td></tr>'}</table></div>
+  <div class="hint">Kosten (Standgebühr, Personal, Auf-/Abbau, Lieferkosten) und Produktionskosten pflegst du unter „Daten“.</div>`;
+}
+
+/* ---------- Gesamt ---------- */
+function vGesamt(){
+  const all=stats(S.stands.map(s=>s.id));
+  const per=S.stands.map(s=>({s,a:stats(s.id)})).sort((x,y)=>y.a.verk-x.a.verk||y.a.umsatz-x.a.umsatz);
+  const days=all.dates.filter(d=>all.byDay[d]);
+  const wd=[1,2,3,4,5,6,0].map(i=>({l:WD[i],v:all.byWd[i]})).filter(x=>x.v>0);
   $('#app').innerHTML=`${backupWarn()}
-  <h2>Gesamt</h2>
-  <div class="card"><table><tr><th>Stand</th><th class="r">Tage</th><th class="r">Stück</th><th class="r">Umsatz</th></tr>
-  ${byStand.map(x=>`<tr><td>${esc(x.s.name)}</td><td class="r">${x.days}</td><td class="r">${x.q}</td><td class="r">${eur(x.r)}</td></tr>`).join('')}
-  <tr class="tot"><td>Summe</td><td></td><td class="r">${Q}</td><td class="r">${eur(R)}</td></tr></table></div>
-  <h2>Letzte Tage (alle Stände)</h2>
-  <div class="card"><table><tr><th>Tag</th><th class="r">Stück</th><th class="r">Umsatz</th></tr>${dayRows||'<tr><td colspan=3>Noch keine Daten</td></tr>'}</table></div>
-  <h2>${esc(stand.name)}: Verlauf</h2>
-  <div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>
-  <div class="card"><table><tr><th>Tag</th><th class="r">Stück</th><th class="r">Umsatz</th><th class="r">Rest</th></tr>${sRows||'<tr><td colspan=4>Noch keine Daten</td></tr>'}</table></div>`;
+  <h2 style="margin-top:4px">Alle Stände</h2>
+  <div class="tiles">
+    <div class="tile b"><small>Verkäufe</small><b>${num(all.verk)} Stk.</b></div>
+    <div class="tile b"><small>Umsatz</small><b>${eur0(all.umsatz)}</b></div>
+    <div class="tile ${all.gewinn<0?'r':'g'}"><small>Gewinn</small><b>${eur0(all.gewinn)}</b></div>
+    <div class="tile ${all.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(all.soll)} Stk.</b></div></div>
+  ${kvList(all)}
+  ${insights(all)}
+  <h2>Ranking</h2>
+  <div class="card scroll"><table><tr><th>#</th><th>Stand</th><th class="r">Verk.</th><th class="r">Bestand</th><th class="r">Umsatz</th><th class="r">Gewinn</th></tr>
+  ${per.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.s.name)}</td><td class="r">${num(x.a.verk)}</td><td class="r ${x.a.soll<0?'neg':''}">${num(x.a.soll)}</td><td class="r">${eur0(x.a.umsatz)}</td><td class="r ${x.a.gewinn<0?'neg':''}">${eur0(x.a.gewinn)}</td></tr>`).join('')}
+  <tr class="tot"><td></td><td>Ergebnis</td><td class="r">${num(all.verk)}</td><td class="r ${all.soll<0?'neg':''}">${num(all.soll)}</td><td class="r">${eur0(all.umsatz)}</td><td class="r ${all.gewinn<0?'neg':''}">${eur0(all.gewinn)}</td></tr></table></div>
+  <h2>Verkäufe pro Stand</h2><div class="card pad">${hbars(per.map(x=>({l:x.s.name,v:x.a.verk})),v=>v+' Stk.')}</div>
+  <h2>Umsatz pro Stand</h2><div class="card pad">${hbars(per.map(x=>({l:x.s.name,v:Math.round(x.a.umsatz)})),eur0)}</div>
+  <h2>Verkäufe pro Tag (alle)</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:all.byDay[d].q})))}</div>
+  <h2>Umsatz pro Tag (alle)</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:Math.round(all.byDay[d].r)})),{color:'var(--green)'})}</div>
+  <h2>Bestandsverlauf (alle)</h2><div class="card pad">${lineChart(all.bestand)}</div>
+  <h2>Bestseller</h2><div class="card pad">${prodChart(all)}</div>
+  <h2>Umsatz nach Wochentag</h2><div class="card pad">${hbars(wd,eur0)}</div>`;
 }
 
 /* ---------- Daten / Einstellungen ---------- */
 function vDaten(){
   $('#app').innerHTML=`${backupWarn()}
-  <h2>Backup</h2>
-  <div class="card pad"><div class="hint">Täglich abends exportieren und per „Sichern" in iCloud Drive, Mail oder AirDrop ablegen.</div>
+  <h2 style="margin-top:4px">Backup</h2>
+  <div class="card pad"><div class="hint">Täglich abends sichern (iCloud Drive, Mail oder AirDrop).</div>
   <button class="btn" id="bJson">Backup sichern (JSON)</button>
   <button class="btn sec" id="bCsv">Excel-Export (CSV)</button>
   <button class="btn sec" id="bImp">Backup einspielen …</button>
   <input type="file" id="fImp" accept=".json,application/json" hidden></div>
+  <h2>Stände & Kosten</h2>
+  ${S.stands.map(s=>`<div class="card pad"><div class="edit"><input class="t" data-sn="${s.id}" value="${esc(s.name)}"><button class="x" data-del-s="${s.id}">×</button></div>
+    <div class="mini">
+    <div><label class="f">Standgebühr €</label><input class="t" inputmode="decimal" data-sc="fee" data-sid="${s.id}" value="${String(s.fee||0).replace('.',',')}"></div>
+    <div><label class="f">Personal €</label><input class="t" inputmode="decimal" data-sc="staff" data-sid="${s.id}" value="${String(s.staff||0).replace('.',',')}"></div></div>
+    <div class="mini">
+    <div><label class="f">Auf-/Abbau €</label><input class="t" inputmode="decimal" data-sc="setup" data-sid="${s.id}" value="${String(s.setup||0).replace('.',',')}"></div>
+    <div><label class="f">Lieferkosten €</label><input class="t" inputmode="decimal" data-sc="freight" data-sid="${s.id}" value="${String(s.freight||0).replace('.',',')}"></div></div></div>`).join('')}
+  <button class="btn sec" id="addS">+ Stand</button>
   <h2>Produkte & Preise</h2>
-  <div class="card pad"><div class="hint">Preis gilt ab dem Moment, in dem ein Tag angelegt wird. Alte Tage behalten ihren Preis.</div>
+  <div class="card pad"><div class="hint">Name · Verkaufspreis · Produktionskosten pro Stück. Neuer Preis gilt für neu angelegte Tage, alte Tage behalten ihren.</div>
   ${S.products.map(p=>`<div class="edit"><input class="t" data-pn="${p.id}" value="${esc(p.name)}">
-    <input class="t" style="width:90px" inputmode="decimal" data-pp="${p.id}" value="${String(p.price).replace('.',',')}">
+    <input class="t" style="width:64px" inputmode="decimal" data-pp="${p.id}" value="${String(p.price).replace('.',',')}">
+    <input class="t" style="width:58px" inputmode="decimal" data-pc="${p.id}" value="${String(p.cost||0).replace('.',',')}">
     <button class="x" data-del-p="${p.id}">×</button></div>`).join('')}
   <button class="btn sec" id="addP">+ Produkt</button></div>
-  <h2>Stände</h2>
-  <div class="card pad">
-  ${S.stands.map(s=>`<div class="edit"><input class="t" data-sn="${s.id}" value="${esc(s.name)}"></div>`).join('')}
-  <button class="btn sec" id="addS">+ Stand</button></div>
   <h2>Gefahrenzone</h2>
   <div class="card pad"><button class="btn red" id="reset">Alle Daten löschen</button></div>
   <div class="hint" style="text-align:center">Alle Daten liegen nur auf diesem Gerät.</div>`;
@@ -263,54 +526,58 @@ function vDaten(){
 function download(name,type,content){
   const blob=new Blob([content],{type});
   const file=new File([blob],name,{type});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
-    navigator.share({files:[file]}).then(()=>1).catch(()=>1);return true;
-  }
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();return true;
+  if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file]}).catch(()=>1);return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
 }
 function csv(){
-  const L=['Datum;Stand;Produkt;Anzahl;Preis;Umsatz;Restbestand;Notiz'];
+  const L=['Datum;Stand;Typ;Produkt;Anzahl;Preis;Umsatz;Ist-Bestand;Notiz'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""').replace(/\n/g,' ')+'"';
   const nf=n=>String(n).replace('.',',');
+  const sn=sid=>{const s=S.stands.find(x=>x.id===sid);return q(s?s.name:sid)};
   Object.keys(S.entries).sort().forEach(k=>{
-    const [sid,d]=k.split('|'),e=S.entries[k],st=S.stands.find(s=>s.id===sid);
-    const act=S.products.filter(p=>+e.counts[p.id]>0);
-    ex(e).forEach(x=>L.push([d,q(st?st.name:sid),q(pname(x.pid)+' (Einzelpreis)'),1,nf(x.price),nf(x.price),'',''].join(';')));
-    (act.length?act:(ex(e).length&&!e.rest&&!e.note?[]:[null])).forEach((p,i)=>{
-      L.push([d,q(st?st.name:sid),p?q(p.name):'',p?e.counts[p.id]:0,p?nf(price(e,p)):'',p?nf(+e.counts[p.id]*price(e,p)):0,
-        i===0?e.rest:'',i===0?q(e.note):''].join(';'));
-    });
+    const [sid,d]=k.split('|'),e=entry(sid,d);let first=true;
+    const tail=()=>{const r=first?[e.rest,q(e.note)]:['',''];first=false;return r};
+    S.products.filter(p=>+e.counts[p.id]>0).forEach(p=>L.push([d,sn(sid),'Verkauf',q(p.name),e.counts[p.id],nf(price(e,p)),nf(e.counts[p.id]*price(e,p)),...tail()].join(';')));
+    e.extra.forEach(x=>L.push([d,sn(sid),'Verkauf (Einzelpreis)',q(pname(x.pid)),exq(x),nf(x.price),nf(x.price*exq(x)),...tail()].join(';')));
+    if(first&&(e.rest!==''||e.note))L.push([d,sn(sid),'Tagesnotiz','',0,'',0,e.rest,q(e.note)].join(';'));
   });
+  S.moves.slice().sort((a,b)=>a.date<b.date?-1:1).forEach(m=>L.push([m.date,sn(m.stand),m.type==='L'?'Lieferung':'Retoure','',m.qty,'','','',''].join(';')));
   return '﻿'+L.join('\r\n');
 }
 document.addEventListener('click',ev=>{
-  const id=ev.target.id;if(!id&&!ev.target.dataset.delP)return;
-  const stamp=todayStr();
-  if(id==='bJson'){S.lastExport=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
-    download(`${stamp}_Droste-Backup.json`,'application/json',JSON.stringify(S));render()}
-  if(id==='bCsv'){S.lastExport=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
-    download(`${stamp}_Droste-Verkauf.csv`,'text/csv;charset=utf-8',csv());render()}
+  const t=ev.target,id=t.id,stamp=todayStr();
+  if(id==='bJson'||id==='bCsv'){S.lastExport=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+    id==='bJson'?download(`${stamp}_Droste-Backup.json`,'application/json',JSON.stringify(S)):download(`${stamp}_Droste-Verkauf.csv`,'text/csv;charset=utf-8',csv());render()}
   if(id==='bImp')$('#fImp').click();
-  if(id==='addP'){S.products.push({id:'p'+uid(),name:'Neu',price:0});save();render()}
-  if(id==='addS'){S.stands.push({id:'s'+uid(),name:'Neuer Stand'});save();render()}
-  if(ev.target.dataset.delP){
-    const p=S.products.find(x=>x.id===ev.target.dataset.delP);
-    if(confirm(`„${p.name}" entfernen? Bereits erfasste Zahlen dazu gehen in der Übersicht verloren.`)){S.products=S.products.filter(x=>x!==p);save();render()}
+  if(id==='addP'){S.products.push({id:'p'+uid(),name:'Neu',price:0,cost:0});save();render()}
+  if(id==='addS'){S.stands.push(mkStand('s'+uid(),'Neuer Stand'));save();render()}
+  if(t.dataset.delP){
+    const p=prod(t.dataset.delP);
+    if(confirm(`„${p.name}" entfernen? Bereits erfasste Zahlen dazu gehen in den Auswertungen verloren.`)){S.products=S.products.filter(x=>x!==p);save();render()}
+  }
+  if(t.dataset.delS){
+    const s=S.stands.find(x=>x.id===t.dataset.delS);
+    if(S.stands.length>1&&confirm(`Stand „${s.name}" samt allen Daten entfernen?`)){
+      S.stands=S.stands.filter(x=>x!==s);S.moves=S.moves.filter(m=>m.stand!==s.id);
+      Object.keys(S.entries).forEach(k=>{if(k.startsWith(s.id+'|'))delete S.entries[k]});
+      if(cur.stand===s.id)cur.stand=S.stands[0].id;save();render()}
   }
   if(id==='reset'&&confirm('Wirklich ALLE Daten löschen? Vorher Backup sichern!')&&confirm('Sicher? Das kann nicht rückgängig gemacht werden.')){
-    S=JSON.parse(JSON.stringify(DEFAULT));save();render()}
+    S=DEFAULT();cur.stand=S.stands[0].id;save();render()}
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id==='fImp'&&t.files[0]){
     const r=new FileReader();r.onload=()=>{try{
-      const d=JSON.parse(r.result);if(!d.stands||!d.products||!d.entries)throw 0;
-      if(confirm('Aktuelle Daten durch dieses Backup ersetzen?')){S=d;save();cur.stand=S.stands[0].id;render()}
+      const d=JSON.parse(r.result);if(!d.stands||!d.products||!d.entries||d.v!==2)throw 0;
+      if(confirm('Aktuelle Daten durch dieses Backup ersetzen?')){S=d;if(!S.moves)S.moves=[];save();cur.stand=S.stands[0].id;render()}
     }catch(e){alert('Keine gültige Backup-Datei.')}};r.readAsText(t.files[0]);
   }
-  if(t.dataset.pn){S.products.find(p=>p.id===t.dataset.pn).name=t.value||'?';save()}
-  if(t.dataset.pp){S.products.find(p=>p.id===t.dataset.pp).price=parseFloat(t.value.replace(',','.'))||0;save()}
+  if(t.dataset.pn){prod(t.dataset.pn).name=t.value||'?';save()}
+  if(t.dataset.pp){prod(t.dataset.pp).price=pf(t.value);save()}
+  if(t.dataset.pc){prod(t.dataset.pc).cost=pf(t.value);save()}
   if(t.dataset.sn){S.stands.find(s=>s.id===t.dataset.sn).name=t.value||'?';save()}
+  if(t.dataset.sc){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sc]=pf(t.value);save()}
 });
 
 render();
