@@ -30,6 +30,12 @@ header img{height:38px;display:block;border-radius:4px;background:#fff}
 #prof b{display:block;font-size:14px;line-height:1.1}
 #prof small{display:block;font-size:11px;color:var(--mut);line-height:1.2}
 #av{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+.wheels{display:flex;gap:8px;margin-bottom:8px}
+.wcol{flex:1;position:relative}
+.wheel{height:150px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:55px 0;background:var(--bg);border-radius:12px;overscroll-behavior:contain}
+.wheel::-webkit-scrollbar{display:none}
+.wheel div{height:40px;line-height:40px;text-align:center;scroll-snap-align:center;font-size:22px;font-weight:600;color:var(--mut);cursor:pointer}
+.band{position:absolute;left:4px;right:4px;top:55px;height:40px;border-radius:10px;background:rgba(0,113,227,.14);border:1px solid rgba(0,113,227,.4);pointer-events:none}
 main{max-width:600px;margin:0 auto;padding:12px 16px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
@@ -280,10 +286,30 @@ function render(){
   ({erfassen:vErfassen,stand:vStand,gesamt:vGesamt,einstellungen:vDaten})[tab]();
 }
 
+/* ---------- Drehrad ---------- */
+const WH=40;
+const wheelHtml=(id,min,max,val)=>`<div class="wcol"><div class="wheel" id="${id}" data-min="${min}" data-max="${max}" data-val="${val}">${Array.from({length:max-min+1},(_,i)=>`<div data-v="${min+i}">${min+i}</div>`).join('')}</div><i class="band"></i></div>`;
+const wheelVal=el=>{const mn=+el.dataset.min,mx=+el.dataset.max;return Math.min(mx,Math.max(mn,mn+Math.round(el.scrollTop/WH)))};
+function setWheel(el,v){el.scrollTop=(Math.min(+el.dataset.max,Math.max(+el.dataset.min,v))-el.dataset.min)*WH}
+function updateAdd(){
+  const wp=$('#wp'),wq=$('#wq'),b=$('#addX');if(!wp||!wq||!b)return;
+  cur.wp=wheelVal(wp);cur.wq=wheelVal(wq);
+  b.textContent=`${cur.wq} × ${eur(cur.wp)} hinzufügen (${eur(cur.wp*cur.wq)})`;
+}
+function initWheels(){
+  document.querySelectorAll('.wheel').forEach(el=>{
+    setWheel(el,+el.dataset.val);
+    el.addEventListener('scroll',updateAdd,{passive:true});
+    el.addEventListener('click',ev=>{const d=ev.target.closest('[data-v]');if(d)el.scrollTo({top:(+d.dataset.v-el.dataset.min)*WH,behavior:'smooth'})});
+  });
+  updateAdd();requestAnimationFrame(()=>{document.querySelectorAll('.wheel').forEach(el=>setWheel(el,+el.dataset.val));updateAdd()});
+}
+
 /* ---------- Erfassen ---------- */
 function vErfassen(){
   const e=entry(cur.stand,cur.date)||{counts:{},prices:{},extra:[],rest:'',note:''};
-  if(!cur.xp||!prod(cur.xp))cur.xp=S.products[0].id;
+  if(!cur.xp||!prod(cur.xp))cur.xp=(S.products.find(p=>p.free)||S.products[0]).id;
+  cur.wp=cur.wp||40;cur.wq=cur.wq||1;
   const rows=S.products.filter(p=>!p.free).map(p=>`
     <div class="row"><div><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><div class="p">${eur(price(e,p))}</div></div>
     <div class="ctr"><button data-a="minus" data-p="${p.id}">−</button>
@@ -310,10 +336,11 @@ function vErfassen(){
   <div class="card pad">
     <label class="f">Einzelpreis-Verkauf (Baum mit eigenem Preis)</label>
     <div class="edit"><select class="t" id="xp">${S.products.map(p=>`<option value="${p.id}" ${p.id===cur.xp?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
-    <input class="t" style="width:92px" id="xprice" inputmode="decimal" placeholder="Preis €">
-    <input class="t" style="width:56px" id="xqty" inputmode="numeric" value="1"></div>
-    <button class="btn" id="addX" style="margin-top:0">Verkauf hinzufügen</button>
-    ${rp.length?`<div class="hint">Zuletzt genutzte Preise (Tippen fügt Anzahl-Menge hinzu):</div><div class="chips">${rp.map(v=>`<button class="chip" data-xchip="${v}">${eur(v)}</button>`).join('')}</div>`:''}
+</div>
+    <div style="display:flex;gap:8px;font-size:12px;color:var(--mut);margin:2px 4px"><span style="flex:1;text-align:center">Menge</span><span style="flex:1;text-align:center">Preis €</span></div>
+    <div class="wheels">${wheelHtml('wq',1,100,cur.wq)}${wheelHtml('wp',15,100,cur.wp)}</div>
+    <button class="btn" id="addX"></button>
+    ${rp.length?`<div class="hint">Zuletzt genutzte Preise (Tippen stellt den Preis ein):</div><div class="chips">${rp.map(v=>`<button class="chip" data-xchip="${v}">${eur(v)}</button>`).join('')}</div>`:''}
     ${(e.extra||[]).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div><div class="p">${exq(x)} × ${eur(x.price)}</div></div><div class="ctr"><b>${eur(x.price*exq(x))}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}
   </div>
   <div class="card pad">
@@ -327,6 +354,7 @@ function vErfassen(){
     <input class="t" type="number" inputmode="numeric" id="rest" value="${esc(e.rest)}" placeholder="optional">
     <label class="f">Notiz (Wetter, Besonderheiten …)</label>
     <textarea class="t" id="note">${esc(e.note)}</textarea></div>`;
+  initWheels();
 }
 
 /* Schnell-Erfassung: Text -> Zeilen */
@@ -382,10 +410,10 @@ document.addEventListener('click',ev=>{
     cur.parsed=null;cur.qtext='';save();return render();
   }
   if(t.id==='addX'){
-    const v=$('#xprice').value;if(v===''||!(pf(v)>=0))return alert('Bitte einen Preis eingeben.');
-    addExtra($('#xp').value,pf(v),Math.max(1,parseInt($('#xqty').value)||1));save();return render();
+    const pr=wheelVal($('#wp')),qt=wheelVal($('#wq'));
+    addExtra($('#xp').value,pr,qt);cur.wp=pr;cur.wq=1;save();return render();
   }
-  if(t.dataset.xchip){addExtra($('#xp').value,parseFloat(t.dataset.xchip),Math.max(1,parseInt($('#xqty').value)||1));save();return render()}
+  if(t.dataset.xchip){const v=Math.round(parseFloat(t.dataset.xchip));cur.wp=Math.min(100,Math.max(15,v));setWheel($('#wp'),cur.wp);updateAdd();return}
   if(t.dataset.delx){const e=entry(cur.stand,cur.date);e.extra=e.extra.filter(x=>x.id!==t.dataset.delx);save();return render()}
   if(t.dataset.mv){
     const q=parseInt($('#mqty').value);if(!(q>0))return alert('Bitte Anzahl eingeben.');
