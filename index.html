@@ -26,6 +26,10 @@ body{background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,"SF Pro 
 header{background:var(--card);padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
+#prof{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:2px;text-align:left;font:inherit}
+#prof b{display:block;font-size:14px;line-height:1.1}
+#prof small{display:block;font-size:11px;color:var(--mut);line-height:1.2}
+#av{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
 main{max-width:600px;margin:0 auto;padding:12px 16px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
@@ -100,7 +104,7 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><div id="hstat" style="font-size:12px;color:var(--mut)"></div></header>
+<header><img src="logo.jpg" alt="Hof Droste"><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
 <main id="app"></main>
 <nav id="nav">
   <button data-t="erfassen"><b>✎</b>Erfassen</button>
@@ -123,7 +127,7 @@ const pf=v=>{const x=parseFloat(String(v).replace(',','.'));return isNaN(x)?0:x}
 
 const mkStand=(id,name)=>({id,name,fee:0,staff:0,setup:0,freight:0});
 const DEFAULT=()=>({
-  v:2,
+  v:2,user:'Till',
   stands:[mkStand('media','Media Markt'),mkStand('schmidt','Schmidt Ankum'),mkStand('kallmeyer','Kallmeyer'),
           mkStand('porta','Porta'),mkStand('hasbergen','Hasbergen'),mkStand('quick','Quick')],
   products:[
@@ -271,6 +275,7 @@ function backupWarn(){
 const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+  $('#pname').textContent=S.user||'Till';$('#av').textContent=(S.user||'Till').trim().charAt(0).toUpperCase();
   $('#hstat').textContent=S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup';
   ({erfassen:vErfassen,stand:vStand,gesamt:vGesamt,einstellungen:vDaten})[tab]();
 }
@@ -367,6 +372,7 @@ function addExtra(pid,pr,qty){
 document.addEventListener('click',ev=>{
   const t=ev.target.closest('button,[data-a]');if(!t)return;
   if(t.dataset.stand){cur.stand=t.dataset.stand;try{localStorage.setItem(KEY+'-ui',JSON.stringify({stand:cur.stand}))}catch(e){}return render()}
+  if(t.id==='prof'||t.closest('#prof')){const n=prompt('Name des Benutzers:',S.user||'Till');if(n&&n.trim()){S.user=n.trim();save();render()}return}
   if(t.id==='qParse'){cur.qtext=$('#qtext').value;cur.parsed=parseText(cur.qtext);if(!cur.parsed.length)alert('Nichts erkannt.');return render()}
   if(t.id==='qCancel'){cur.parsed=null;return render()}
   if(t.id==='qApply'){
