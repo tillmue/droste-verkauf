@@ -30,6 +30,22 @@ header img{height:38px;display:block;border-radius:4px;background:#fff}
 #prof b{display:block;font-size:14px;line-height:1.1}
 #prof small{display:block;font-size:11px;color:var(--mut);line-height:1.2}
 #av{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal u{text-decoration:none;text-align:center;font-size:11px;color:var(--mut);padding-bottom:2px}
+.cd{height:46px;border:1px solid transparent;border-radius:10px;background:var(--bg);color:var(--text);padding:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit}
+.cd b{font-size:14px;font-weight:600}.cd span{height:7px;display:flex;gap:3px}
+.cd.sel{background:var(--blue);color:#fff}.cd.today{border-color:var(--blue)}
+em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:normal}
+.d.b{background:var(--blue)}.d.r{background:var(--red)}.d.g{background:var(--green)}.d.x{background:var(--line)}
+.cd.sel .d.b{background:#fff}
+.calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.calhead button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:18px}
+.chk{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:none;color:#fff;font-size:15px;padding:0}
+.chk.on{background:var(--green);border-color:var(--green)}
+.done{text-decoration:line-through;color:var(--mut)}
+.dim{opacity:.6}
+.sug{background:var(--panel);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}.sug small{color:var(--mut)}
+.tbanner{background:var(--panel);color:var(--blue);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px;font-weight:600}
 .wheels{display:flex;gap:8px;margin-bottom:8px}
 .wcol{flex:1;position:relative}
 .wheel{height:150px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:55px 0;background:var(--bg);border-radius:12px;overscroll-behavior:contain}
@@ -114,6 +130,7 @@ svg .val{fill:var(--text)}
 <main id="app"></main>
 <nav id="nav">
   <button data-t="erfassen"><b>✎</b>Erfassen</button>
+  <button data-t="plan"><b>◫</b>Plan<span id="pbadge"></span></button>
   <button data-t="stand"><b>▦</b>Stand</button>
   <button data-t="gesamt"><b>▤</b>Gesamt</button>
   <button data-t="einstellungen"><b>⚙︎</b>Daten</button>
@@ -155,7 +172,7 @@ const DEFAULT=()=>({
     {id:'p16',name:'Nordmann 25 €',price:25,cost:0},
     {id:'p17',name:'Nordmann 26 €',price:26,cost:0},
     {id:'f1',name:'Nordmann (Einzelpreis)',price:0,cost:0,free:true}],
-  entries:{}, moves:[], lastExport:0, lastChange:0
+  entries:{}, moves:[], tasks:[], notes:[], people:['Till'], lastExport:0, lastChange:0
 });
 let S;
 function load(){
@@ -173,9 +190,10 @@ function save(){
   const el=$('#saved');el.classList.add('show');clearTimeout(saveT);saveT=setTimeout(()=>el.classList.remove('show'),900);
 }
 load();
+S.tasks=S.tasks||[];S.notes=S.notes||[];S.people=(S.people&&S.people.length)?S.people:[S.user||'Till'];
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 
-let tab='erfassen', cur={stand:null,date:todayStr(),xp:null,parsed:null,qtext:''};
+let tab='erfassen', cur={stand:null,date:todayStr(),xp:null,parsed:null,qtext:'',ptab:'kal',cal:todayStr().slice(0,7),cday:todayStr(),pf:'',tfOpen:false,ntext:'',tf:null};
 try{const c=JSON.parse(localStorage.getItem(KEY+'-ui'));if(c&&S.stands.some(s=>s.id===c.stand))cur.stand=c.stand}catch(e){}
 if(!cur.stand)cur.stand=S.stands[0].id;
 const keyOf=(st,d)=>st+'|'+d;
@@ -283,7 +301,8 @@ function render(){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
   $('#pname').textContent=S.user||'Till';$('#av').textContent=(S.user||'Till').trim().charAt(0).toUpperCase();
   $('#hstat').textContent=S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup';
-  ({erfassen:vErfassen,stand:vStand,gesamt:vGesamt,einstellungen:vDaten})[tab]();
+  const oc=openCount();$('#pbadge').textContent=oc?' ('+oc+')':'';
+  ({erfassen:vErfassen,plan:vPlan,stand:vStand,gesamt:vGesamt,einstellungen:vDaten})[tab]();
 }
 
 /* ---------- Drehrad ---------- */
@@ -325,7 +344,7 @@ function vErfassen(){
       <input class="t" style="width:74px" inputmode="decimal" data-qi="${i}" data-qf="price" value="${String(r.price).replace('.',',')}">
       <input class="t" style="width:58px" inputmode="numeric" data-qi="${i}" data-qf="count" value="${r.count}"></div></div>`).join('')}
     <button class="btn green" id="qApply">Übernehmen</button><button class="btn sec" id="qCancel">Verwerfen</button>`:'';
-  $('#app').innerHTML=`${backupWarn()}${standChips()}
+  $('#app').innerHTML=`${backupWarn()}${todayBanner()}${standChips()}
   <div class="datebar"><button data-d="-1">‹</button><input type="date" id="date" value="${cur.date}"><button data-d="1">›</button></div>
   <div class="card pad">
     <label class="f">Schnell erfassen (z. B. „Nordmann Blau 7, Nordmann 43€ 3 mal, Handbunde 4“)</label>
@@ -445,6 +464,129 @@ document.addEventListener('input',ev=>{
   if(t.id==='rest'||t.id==='note'){const e=entry(cur.stand,cur.date,true);e[t.id]=t.value;save()}
 });
 
+/* ---------- Plan: Kalender, Aufgaben, Notizen ---------- */
+/* Datenhaltung: S.tasks, S.notes, S.people. Später durch gemeinsamen Cloud-Speicher ersetzbar. */
+const newTf=date=>({id:null,title:'',date:date||'',time:'',person:(S.people&&S.people[0])||'',stand:'',type:'todo',noteId:null});
+cur.tf=newTf(cur.cday);
+const wdD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
+const p2=n=>String(n).padStart(2,'0');
+const standNm=id=>{const x=S.stands.find(s=>s.id===id);return x?x.name:''};
+function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.done&&x.date&&x.date<=t).length}
+function todayBanner(){const n=openCount();return n?`<div class="tbanner" data-pl="goto" data-v="aufg">${n} Aufgabe${n>1?'n':''} heute oder überfällig →</div>`:''}
+function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
+function taskRow(t,showDate){
+  const over=!t.done&&t.date&&t.date<todayStr();
+  const meta=[showDate&&t.date?wdD(t.date):'',t.time,t.person,standNm(t.stand)].filter(Boolean).join(' · ');
+  return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
+    <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
+    <div style="min-width:0;flex:1" data-pl="tedit" data-v="${t.id}"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
+    <div class="p ${over?'neg':''}">${esc(meta)||'&nbsp;'}</div></div></div></div>`;
+}
+function taskForm(){
+  const f=cur.tf,sel=(a,b)=>a===b?'selected':'';
+  return `<div class="card pad">
+    <label class="f">${f.id?'Eintrag bearbeiten':f.noteId?'Notiz zu Aufgabe machen':'Neuer Eintrag'}</label>
+    <input class="t" id="tf-title" placeholder="Was ist zu tun?" value="${esc(f.title)}">
+    <div class="mini" style="margin-top:8px"><input class="t" type="date" id="tf-date" value="${f.date}" style="min-width:0"><input class="t" type="time" id="tf-time" value="${f.time}" style="min-width:0"></div>
+    <div class="mini" style="margin-top:8px"><select class="t" id="tf-person"><option value="">Wer? (offen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>
+    <select class="t" id="tf-stand"><option value="">Stand (optional)</option>${S.stands.map(x=>`<option value="${x.id}" ${sel(x.id,f.stand)}>${esc(x.name)}</option>`).join('')}</select></div>
+    <div class="mini" style="margin-top:8px"><select class="t" id="tf-type"><option value="todo" ${sel('todo',f.type)}>Aufgabe</option><option value="termin" ${sel('termin',f.type)}>Termin</option></select></div>
+    <div class="mini" style="margin-top:8px"><button class="btn" data-pl="tsave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${(f.id||cur.tfOpen)?'<button class="btn sec" data-pl="tcancel" style="margin:0">Abbrechen</button>':''}</div>
+    ${f.id?'<button class="btn red" data-pl="tdel">Löschen</button>':''}</div>`;
+}
+function vPlan(){
+  const seg=`<div class="chips">${[['kal','Kalender'],['aufg','Aufgaben'],['notiz','Notizen']].map(([k,l])=>`<button class="chip ${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  $('#app').innerHTML=backupWarn()+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz})[cur.ptab]();
+}
+function planKal(){
+  const [y,m]=cur.cal.split('-').map(Number),td=todayStr(),sb=salesByDate();
+  const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate();
+  let cells='<i></i>'.repeat(off);
+  for(let d=1;d<=dim;d++){
+    const ds=`${y}-${p2(m)}-${p2(d)}`,ts=S.tasks.filter(t=>t.date===ds),open=ts.filter(t=>!t.done).length;
+    const dots=(open?`<em class="d ${ds<td?'r':'b'}"></em>`:ts.length?'<em class="d x"></em>':'')+(sb[ds]?'<em class="d g"></em>':'');
+    cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dots}</span></button>`;
+  }
+  const day=S.tasks.filter(t=>t.date===cur.cday).sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:1);
+  const s=sb[cur.cday];
+  return `<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${new Date(y,m-1,1).toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</b><button data-pl="cmon" data-v="1">›</button></div>
+    <div class="cal"><u>Mo</u><u>Di</u><u>Mi</u><u>Do</u><u>Fr</u><u>Sa</u><u>So</u>${cells}</div>
+    <div class="hint"><em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig &nbsp;<em class="d g"></em> Verkauf erfasst</div>
+    <button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>
+    <h2 style="margin-top:4px">${wdD(cur.cday)}</h2>
+    ${s?`<div class="card pad"><div class="kv"><span>Verkauf (alle Stände)</span><span>${s.q} Stk. · ${eur0(s.r)}</span></div></div>`:''}
+    <div class="card">${day.map(t=>taskRow(t,false)).join('')||'<div class="row"><span class="p">Nichts eingetragen.</span></div>'}</div>
+    ${taskForm()}`;
+}
+function planAufg(){
+  const td=todayStr(),pfl=cur.pf;
+  const list=S.tasks.filter(t=>!pfl||t.person===pfl),open=list.filter(t=>!t.done);
+  const srt=a=>a.slice().sort((x,y)=>((x.date||'9')+(x.time||''))<((y.date||'9')+(y.time||''))?-1:1);
+  const groups=[['Überfällig',open.filter(t=>t.date&&t.date<td)],['Heute',open.filter(t=>t.date===td)],['Demnächst',open.filter(t=>t.date>td)],['Ohne Datum',open.filter(t=>!t.date)]];
+  const done=list.filter(t=>t.done);
+  return `<div class="chips"><button class="chip ${!pfl?'on':''}" data-pl="pf" data-v="">Alle</button>${S.people.map(p=>`<button class="chip ${pfl===p?'on':''}" data-pl="pf" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+    <button class="btn" data-pl="tnew" style="margin-top:0">+ Neuer Eintrag</button>
+    ${cur.tfOpen?taskForm():''}
+    ${groups.map(([n,a])=>a.length?`<h3>${n} (${a.length})</h3><div class="card">${srt(a).map(t=>taskRow(t,true)).join('')}</div>`:'').join('')}
+    ${done.length?`<h3>Erledigt (${done.length})</h3><div class="card">${srt(done).reverse().slice(0,15).map(t=>taskRow(t,true)).join('')}</div>`:''}
+    ${!S.tasks.length?'<div class="hint">Noch keine Einträge.</div>':''}`;
+}
+function planNotiz(){
+  const ns=S.notes.slice().sort((a,b)=>b.created-a.created);
+  return `<div class="card pad"><label class="f">Schnelle Notiz (fällt dir was auf? Hier rein, später einordnen)</label>
+    <textarea class="t" id="nt-text" placeholder="z. B. Kabeltrommel für Quick fehlt">${esc(cur.ntext)}</textarea>
+    <button class="btn" data-pl="nsave" style="margin-bottom:0">Notiz speichern</button></div>
+    ${cur.tfOpen&&cur.tf.noteId?taskForm():''}
+    <div class="hint">Abends: Backup sichern, Datei in den Eingang-Ordner legen und mir „Notizen zuordnen“ sagen. Du bekommst Vorschläge, die du hier mit einem Tipp übernimmst.</div>
+    ${ns.map(n=>{const sg=n.suggest;return `<div class="card pad ${n.status==='zugeordnet'?'dim':''}"><div>${esc(n.text)}</div>
+      <div style="color:var(--mut);font-size:12px;margin-top:4px">${new Date(n.created).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${n.status==='zugeordnet'?' · zugeordnet':''}</div>
+      ${sg?`<div class="sug"><b>Vorschlag:</b> ${esc(sg.title||n.text)}<br><small>${esc([sg.date&&wdD(sg.date),sg.time,sg.person,standNm(sg.stand)||sg.stand].filter(Boolean).join(' · '))}</small>
+        <div class="mini" style="margin-top:6px"><button class="btn green" data-pl="sugok" data-v="${n.id}" style="margin:0">Übernehmen</button><button class="btn sec" data-pl="sugno" data-v="${n.id}" style="margin:0">Verwerfen</button></div></div>`:''}
+      <div class="mini" style="margin-top:8px">${n.status!=='zugeordnet'?`<button class="btn sec" data-pl="n2t" data-v="${n.id}" style="margin:0">→ Aufgabe</button>`:''}<button class="btn sec" data-pl="ndel" data-v="${n.id}" style="margin:0;color:var(--red)">Löschen</button></div></div>`}).join('')||'<div class="hint">Noch keine Notizen.</div>'}`;
+}
+document.addEventListener('click',ev=>{
+  const t=ev.target.closest('[data-pl]');if(!t)return;
+  const a=t.dataset.pl,v=t.dataset.v,reset=()=>{cur.tf=newTf(cur.cday);cur.tfOpen=false};
+  if(a==='ptab'){cur.ptab=v;return render()}
+  if(a==='goto'){tab='plan';cur.ptab=v;window.scrollTo(0,0);return render()}
+  if(a==='cday'){cur.cday=v;if(!cur.tf.id)cur.tf.date=v;return render()}
+  if(a==='cmon'){const [y,m]=cur.cal.split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.cal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
+  if(a==='ctoday'){cur.cday=todayStr();cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;return render()}
+  if(a==='pf'){cur.pf=v;return render()}
+  if(a==='tdone'){const x=S.tasks.find(x=>x.id===v);x.done=!x.done;save();return render()}
+  if(a==='tedit'){const x=S.tasks.find(x=>x.id===v);cur.tf={id:x.id,title:x.title,date:x.date||'',time:x.time||'',person:x.person||'',stand:x.stand||'',type:x.type||'todo',noteId:null};cur.tfOpen=true;return render()}
+  if(a==='tnew'){cur.tf=newTf('');cur.tfOpen=true;return render()}
+  if(a==='tcancel'){reset();return render()}
+  if(a==='tdel'){if(confirm('Eintrag löschen?')){S.tasks=S.tasks.filter(x=>x.id!==cur.tf.id);reset();save();render()}return}
+  if(a==='tsave'){
+    const f=cur.tf;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');
+    const base={title:f.title.trim(),date:f.date,time:f.time,person:f.person,stand:f.stand,type:f.type};
+    if(f.id)Object.assign(S.tasks.find(x=>x.id===f.id),base);
+    else{const task={id:uid(),...base,done:false,created:Date.now()};S.tasks.push(task);
+      if(f.noteId){const n=S.notes.find(n=>n.id===f.noteId);if(n){n.status='zugeordnet';n.taskId=task.id;delete n.suggest}}}
+    reset();save();return render();
+  }
+  if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu'});cur.ntext='';save();return render()}
+  if(a==='n2t'){const n=S.notes.find(n=>n.id===v);cur.tf={...newTf(cur.cday),title:n.text.slice(0,200),noteId:n.id};cur.tfOpen=true;cur.ptab='notiz';window.scrollTo(0,0);return render()}
+  if(a==='ndel'){if(confirm('Notiz löschen?')){S.notes=S.notes.filter(n=>n.id!==v);save();render()}return}
+  if(a==='sugno'){delete S.notes.find(n=>n.id===v).suggest;save();return render()}
+  if(a==='sugok'){
+    const n=S.notes.find(n=>n.id===v),sg=n.suggest;
+    const st=S.stands.find(x=>x.id===sg.stand||x.name.toLowerCase()===String(sg.stand||'').toLowerCase());
+    const task={id:uid(),title:sg.title||n.text,date:sg.date||'',time:sg.time||'',person:sg.person||'',stand:st?st.id:'',type:sg.type==='termin'?'termin':'todo',done:false,created:Date.now()};
+    S.tasks.push(task);n.status='zugeordnet';n.taskId=task.id;delete n.suggest;save();return render();
+  }
+});
+document.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.id==='nt-text')cur.ntext=t.value;
+  if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
+});
+document.addEventListener('change',ev=>{
+  const t=ev.target;
+  if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
+});
+
 /* ---------- Dashboard pro Stand ---------- */
 function kvList(a){
   const s=a;
@@ -553,6 +695,14 @@ function vDaten(){
     <input class="t" style="width:58px" inputmode="decimal" data-pc="${p.id}" value="${String(p.cost||0).replace('.',',')}">
     <button class="x" data-del-p="${p.id}">×</button></div>`).join('')}
   <button class="btn sec" id="addP">+ Produkt</button></div>
+  <h2>Team</h2>
+  <div class="card pad"><div class="hint">Namen für „Wer?“ bei Aufgaben.</div>
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}"><button class="x" data-del-pe="${i}">×</button></div>`).join('')}
+  <button class="btn sec" id="addPe">+ Person</button></div>
+  <h2>Vorschläge einspielen</h2>
+  <div class="card pad"><div class="hint">Datei mit Zuordnungsvorschlägen zu deinen Notizen (von Claude).</div>
+  <button class="btn sec" id="bSug">Vorschläge-Datei wählen …</button>
+  <input type="file" id="fSug" accept=".json,application/json" hidden></div>
   <h2>Gefahrenzone</h2>
   <div class="card pad"><button class="btn red" id="reset">Alle Daten löschen</button></div>
   <div class="hint" style="text-align:center">Alle Daten liegen nur auf diesem Gerät.</div>`;
@@ -604,7 +754,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='fImp'&&t.files[0]){
     const r=new FileReader();r.onload=()=>{try{
       const d=JSON.parse(r.result);if(!d.stands||!d.products||!d.entries||d.v!==2)throw 0;
-      if(confirm('Aktuelle Daten durch dieses Backup ersetzen?')){S=d;if(!S.moves)S.moves=[];save();cur.stand=S.stands[0].id;render()}
+      if(confirm('Aktuelle Daten durch dieses Backup ersetzen?')){S=d;if(!S.moves)S.moves=[];S.tasks=S.tasks||[];S.notes=S.notes||[];S.people=(S.people&&S.people.length)?S.people:['Till'];save();cur.stand=S.stands[0].id;render()}
     }catch(e){alert('Keine gültige Backup-Datei.')}};r.readAsText(t.files[0]);
   }
   if(t.dataset.pn){prod(t.dataset.pn).name=t.value||'?';save()}
@@ -612,6 +762,24 @@ document.addEventListener('change',ev=>{
   if(t.dataset.pc){prod(t.dataset.pc).cost=pf(t.value);save()}
   if(t.dataset.sn){S.stands.find(s=>s.id===t.dataset.sn).name=t.value||'?';save()}
   if(t.dataset.sc){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sc]=pf(t.value);save()}
+});
+
+document.addEventListener('click',ev=>{
+  const t=ev.target;
+  if(t.id==='addPe'){S.people.push('Neu');save();render()}
+  if(t.id==='bSug')$('#fSug').click();
+  if(t.dataset.delPe!=null&&S.people.length>1){S.people.splice(+t.dataset.delPe,1);save();render()}
+});
+document.addEventListener('change',ev=>{
+  const t=ev.target;
+  if(t.dataset.pe!=null){S.people[+t.dataset.pe]=t.value.trim()||'?';save()}
+  if(t.id==='fSug'&&t.files[0]){
+    const r=new FileReader();r.onload=()=>{try{
+      const d=JSON.parse(r.result),items=d.suggestions||d;let n=0;
+      items.forEach(it=>{const note=S.notes.find(x=>x.id===it.noteId);if(note&&note.status!=='zugeordnet'){note.suggest={title:it.title,date:it.date,time:it.time,person:it.person,stand:it.stand,type:it.type};n++}});
+      save();alert(n+' Vorschläge eingespielt. Sie stehen unter Plan, Notizen.');
+    }catch(e){alert('Keine gültige Vorschläge-Datei.')}};r.readAsText(t.files[0]);
+  }
 });
 
 render();
