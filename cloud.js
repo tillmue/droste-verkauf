@@ -35,6 +35,7 @@ function initCloud(FB) {
     tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: true },
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
+    settings: { get: () => (T.S.hofInfo && T.S.hofInfo.address) ? [['hof', T.S.hofInfo]] : [], put: m => { T.S.hofInfo = { address: (m.hof && m.hof.address) || '' }; }, del: true },
     penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,
                 put: m => { T.S.products = Object.values(m).sort((a, b) => a._o - b._o).map(({ _o, ...r }) => r); } },
@@ -120,7 +121,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -128,7 +129,7 @@ function initCloud(FB) {
       arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emailVerified[u.name] = u.emailVerified === true; });
       T.softRender();
     }, err => console.error('users', err)));
-    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands'].forEach(listen);
+    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings'].forEach(listen);
     if (p.role !== 'team') ['moves', 'sales'].forEach(listen);
   }
 

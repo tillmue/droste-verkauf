@@ -23,9 +23,10 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;
 html{min-height:100%;background-color:#0f1b16;background-image:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%);background-repeat:no-repeat;background-size:100% 100vh}
 body{background:transparent;color:var(--text);font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
   padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-header{background:#2c463d;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
+header{flex-wrap:wrap;background:#2c463d;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
+#hofbar{order:3;flex-basis:100%;margin-top:6px;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.25);color:var(--text);text-decoration:none;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #prof{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:2px;text-align:left;font:inherit}
 #prof b{display:block;font-size:14px;line-height:1.1}
 #prof small{display:block;font-size:11px;color:var(--mut);line-height:1.2}
@@ -146,7 +147,7 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
+<header><img src="logo.jpg" alt="Hof Droste"><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button><a id="hofbar" target="_blank" rel="noopener" style="display:none"></a></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -154,7 +155,7 @@ svg .val{fill:var(--text)}
 <script src="firebase-config.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
-const APP_VERSION='2026-10-13 i';
+const APP_VERSION='2026-10-14 j';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -194,7 +195,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -344,7 +345,7 @@ function render(){
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${i[0]===tab?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
-  $('#hstat').textContent=headerStat();
+  $('#hstat').textContent=headerStat();hofbarUpdate();
   ({ich:vIch,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
 }
 
@@ -576,6 +577,12 @@ function accountBlock(){
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
     return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div><button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
   return `<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
+}
+function hofbarUpdate(hide){
+  const hb=$('#hofbar');if(!hb)return;
+  const a=(!hide&&S.hofInfo&&S.hofInfo.address)||'';
+  hb.style.display=a?'':'none';
+  if(a){hb.textContent='📍 Hof: '+a;hb.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a)}
 }
 function headerStat(){
   if(CLOUD)return ((window.APP&&APP.status)||'')+' · '+ROLE[roleOf(S.me)];
@@ -1079,6 +1086,9 @@ function vDaten(){
   ${freigaben()}
   <h2 ${pendingNames().length?'':'style="margin-top:4px"'}>Profil</h2>
   <div class="card pad">${accountBlock()}</div>
+  <h2>Hof-Adresse</h2>
+  <div class="card pad"><div class="hint">Steht für alle ganz oben in der App, ein Tipp öffnet die Karte.</div>
+  <input class="t" id="hof-addr" value="${esc((S.hofInfo&&S.hofInfo.address)||'')}" placeholder="Straße Nr., PLZ Ort" autocomplete="street-address"></div>
   <h2>Backup</h2>
   <div class="card pad"><div class="hint">Täglich abends sichern (iCloud Drive, Mail oder AirDrop).</div>
   <button class="btn" id="bJson">Backup sichern (JSON)</button>
@@ -1237,7 +1247,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}Object.assign(S,{tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
@@ -1271,7 +1281,11 @@ document.addEventListener('input',ev=>{
   if(t.id==='au-mail'&&cur.auth)cur.auth.mail=t.value;
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
 });
-document.addEventListener('change',ev=>{const t=ev.target;if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value});
+document.addEventListener('change',ev=>{
+  const t=ev.target;
+  if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
+  if(t.id==='hof-addr'){S.hofInfo={...S.hofInfo,address:t.value.trim()};save();hofbarUpdate()}
+});
 
 render();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

@@ -55,6 +55,9 @@ service cloud.firestore {
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
+    // Einstellungen (z. B. Hof-Adresse): alle lesen, Admin pflegt
+    match /settings/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+
     // Strafbierkisten: alle sehen, nur Admin vergibt und hakt ab
     match /penalties/{id} {
       allow read: if isMember();
