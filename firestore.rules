@@ -4,30 +4,38 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
     function userDoc(uid) { return /databases/$(database)/documents/users/$(uid); }
-    function isMember() { return signedIn() && exists(userDoc(request.auth.uid)); }
+    // Mitglied = hat ein Benutzerdokument UND wurde vom Admin freigegeben
+    function isMember() { return signedIn() && exists(userDoc(request.auth.uid)) && get(userDoc(request.auth.uid)).data.approved == true; }
     function role() { return get(userDoc(request.auth.uid)).data.role; }
     function isAdmin() { return isMember() && role() == 'admin'; }
     function isSales() { return isMember() && role() in ['admin', 'verkauf']; }
     function myEmail() { return request.auth.token.email.lower(); }
     function inviteDoc(email) { return /databases/$(database)/documents/invites/$(email); }
 
-    // Nutzer: Anlegen nur mit passender Einladung, Rolle kommt aus der Einladung
+    // Benutzer: Selbstregistrierung mit E-Mail und Passwort (Firebase Auth), Konto startet
+    // als Standardbenutzer (team) und NICHT freigegeben. Der Admin gibt frei und vergibt Rollen.
+    // Ausnahme: Der erste Admin (Till) wird ueber eine von Hand angelegte Einladung erzeugt.
     match /users/{uid} {
-      allow read: if isMember();
+      allow read: if isMember() || (signedIn() && request.auth.uid == uid);
       allow create: if signedIn()
         && request.auth.uid == uid
-        && request.auth.token.email_verified == true
-        && exists(inviteDoc(myEmail()))
-        && request.resource.data.role == get(inviteDoc(myEmail())).data.role
+        && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'approved', 'created'])
         && request.resource.data.email == myEmail()
-        && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'created']);
+        && (
+          (request.resource.data.role == 'team' && request.resource.data.approved == false)
+          || (exists(inviteDoc(myEmail()))
+              && request.resource.data.role == get(inviteDoc(myEmail())).data.role
+              && request.resource.data.approved == true)
+        );
       allow update: if isAdmin()
-        || (request.auth.uid == uid && request.resource.data.role == resource.data.role
+        || (request.auth.uid == uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.approved == resource.data.approved
             && request.resource.data.email == resource.data.email);
       allow delete: if isAdmin();
     }
 
-    // Einladungen: nur Admin verwaltet, jeder darf nur die eigene lesen
+    // Einladungen (nur fuer den ersten Admin): nur Admin verwaltet, jeder liest nur die eigene
     match /invites/{email} {
       allow read: if isAdmin() || (signedIn() && email == myEmail());
       allow write: if isAdmin();
@@ -36,9 +44,13 @@ service cloud.firestore {
     // Aufgaben und Termine
     match /tasks/{id} {
       allow read, create: if isMember();
-      allow update: if isMember() && (isAdmin()
-        || resource.data.createdBy == request.auth.uid
-        || resource.data.assignee == request.auth.uid);
+      allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen oder abhaken
+      allow delete: if isMember() && (isAdmin() || resource.data.createdBy == request.auth.uid);
+    }
+
+    // Kalendereintraege (Saison, Lieferungen, Instagram)
+    match /events/{id} {
+      allow read, create, update: if isMember();
       allow delete: if isMember() && (isAdmin() || resource.data.createdBy == request.auth.uid);
     }
 
@@ -49,7 +61,7 @@ service cloud.firestore {
       allow update, delete: if isMember() && (isAdmin() || resource.data.owner == request.auth.uid);
     }
 
-    // Preisliste und Stände: alle lesen, Admin pflegt
+    // Preisliste und Stände: alle Freigegebenen lesen, Admin pflegt
     match /products/{id} { allow read: if isMember(); allow write: if isAdmin(); }
     match /stands/{id}   { allow read: if isMember(); allow write: if isAdmin(); }
 

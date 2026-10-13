@@ -184,7 +184,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.approved=S.approved||{};
   S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
   S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'});
   S.tasks.forEach(t=>{if(!t.createdBy)t.createdBy='Till'});
@@ -317,6 +317,7 @@ function backupWarn(){
 const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
   if(!S.me||!S.people.includes(S.me))return whoScreen();
+  if(S.approved[S.me]===false)return waitScreen();
   if(!canSales()&&(tab==='erfassen'||tab==='zahlen'))tab='plan';
   const items=[['plan','◫','Plan'],['erfassen','✎','Verkauf',1],['zahlen','▤','Zahlen',1],['preise','€','Preise']].filter(i=>!i[3]||canSales());
   const nav=$('#nav'),oc=openCount();nav.style.display='';
@@ -503,10 +504,21 @@ const meSelect=()=>`<select class="t" data-meselect="1">${S.people.map(n=>`<opti
 function whoScreen(){
   $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='?';$('#hstat').textContent='';
   $('#app').innerHTML=`<h2 style="margin-top:20px">Wer bist du?</h2><div class="hint">Namen antippen. (Testversion, später meldest du dich per E-Mail an.)</div>
-    ${S.people.map(n=>`<button class="btn sec" data-me="${esc(n)}" style="text-align:left;display:flex;justify-content:space-between"><span>${esc(n)}</span><small style="color:var(--mut)">${ROLE[roleOf(n)]}</small></button>`).join('')}
+    ${S.people.map(n=>`<button class="btn sec" data-me="${esc(n)}" style="text-align:left;display:flex;justify-content:space-between"><span>${esc(n)}</span><small style="color:var(--mut)">${S.approved[n]===false?'wartet auf Freigabe':ROLE[roleOf(n)]}</small></button>`).join('')}
     <h3>Neu hier?</h3><input class="t" id="reg-name" placeholder="Dein Benutzername" autocapitalize="words">
     <button class="btn" id="regGo">Als Standardbenutzer anlegen</button>
     <div class="hint">Mit dem Login kommen später E-Mail und Passwort dazu. Welche Rechte du bekommst, legt der Admin fest.</div>`;
+}
+const pendingNames=()=>S.people.filter(n=>S.approved[n]===false);
+function waitScreen(){
+  $('#nav').style.display='none';$('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();$('#hstat').textContent='wartet auf Freigabe';
+  $('#app').innerHTML=`<h2 style="margin-top:20px">Fast geschafft, ${esc(S.me)}</h2>
+    <div class="hint">Dein Zugang muss noch vom Admin freigegeben werden. Sobald das passiert ist, öffnest du die App erneut und bist drin.</div>
+    <button class="btn sec" id="whoBack">Anderen Namen wählen</button>`;
+}
+function freigaben(){
+  const p=pendingNames();if(!p.length)return '';
+  return `<h2 style="margin-top:4px">Freigaben</h2><div class="card pad">${p.map(n=>`<div class="row"><div class="n">${esc(n)}</div><div class="ctr"><button class="claim" data-appr="${esc(n)}">Freigeben</button><button data-deny="${esc(n)}" style="color:var(--red)">×</button></div></div>`).join('')}</div>`;
 }
 function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2>
@@ -577,7 +589,9 @@ function eventForm(){
 }
 function vPlan(){
   const seg=`<div class="chips">${[['aufg','Aufgaben'],['kal','Kalender'],['notiz','Notizen']].map(([k,l])=>`<button class="chip ${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
-  $('#app').innerHTML=backupWarn()+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz})[cur.ptab]();
+  const np=isAdmin()?pendingNames().length:0;
+  const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
+  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz})[cur.ptab]();
 }
 function planKal(){
   const ct=cur.ctab,[y,m]=cur.cal.split('-').map(Number),td=todayStr(),sb=(canSales()&&ct==='saison')?salesByDate():{};
@@ -646,7 +660,15 @@ document.addEventListener('click',ev=>{
     const n=($('#reg-name').value||'').trim().replace(/\s+/g,' ');
     if(!n)return alert('Bitte einen Benutzernamen eingeben.');
     if(S.people.some(p=>p.toLowerCase()===n.toLowerCase()))return alert('Diesen Namen gibt es schon.');
-    S.people.push(n);S.roles[n]='team';S.me=n;save();tab='plan';cur.ptab='aufg';return render();
+    S.people.push(n);S.roles[n]='team';S.approved[n]=false;S.me=n;save();tab='plan';cur.ptab='aufg';return render();
+  }
+  const go=ev.target.closest('[data-go]');if(go){tab=go.dataset.go;window.scrollTo(0,0);return render()}
+  if(ev.target.id==='whoBack'){S.me='';save();return render()}
+  if(ev.target.dataset.appr){S.approved[ev.target.dataset.appr]=true;save();return render()}
+  if(ev.target.dataset.deny){
+    const n=ev.target.dataset.deny;
+    if(confirm(`Anfrage von ${n} ablehnen und Benutzer entfernen?`)){S.people=S.people.filter(x=>x!==n);delete S.roles[n];delete S.approved[n];save();render()}
+    return;
   }
   if(ev.target.closest('.cheers'))return;
   const t=ev.target.closest('[data-pl]');if(!t)return;
@@ -801,7 +823,8 @@ function vGesamt(){
 function vDaten(){
   if(!isAdmin())return vProfil();
   $('#app').innerHTML=`${backupWarn()}
-  <h2 style="margin-top:4px">Profil</h2>
+  ${freigaben()}
+  <h2 ${pendingNames().length?'':'style="margin-top:4px"'}>Profil</h2>
   <div class="card pad"><label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}</div>
   <h2>Backup</h2>
   <div class="card pad"><div class="hint">Täglich abends sichern (iCloud Drive, Mail oder AirDrop).</div>
