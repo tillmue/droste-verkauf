@@ -60,6 +60,10 @@ details[open] summary::after{transform:rotate(90deg)}
 .cheers{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:20;padding:24px}
 .cheers>div{background:var(--card);color:var(--text);border-radius:20px;padding:28px 22px;text-align:center;max-width:320px}
 .cheers b{display:block;font-size:52px;font-weight:400}.cheers p{font-size:18px;font-weight:600;margin:8px 0 16px}
+.wxrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.wxd{background:var(--fill);border-radius:14px;padding:10px 4px;text-align:center}
+.wxd small{display:block;color:var(--mut);font-size:12px;line-height:1.35}
+.wxd .ic{font-size:30px;line-height:1.25}.wxd b{font-size:15px}
 .barw{height:10px;background:var(--fill);border-radius:6px;overflow:hidden}
 .barw i{display:block;height:100%;background:var(--green);border-radius:6px}
 .tile small+b+small{margin-top:2px}
@@ -150,7 +154,7 @@ svg .val{fill:var(--text)}
 <script src="firebase-config.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
-const APP_VERSION='2026-10-13 h';
+const APP_VERSION='2026-10-13 i';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -586,6 +590,59 @@ function freigaben(){
 function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>`;
 }
+/* ---------- Wetter (Bright Sky, Daten des Deutschen Wetterdienstes) ---------- */
+const WX={lat:52.2799,lon:8.0472,ort:'Osnabrück'};
+let wxData=null,wxBusy=null;
+function wxAgg(list,start){
+  const days={};
+  list.forEach(h=>{const d=h.timestamp.slice(0,10);(days[d]=days[d]||[]).push(h)});
+  return [0,1,2].map(i=>{
+    const d=shiftDate(start,i),hs=days[d]||[];if(!hs.length)return {d};
+    const t=hs.map(h=>h.temperature).filter(v=>v!=null);if(!t.length)return {d};
+    const day=hs.filter(h=>{const hh=+h.timestamp.slice(11,13);return hh>=8&&hh<=18}),use=day.length?day:hs;
+    const rain=hs.reduce((a,h)=>a+(h.precipitation||0),0);
+    const pp=Math.max(0,...use.map(h=>h.precipitation_probability||0));
+    const gust=Math.round(Math.max(0,...hs.map(h=>h.wind_gust_speed||h.wind_speed||0)));
+    const has=c=>use.some(h=>h.condition===c);
+    const cc=use.reduce((a,h)=>a+(h.cloud_cover||0),0)/use.length;
+    let ic,txt;
+    if(has('thunderstorm')){ic='⛈';txt='Gewitter'}
+    else if(has('snow')||has('sleet')||has('hail')){ic='🌨';txt=has('snow')?'Schnee':has('sleet')?'Schneeregen':'Hagel'}
+    else if(has('rain')||(rain>=2&&pp>=50)){ic='🌧';txt='Regen'}
+    else if(has('fog')){ic='🌫';txt='Nebel'}
+    else if(cc<25){ic='☀️';txt='Sonnig'}else if(cc<60){ic='⛅';txt='Teils bewölkt'}else{ic='☁️';txt='Bewölkt'}
+    return {d,ic,txt,tmin:Math.round(Math.min(...t)),tmax:Math.round(Math.max(...t)),rain,pp,gust};
+  });
+}
+async function loadWx(force){
+  const today=todayStr();let c=null;
+  try{c=JSON.parse(localStorage.getItem(KEY+'-wx'))}catch(e){}
+  if(c&&c.start===today&&!force&&Date.now()-c.at<30*60e3){wxData=c;return}
+  if(wxBusy)return wxBusy;
+  wxBusy=(async()=>{
+    try{
+      const r=await fetch(`https://api.brightsky.dev/weather?lat=${WX.lat}&lon=${WX.lon}&date=${today}&last_date=${shiftDate(today,3)}&tz=Europe/Berlin`);
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const j=await r.json();wxData={at:Date.now(),start:today,days:wxAgg(j.weather||[],today)};
+      try{localStorage.setItem(KEY+'-wx',JSON.stringify(wxData))}catch(e){}
+    }catch(e){wxData=c?{...c,stale:true}:{fail:true}}
+    wxBusy=null;
+  })();
+  return wxBusy;
+}
+function wxHtml(){
+  if(!wxData)return '<div class="hint">Wetter wird geladen …</div>';
+  if(wxData.fail)return '<div class="hint">Wetter gerade nicht verfügbar.</div>';
+  const today=todayStr(),lab={[today]:'Heute',[shiftDate(today,1)]:'Morgen',[shiftDate(today,2)]:'Übermorgen'};
+  const days=wxData.days.filter(x=>x.ic&&lab[x.d]);
+  if(!days.length)return '<div class="hint">Wetter gerade nicht verfügbar.</div>';
+  const storm=days.filter(x=>x.gust>=60);
+  const at=new Date(wxData.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  return `<div class="wxrow">${days.map(x=>`<div class="wxd"><small>${lab[x.d]}</small><div class="ic">${x.ic}</div><b>${x.tmin}° / ${x.tmax}°</b>
+    <small>${x.txt}</small><small>${x.rain>=0.1?x.rain.toFixed(1).replace('.',',')+' mm':'trocken'}${x.pp?' · '+x.pp+' %':''}</small><small>Böen ${x.gust} km/h</small></div>`).join('')}</div>
+    ${storm.length?`<div class="warn" style="margin-top:8px">Starker Wind: ${storm.map(x=>lab[x.d]+' bis '+x.gust+' km/h').join(', ')}. Planen, Schilder und Ständer sichern.</div>`:''}
+    <div class="hint" style="margin:6px 2px 0">${WX.ort} · Deutscher Wetterdienst via Bright Sky · Stand ${at}${wxData.stale?' (offline, alte Daten)':''}</div>`;
+}
 /* ---------- Ich: Dashboard ---------- */
 function vIch(){
   const td=todayStr(),me=S.me,now=new Date(),nowS=now.toDateString();
@@ -610,6 +667,7 @@ function vIch(){
   const hello=now.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
   const pn=cur.pen;
   $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>
+  <div id="wx" style="margin:8px 0">${wxHtml()}</div>
   <div class="card pad"><div class="barw"><i style="width:${Math.min(100,doneToday/3*100)}%"></i></div>
     <div class="hint" style="margin:6px 0 0">${doneToday>=3?'Feierabendbier verdient 🍺':doneToday+' von 3 Aufgaben bis zum Feierabendbier'}</div></div>
   <h3>Heute für dich</h3>
@@ -630,6 +688,7 @@ function vIch(){
     <select class="t" id="pn-person">${S.people.map(n=>`<option ${n===(pn.person||S.people[0])?'selected':''}>${esc(n)}</option>`).join('')}</select>
     <input class="t" id="pn-reason" placeholder="Grund" value="${esc(pn.reason||'')}" style="margin-top:8px">
     <button class="btn" data-pl="penadd" style="margin-bottom:0">Strafbierkiste vergeben</button></div>`:''}`;
+  loadWx().then(()=>{const e=$('#wx');if(e)e.innerHTML=wxHtml()});
 }
 function vPreise(){
   const ps=S.products.filter(p=>!p.free),row=p=>`<div class="row"><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b>${p.price?eur(p.price):'auf Anfrage'}</b></div>`;
