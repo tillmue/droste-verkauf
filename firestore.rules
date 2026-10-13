@@ -56,9 +56,9 @@ service cloud.firestore {
 
     // Brain-Dump-Notizen: nur eigene, Admin sieht alle
     match /notes/{id} {
-      allow read: if isMember() && (isAdmin() || resource.data.owner == request.auth.uid);
-      allow create: if isMember() && request.resource.data.owner == request.auth.uid;
-      allow update: if isMember() && (isAdmin() || resource.data.owner == request.auth.uid);
+      allow read: if isMember() && (isAdmin() || resource.data.ownerUid == request.auth.uid);
+      allow create: if isMember() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isMember() && (isAdmin() || resource.data.ownerUid == request.auth.uid);
       allow delete: if false;
     }
 

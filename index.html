@@ -29,6 +29,7 @@ header img{height:38px;display:block;border-radius:4px;background:#fff}
 #prof{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:2px;text-align:left;font:inherit}
 #prof b{display:block;font-size:14px;line-height:1.1}
 #prof small{display:block;font-size:11px;color:var(--mut);line-height:1.2}
+#av:empty{display:none}
 #av{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal u{text-decoration:none;text-align:center;font-size:11px;color:var(--mut);padding-bottom:2px}
@@ -144,8 +145,10 @@ svg .val{fill:var(--text)}
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
 
+<script src="firebase-config.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
+const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
 const todayStr=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
@@ -185,11 +188,12 @@ let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
   S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.approved=S.approved||{};
-  S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
-  S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'});
+  if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
+  else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
+    S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
   S.tasks.forEach(t=>{if(!t.createdBy)t.createdBy='Till'});
   S.notes.forEach(n=>{if(!n.owner)n.owner='Till'});
-  if(S.me&&!S.people.includes(S.me))S.me='';
+  if(!CLOUD&&S.me&&!S.people.includes(S.me))S.me='';
   S.me=S.me||'';
 }
 function load(){
@@ -204,7 +208,8 @@ let saveT;
 function save(){
   S.lastChange=Date.now();
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Speichern fehlgeschlagen! Bitte sofort exportieren.')}
-  const el=$('#saved');el.classList.add('show');clearTimeout(saveT);saveT=setTimeout(()=>el.classList.remove('show'),900);
+  if(window.cloud)window.cloud.sync();
+  const el=$('#saved');el.textContent='Gespeichert';el.classList.add('show');clearTimeout(saveT);saveT=setTimeout(()=>el.classList.remove('show'),900);
 }
 load();
 normalizeS();
@@ -316,14 +321,23 @@ function backupWarn(){
 }
 const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
-  if(!S.me||!S.people.includes(S.me))return whoScreen();
-  if(S.approved[S.me]===false)return waitScreen();
+  if(CLOUD){
+    const c=cur.cloud||{status:'loading'};
+    if(c.status==='loading')return infoScreen('Lade …');
+    if(c.status==='error')return errScreen(c.msg);
+    if(c.status==='out')return loginScreen();
+    if(!c.profile.approved)return waitScreen();
+    if(!APP.ready)return infoScreen('Daten werden geladen …');
+  }else{
+    if(!S.me||!S.people.includes(S.me))return whoScreen();
+    if(S.approved[S.me]===false)return waitScreen();
+  }
   if(!canSales()&&(tab==='erfassen'||tab==='zahlen'))tab='plan';
   const items=[['plan','◫','Plan'],['erfassen','✎','Verkauf',1],['zahlen','▤','Zahlen',1],['preise','€','Preise']].filter(i=>!i[3]||canSales());
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${i[0]===tab?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
-  $('#hstat').textContent=isAdmin()?(S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup'):ROLE[roleOf(S.me)];
+  $('#hstat').textContent=headerStat();
   ({erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
 }
 
@@ -511,19 +525,53 @@ function whoScreen(){
 }
 const pendingNames=()=>S.people.filter(n=>S.approved[n]===false);
 function waitScreen(){
-  $('#nav').style.display='none';$('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();$('#hstat').textContent='wartet auf Freigabe';
-  $('#app').innerHTML=`<h2 style="margin-top:20px">Fast geschafft, ${esc(S.me)}</h2>
-    <div class="hint">Dein Zugang muss noch vom Admin freigegeben werden. Sobald das passiert ist, öffnest du die App erneut und bist drin.</div>
-    <button class="btn sec" id="whoBack">Anderen Namen wählen</button>`;
+  const nm=S.me||(cur.cloud&&cur.cloud.profile&&cur.cloud.profile.name)||'';
+  $('#nav').style.display='none';$('#pname').textContent=nm;$('#av').textContent=nm.trim().charAt(0).toUpperCase();$('#hstat').textContent='wartet auf Freigabe';
+  $('#app').innerHTML=`<h2 style="margin-top:20px">Fast geschafft, ${esc(nm)}</h2>
+    <div class="hint">Dein Zugang muss noch vom Admin freigegeben werden.${CLOUD?' Sobald das passiert ist, geht es hier automatisch weiter.':' Sobald das passiert ist, öffnest du die App erneut und bist drin.'}</div>
+    ${CLOUD?'<button class="btn sec" id="signOutBtn">Abmelden</button>':'<button class="btn sec" id="whoBack">Anderen Namen wählen</button>'}`;
+}
+function infoScreen(t){
+  $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='';$('#hstat').textContent='';
+  $('#app').innerHTML=`<h2 style="margin-top:30px;text-align:center;color:var(--mut)">${esc(t)}</h2>`;
+}
+function errScreen(m){
+  $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='';$('#hstat').textContent='';
+  $('#app').innerHTML=`<h2 style="margin-top:20px">Das hat nicht geklappt</h2><div class="warn">${esc(m||'Unbekannter Fehler')}</div><button class="btn" id="retryBtn">Neu laden</button>`;
+}
+const AUTH_ERR={'auth/invalid-credential':'E-Mail oder Passwort stimmt nicht.','auth/wrong-password':'E-Mail oder Passwort stimmt nicht.','auth/user-not-found':'E-Mail oder Passwort stimmt nicht.',
+  'auth/email-already-in-use':'Für diese E-Mail gibt es schon ein Konto. Bitte anmelden.','auth/weak-password':'Das Passwort braucht mindestens 6 Zeichen.','auth/invalid-email':'Die E-Mail-Adresse ist ungültig.',
+  'auth/missing-password':'Bitte ein Passwort eingeben.','auth/network-request-failed':'Keine Verbindung. Bitte Netz prüfen.','auth/too-many-requests':'Zu viele Versuche. Bitte kurz warten.',
+  'auth/operation-not-allowed':'E-Mail/Passwort ist in Firebase noch nicht aktiviert.','auth/invalid-api-key':'Firebase-Schlüssel ungültig. Bitte Till Bescheid geben.','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'Firebase-Schlüssel ungültig. Bitte Till Bescheid geben.'};
+const authErr=e=>AUTH_ERR[e&&e.code]||('Fehler: '+((e&&(e.code||e.message))||'unbekannt'));
+function loginScreen(){
+  const a=cur.auth||(cur.auth={mode:'login',err:'',info:'',mail:''}),reg=a.mode==='reg';
+  $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='';$('#hstat').textContent='';
+  $('#app').innerHTML=`<h2 style="margin-top:20px">${reg?'Konto anlegen':'Anmelden'}</h2>
+    <div class="card pad">
+    ${reg?'<input class="t" id="au-name" placeholder="Benutzername (z. B. Vorname)" autocapitalize="words" autocomplete="nickname" style="margin-bottom:8px">':''}
+    <input class="t" id="au-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" placeholder="E-Mail" value="${esc(a.mail||'')}" style="margin-bottom:8px">
+    <input class="t" id="au-pw" type="password" autocomplete="${reg?'new-password':'current-password'}" placeholder="Passwort (mindestens 6 Zeichen)">
+    ${a.err?`<div class="warn" style="margin-top:10px">${esc(a.err)}</div>`:''}${a.info?`<div class="hint">${esc(a.info)}</div>`:''}
+    <button class="btn" id="authGo">${reg?'Konto anlegen':'Anmelden'}</button></div>
+    <button class="btn sec" data-authmode="${reg?'login':'reg'}">${reg?'Ich habe schon ein Konto':'Neu hier? Konto anlegen'}</button>
+    ${reg?'<div class="hint">Nach dem Anlegen muss der Admin dich freigeben.</div>':'<button class="btn sec" id="authReset">Passwort vergessen</button>'}`;
+}
+function accountBlock(){
+  if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
+    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div><button class="btn sec" id="signOutBtn">Abmelden</button>`}
+  return `<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>`;
+}
+function headerStat(){
+  if(CLOUD)return ((window.APP&&APP.status)||'')+' · '+ROLE[roleOf(S.me)];
+  return isAdmin()?(S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup'):ROLE[roleOf(S.me)];
 }
 function freigaben(){
   const p=pendingNames();if(!p.length)return '';
   return `<h2 style="margin-top:4px">Freigaben</h2><div class="card pad">${p.map(n=>`<div class="row"><div class="n">${esc(n)}</div><div class="ctr"><button class="claim" data-appr="${esc(n)}">Freigeben</button><button data-deny="${esc(n)}" style="color:var(--red)">×</button></div></div>`).join('')}</div>`;
 }
 function vProfil(){
-  $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2>
-    <div class="card pad"><label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}
-    <div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div></div>`;
+  $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>`;
 }
 function vPreise(){
   const ps=S.products.filter(p=>!p.free),row=p=>`<div class="row"><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b>${p.price?eur(p.price):'auf Anfrage'}</b></div>`;
@@ -675,9 +723,17 @@ document.addEventListener('click',ev=>{
   }
   const go=ev.target.closest('[data-go]');if(go){tab=go.dataset.go;window.scrollTo(0,0);return render()}
   if(ev.target.id==='whoBack'){S.me='';save();return render()}
-  if(ev.target.dataset.appr){S.approved[ev.target.dataset.appr]=true;save();return render()}
+  if(ev.target.dataset.appr){
+    const n=ev.target.dataset.appr;
+    if(CLOUD){
+      if(S.people.filter(x=>x===n).length>1)return alert('Dieser Name ist schon vergeben. Bitte lehne die Anfrage ab und bitte die Person, sich mit einem anderen Namen zu registrieren.');
+      window.cloud.approve(n).catch(e=>alert('Freigabe fehlgeschlagen: '+(e.code||e.message)));return;
+    }
+    S.approved[n]=true;save();return render();
+  }
   if(ev.target.dataset.deny){
     const n=ev.target.dataset.deny;
+    if(CLOUD){if(confirm(`Anfrage von ${n} ablehnen und Benutzer entfernen?`))window.cloud.remove(n).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
     if(confirm(`Anfrage von ${n} ablehnen und Benutzer entfernen?`)){S.people=S.people.filter(x=>x!==n);delete S.roles[n];delete S.approved[n];save();render()}
     return;
   }
@@ -722,7 +778,7 @@ document.addEventListener('click',ev=>{
     if(f.id)Object.assign(S.events.find(x=>x.id===f.id),base);else S.events.push({id:uid(),...base,createdBy:S.me});
     cur.ef=newEf(f.cal,cur.cday);save();return render();
   }
-  if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu',owner:S.me});cur.ntext='';save();return render()}
+  if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu',owner:S.me,ownerUid:S.myUid||''});cur.ntext='';save();return render()}
   if(a==='n2t'){const n=S.notes.find(n=>n.id===v);cur.tf={...newTf(cur.cday),title:n.text.slice(0,200),noteId:n.id};cur.tfOpen=true;cur.ptab='notiz';window.scrollTo(0,0);return render()}
   if(a==='ndel'){if(confirm('Notiz ins Archiv verschieben?')){softDel(S.notes.find(n=>n.id===v));save();render()}return}
   if(a==='restore'){const [k,id]=v.split(':'),x=(k==='task'?S.tasks:k==='event'?S.events:S.notes).find(y=>y.id===id);if(x){delete x.deleted;delete x.deletedBy;delete x.deletedAt;save();render()}return}
@@ -837,7 +893,7 @@ function vDaten(){
   $('#app').innerHTML=`${backupWarn()}
   ${freigaben()}
   <h2 ${pendingNames().length?'':'style="margin-top:4px"'}>Profil</h2>
-  <div class="card pad"><label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}</div>
+  <div class="card pad">${accountBlock()}</div>
   <h2>Backup</h2>
   <div class="card pad"><div class="hint">Täglich abends sichern (iCloud Drive, Mail oder AirDrop).</div>
   <button class="btn" id="bJson">Backup sichern (JSON)</button>
@@ -862,8 +918,8 @@ function vDaten(){
   <button class="btn sec" id="addP">+ Produkt</button></div>
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin sieht alles, Verkauf sieht Verkauf und Zahlen, Team sieht Plan und Preise.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}"><select class="t" style="width:110px" data-role="${i}">${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select><button class="x" data-del-pe="${i}">×</button></div>`).join('')}
-  <button class="btn sec" id="addPe">+ Person</button></div>
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>`).join('')}
+  ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
   <h2>Vorschläge einspielen</h2>
   <div class="card pad"><div class="hint">Datei mit Zuordnungsvorschlägen zu deinen Notizen (von Claude).</div>
   <button class="btn sec" id="bSug">Vorschläge-Datei wählen …</button>
@@ -919,7 +975,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='fImp'&&t.files[0]){
     const r=new FileReader();r.onload=()=>{try{
       const d=JSON.parse(r.result);if(!d.stands||!d.products||!d.entries||d.v!==2)throw 0;
-      if(confirm('Aktuelle Daten durch dieses Backup ersetzen?')){S=d;if(!S.moves)S.moves=[];normalizeS();save();cur.stand=S.stands[0].id;render()}
+      if(confirm('Aktuelle Daten durch dieses Backup ersetzen?')){if(CLOUD){const keep={};['people','roles','approved','userIds','me','myUid'].forEach(x=>keep[x]=S[x]);S=d;Object.assign(S,keep)}else S=d;if(!S.moves)S.moves=[];normalizeS();save();cur.stand=S.stands[0].id;render()}
     }catch(e){alert('Keine gültige Backup-Datei.')}};r.readAsText(t.files[0]);
   }
   if(t.dataset.pn){prod(t.dataset.pn).name=t.value||'?';save()}
@@ -933,7 +989,9 @@ document.addEventListener('click',ev=>{
   const t=ev.target;
   if(t.id==='addPe'){S.people.push('Neu');save();render()}
   if(t.id==='bSug')$('#fSug').click();
-  if(t.dataset.delPe!=null&&S.people.length>1&&S.people[+t.dataset.delPe]!==S.me){S.people.splice(+t.dataset.delPe,1);save();render()}
+  if(t.dataset.delPe!=null&&S.people.length>1&&S.people[+t.dataset.delPe]!==S.me){
+    if(CLOUD){const n=S.people[+t.dataset.delPe];if(confirm(`${n} aus dem Team entfernen? Aufgaben bleiben erhalten.`))window.cloud.remove(n).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
+    S.people.splice(+t.dataset.delPe,1);save();render()}
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
@@ -945,7 +1003,10 @@ document.addEventListener('change',ev=>{
       S.notes.forEach(n=>{if(n.owner===old)n.owner=nw});if(S.me===old)S.me=nw;save();render();
     }
   }
-  if(t.dataset.role!=null){S.roles[S.people[+t.dataset.role]]=t.value;save();render()}
+  if(t.dataset.role!=null){
+    const n=S.people[+t.dataset.role];
+    if(CLOUD){window.cloud.setRole(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
+    S.roles[n]=t.value;save();render()}
   if(t.id==='fSug'&&t.files[0]){
     const r=new FileReader();r.onload=()=>{try{
       const d=JSON.parse(r.result),items=d.suggestions||d;let n=0;
@@ -967,8 +1028,45 @@ document.addEventListener('change',ev=>{
   const t=ev.target;
 });
 
+/* ---------- Brücke zur Cloud-Schicht (cloud.js) ---------- */
+function toast(msg){const el=$('#saved');el.textContent=msg;el.classList.add('show');clearTimeout(saveT);saveT=setTimeout(()=>{el.classList.remove('show');el.textContent='Gespeichert'},3000)}
+function updateHeader(){const h=$('#hstat');if(h&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'&&cur.cloud.profile.approved)))h.textContent=headerStat()}
+let needR=false;
+const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
+function softRender(){if(editing()){needR=true;return}needR=false;render()}
+document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}Object.assign(S,{tasks:[],events:[],notes:[],moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
+const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,ready:false,status:'',setCloud(c){cur.cloud=c}};
+window.APP=APP;
+
+document.addEventListener('click',async ev=>{
+  const m=ev.target.closest('[data-authmode]');
+  if(m){cur.auth=Object.assign(cur.auth||{},{mode:m.dataset.authmode,err:'',info:''});return render()}
+  const id=ev.target.id;
+  if(id==='retryBtn')return location.reload();
+  if(id==='signOutBtn'){if(window.cloud)await window.cloud.signOut();return}
+  if(id!=='authGo'&&id!=='authReset')return;
+  const a=cur.auth||(cur.auth={mode:'login'});
+  const mail=($('#au-mail').value||'').trim(),pw=$('#au-pw').value||'',nm=a.mode==='reg'?($('#au-name').value||'').trim().replace(/\s+/g,' '):'';
+  a.mail=mail;a.err='';a.info='';
+  if(!window.cloud){a.err='Verbindung wird aufgebaut, bitte einen Moment warten und noch einmal tippen.';return render()}
+  if(id==='authReset'){
+    if(!mail){a.err='Bitte zuerst die E-Mail eintragen.';return render()}
+    try{await window.cloud.reset(mail);a.info='Wenn es ein Konto gibt, ist eine E-Mail zum Zurücksetzen unterwegs.'}catch(e){a.err=authErr(e)}
+    return render();
+  }
+  if(!mail||!pw){a.err='Bitte E-Mail und Passwort eingeben.';return render()}
+  if(a.mode==='reg'&&!nm){a.err='Bitte einen Benutzernamen eingeben.';return render()}
+  const b=$('#authGo');b.disabled=true;b.textContent='Einen Moment …';
+  try{a.mode==='reg'?await window.cloud.register(nm,mail,pw):await window.cloud.signIn(mail,pw)}
+  catch(e){a.err=authErr(e);render()}
+});
+document.addEventListener('input',ev=>{if(ev.target.id==='au-mail'&&cur.auth)cur.auth.mail=ev.target.value});
+
 render();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
+<script type="module" src="cloud.js"></script>
 </body>
 </html>
