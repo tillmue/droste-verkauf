@@ -54,6 +54,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Strafbierkisten: alle sehen, nur Admin vergibt und hakt ab
+    match /penalties/{id} {
+      allow read: if isMember();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
     // Brain-Dump-Notizen: nur eigene, Admin sieht alle
     match /notes/{id} {
       allow read: if isMember() && (isAdmin() || resource.data.ownerUid == request.auth.uid);

@@ -60,6 +60,9 @@ details[open] summary::after{transform:rotate(90deg)}
 .cheers{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:20;padding:24px}
 .cheers>div{background:var(--card);color:var(--text);border-radius:20px;padding:28px 22px;text-align:center;max-width:320px}
 .cheers b{display:block;font-size:52px;font-weight:400}.cheers p{font-size:18px;font-weight:600;margin:8px 0 16px}
+.barw{height:10px;background:var(--fill);border-radius:6px;overflow:hidden}
+.barw i{display:block;height:100%;background:var(--green);border-radius:6px}
+.tile small+b+small{margin-top:2px}
 .wheels{display:flex;gap:8px;margin-bottom:8px}
 .wcol{flex:1;position:relative}
 .wheel{height:150px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:55px 0;background:var(--fill);border-radius:12px;overscroll-behavior:contain}
@@ -182,12 +185,12 @@ const DEFAULT=()=>({
     {id:'p16',name:'Nordmann 25 €',price:25,cost:0},
     {id:'p17',name:'Nordmann 26 €',price:26,cost:0},
     {id:'f1',name:'Nordmann (Einzelpreis)',price:0,cost:0,free:true}],
-  entries:{}, moves:[], tasks:[], notes:[], events:[], people:['Cedric','Felix','Magnus','Lukas','Till','Rolf'], roles:{Till:'admin',Rolf:'verkauf'}, me:'', lastExport:0, lastChange:0
+  entries:{}, moves:[], tasks:[], notes:[], events:[], penalties:[], people:['Cedric','Felix','Magnus','Lukas','Till','Rolf'], roles:{Till:'admin',Rolf:'verkauf'}, me:'', lastExport:0, lastChange:0
 });
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.approved=S.approved||{};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -215,7 +218,7 @@ load();
 normalizeS();
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 
-let tab='plan', cur={det:{},zst:false,stand:null,date:todayStr(),xp:null,parsed:null,qtext:'',ptab:'aufg',cal:todayStr().slice(0,7),cday:todayStr(),pf:'',tfOpen:false,ntext:'',tf:null};
+let tab='ich', cur={pen:{person:'',reason:''},det:{},zst:false,stand:null,date:todayStr(),xp:null,parsed:null,qtext:'',ptab:'aufg',cal:todayStr().slice(0,7),cday:todayStr(),pf:'',tfOpen:false,ntext:'',tf:null};
 try{const c=JSON.parse(localStorage.getItem(KEY+'-ui'));if(c&&S.stands.some(s=>s.id===c.stand))cur.stand=c.stand}catch(e){}
 if(!cur.stand)cur.stand=S.stands[0].id;
 const keyOf=(st,d)=>st+'|'+d;
@@ -333,12 +336,12 @@ function render(){
     if(S.approved[S.me]===false)return waitScreen();
   }
   if(!canSales()&&(tab==='erfassen'||tab==='zahlen'))tab='plan';
-  const items=[['plan','◫','Plan'],['erfassen','✎','Verkauf',1],['zahlen','▤','Zahlen',1],['preise','€','Preise']].filter(i=>!i[3]||canSales());
+  const items=[['ich','◉','Ich'],['plan','◫','Plan'],['erfassen','✎','Verkauf',1],['zahlen','▤','Zahlen',1],['preise','€','Preise']].filter(i=>!i[3]||canSales());
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${i[0]===tab?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
   $('#hstat').textContent=headerStat();
-  ({erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
+  ({ich:vIch,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
 }
 
 /* ---------- Drehrad ---------- */
@@ -528,8 +531,15 @@ function waitScreen(){
   const nm=S.me||(cur.cloud&&cur.cloud.profile&&cur.cloud.profile.name)||'';
   $('#nav').style.display='none';$('#pname').textContent=nm;$('#av').textContent=nm.trim().charAt(0).toUpperCase();$('#hstat').textContent='wartet auf Freigabe';
   $('#app').innerHTML=`<h2 style="margin-top:20px">Fast geschafft, ${esc(nm)}</h2>
+    ${CLOUD?verifyBlock():''}
     <div class="hint">Dein Zugang muss noch vom Admin freigegeben werden.${CLOUD?' Sobald das passiert ist, geht es hier automatisch weiter.':' Sobald das passiert ist, öffnest du die App erneut und bist drin.'}</div>
     ${CLOUD?'<button class="btn sec" id="signOutBtn">Abmelden</button>':'<button class="btn sec" id="whoBack">Anderen Namen wählen</button>'}`;
+}
+function verifyBlock(){
+  const c=(cur.cloud&&cur.cloud.profile)||{};
+  if(c.verified)return '<div class="tbanner" style="margin-top:10px">E-Mail bestätigt ✓</div>';
+  return `<div class="warn" style="margin-top:10px">Bitte bestätige deine E-Mail-Adresse. Wir haben dir einen Link geschickt (auch im Spam-Ordner nachsehen).</div>
+    <div class="mini"><button class="btn sec" id="verResend" style="margin:0">Link erneut senden</button><button class="btn sec" id="verCheck" style="margin:0">Ich habe bestätigt</button></div>`;
 }
 function infoScreen(t){
   $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='';$('#hstat').textContent='';
@@ -568,10 +578,57 @@ function headerStat(){
 }
 function freigaben(){
   const p=pendingNames();if(!p.length)return '';
-  return `<h2 style="margin-top:4px">Freigaben</h2><div class="card pad">${p.map(n=>`<div class="row"><div class="n">${esc(n)}</div><div class="ctr"><button class="claim" data-appr="${esc(n)}">Freigeben</button><button data-deny="${esc(n)}" style="color:var(--red)">×</button></div></div>`).join('')}</div>`;
+  return `<h2 style="margin-top:4px">Freigaben</h2>${p.map(n=>`<div style="background:var(--fill);border-radius:14px;padding:14px;margin-bottom:10px"><div class="n" style="font-size:18px">${esc(n)}</div>
+    <div class="p">${S.emailVerified&&S.emailVerified[n]?'E-Mail bestätigt':'E-Mail noch nicht bestätigt'}</div>
+    <div class="mini" style="margin-top:12px"><button class="btn green" data-appr="${esc(n)}" style="margin:0">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;color:var(--red)">Ablehnen</button></div></div>`).join('')}`;
 }
 function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>`;
+}
+/* ---------- Ich: Dashboard ---------- */
+function vIch(){
+  const td=todayStr(),me=S.me,now=new Date(),nowS=now.toDateString();
+  const live=S.tasks.filter(t=>!t.deleted);
+  const today=live.filter(t=>t.person===me&&!t.done&&t.date&&t.date<=td).sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?-1:1);
+  const free=live.filter(t=>!t.person&&!t.done).length;
+  const doneBy=live.filter(t=>t.done&&t.doneBy===me&&t.doneAt);
+  const doneToday=doneBy.filter(t=>new Date(t.doneAt).toDateString()===nowS).length;
+  const week=doneBy.filter(t=>t.doneAt>Date.now()-7*864e5).length;
+  const days=new Set(doneBy.map(t=>new Date(t.doneAt).toDateString()));
+  let streak=0;const d=new Date();if(!days.has(d.toDateString()))d.setDate(d.getDate()-1);
+  while(days.has(d.toDateString())){streak++;d.setDate(d.getDate()-1)}
+  const created=S.tasks.filter(t=>t.createdBy===me).length;
+  const doneAll=live.filter(t=>t.done&&t.doneBy===me).length;
+  const myPen=S.penalties.filter(p=>p.person===me&&!p.paid).reduce((a,p)=>a+(p.qty||1),0);
+  const CAL={saison:'Saison',lieferung:'Lieferung',insta:'Instagram'};
+  const evs=S.events.filter(e=>!e.deleted&&e.date<=td&&td<=(e.end||e.date));
+  const sb=canSales()?salesByDate()[td]:null;
+  const cnt=live.filter(t=>t.done&&t.doneBy).reduce((m,t)=>(m[t.doneBy]=(m[t.doneBy]||0)+1,m),{});
+  const rank=Object.entries(cnt).map(([l,v])=>({l,v})).sort((a,b)=>b.v-a.v).slice(0,5);
+  const openPen=S.penalties.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0));
+  const hello=now.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
+  const pn=cur.pen;
+  $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>
+  <div class="card pad"><div class="barw"><i style="width:${Math.min(100,doneToday/3*100)}%"></i></div>
+    <div class="hint" style="margin:6px 0 0">${doneToday>=3?'Feierabendbier verdient 🍺':doneToday+' von 3 Aufgaben bis zum Feierabendbier'}</div></div>
+  <h3>Heute für dich</h3>
+  <div class="card">${today.map(t=>taskRow(t,true)).join('')||'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>'}</div>
+  ${free?`<div class="tbanner" data-pl="gopen">${free} offene Aufgabe${free>1?'n':''} ohne Zuständigen, such dir eine aus →</div>`:''}
+  ${evs.length?`<h3>Heute im Kalender</h3><div class="card">${evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')}</div>`:''}
+  ${sb?`<h3>Verkauf heute</h3><div class="card pad"><div class="kv"><span>Alle Stände</span><span>${sb.q} Stk. · ${eur0(sb.r)}</span></div></div>`:''}
+  <h2>Meine Zahlen</h2>
+  <div class="tiles">
+    <div class="tile ${myPen?'r':''}"><small>Strafbierkisten offen</small><b>${myPen}</b></div>
+    <div class="tile"><small>Aufgaben eingetragen</small><b>${created}</b></div>
+    <div class="tile g"><small>Aufgaben erledigt</small><b>${doneAll}</b><small>${week} in den letzten 7 Tagen</small></div>
+    <div class="tile b"><small>Serie</small><b>${streak} ${streak===1?'Tag':'Tage'}</b></div></div>
+  ${rank.length?`<h3>Team: erledigte Aufgaben</h3><div class="card pad">${hbars(rank,v=>v+' erledigt')}</div>`:''}
+  <h2>Strafbierkisten</h2>
+  <div class="card">${openPen.map(p=>`<div class="row"><div><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')} · ${new Date(p.at||Date.now()).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</div></div>${isAdmin()?`<button class="claim" data-pl="penpaid" data-v="${p.id}">bezahlt</button>`:''}</div>`).join('')||'<div class="row"><span class="p">Keine offenen Kisten. Weiter so.</span></div>'}</div>
+  ${isAdmin()?`<div class="card pad"><label class="f">Kiste vergeben</label>
+    <select class="t" id="pn-person">${S.people.map(n=>`<option ${n===(pn.person||S.people[0])?'selected':''}>${esc(n)}</option>`).join('')}</select>
+    <input class="t" id="pn-reason" placeholder="Grund" value="${esc(pn.reason||'')}" style="margin-top:8px">
+    <button class="btn" data-pl="penadd" style="margin-bottom:0">Strafbierkiste vergeben</button></div>`:''}`;
 }
 function vPreise(){
   const ps=S.products.filter(p=>!p.free),row=p=>`<div class="row"><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b>${p.price?eur(p.price):'auf Anfrage'}</b></div>`;
@@ -625,8 +682,7 @@ function taskForm(){
     <input class="t" id="tf-title" placeholder="Was ist zu tun?" value="${esc(f.title)}">
     <div class="mini" style="margin-top:8px"><input class="t" type="date" id="tf-date" value="${f.date}" style="min-width:0"><input class="t" type="time" id="tf-time" value="${f.time}" style="min-width:0"></div>
     <div class="mini" style="margin-top:8px"><select class="t" id="tf-person"><option value="">Offen (jeder kann übernehmen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>
-    <select class="t" id="tf-stand"><option value="">Stand (optional)</option>${S.stands.map(x=>`<option value="${x.id}" ${sel(x.id,f.stand)}>${esc(x.name)}</option>`).join('')}</select></div>
-    <div class="mini" style="margin-top:8px"><select class="t" id="tf-type"><option value="todo" ${sel('todo',f.type)}>Aufgabe</option><option value="termin" ${sel('termin',f.type)}>Termin</option></select></div>
+    <select class="t" id="tf-stand"><option value="">Hof (Standard)</option>${S.stands.map(x=>`<option value="${x.id}" ${sel(x.id,f.stand)}>${esc(x.name)}</option>`).join('')}</select></div>
     <div class="mini" style="margin-top:8px"><button class="btn" data-pl="tsave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${(f.id||cur.tfOpen)?'<button class="btn sec" data-pl="tcancel" style="margin:0">Abbrechen</button>':''}</div>
     ${canDel?'<button class="btn red" data-pl="tdel">Löschen</button>':''}</div>`;
 }
@@ -746,6 +802,10 @@ document.addEventListener('click',ev=>{
   if(a==='cmon'){const [y,m]=cur.cal.split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.cal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
   if(a==='ctoday'){cur.cday=td;cur.cal=td.slice(0,7);if(!cur.tf.id)cur.tf.date=td;if(!cur.ef.id)cur.ef.date=td;return render()}
   if(a==='pf'){cur.pf=v;return render()}
+  if(a==='gopen'){tab='plan';cur.ptab='aufg';cur.pf='@open';window.scrollTo(0,0);return render()}
+  if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
+  if(a==='penadd'){const per=cur.pen.person||S.people[0];S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
+  if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
   if(a==='tclaim'){const x=S.tasks.find(x=>x.id===v);x.person=S.me;save();return render()}
   if(a==='tdone'){
     const x=S.tasks.find(x=>x.id===v);x.done=!x.done;
@@ -920,6 +980,10 @@ function vDaten(){
   <div class="card pad"><div class="hint">Rollen: Admin sieht alles, Verkauf sieht Verkauf und Zahlen, Team sieht Plan und Preise.</div>
   ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
+  <h2>Kalender importieren</h2>
+  <div class="card pad"><div class="hint">Datei mit Kalendereinträgen (z. B. Instagram-Plan) einspielen. Schon vorhandene Einträge werden übersprungen.</div>
+  <button class="btn sec" id="bImpEv">Importdatei wählen …</button>
+  <input type="file" id="fImpEv" accept=".json,application/json" hidden></div>
   <h2>Vorschläge einspielen</h2>
   <div class="card pad"><div class="hint">Datei mit Zuordnungsvorschlägen zu deinen Notizen (von Claude).</div>
   <button class="btn sec" id="bSug">Vorschläge-Datei wählen …</button>
@@ -989,6 +1053,7 @@ document.addEventListener('click',ev=>{
   const t=ev.target;
   if(t.id==='addPe'){S.people.push('Neu');save();render()}
   if(t.id==='bSug')$('#fSug').click();
+  if(t.id==='bImpEv')$('#fImpEv').click();
   if(t.dataset.delPe!=null&&S.people.length>1&&S.people[+t.dataset.delPe]!==S.me){
     if(CLOUD){const n=S.people[+t.dataset.delPe];if(confirm(`${n} aus dem Team entfernen? Aufgaben bleiben erhalten.`))window.cloud.remove(n).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
     S.people.splice(+t.dataset.delPe,1);save();render()}
@@ -1007,6 +1072,14 @@ document.addEventListener('change',ev=>{
     const n=S.people[+t.dataset.role];
     if(CLOUD){window.cloud.setRole(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
     S.roles[n]=t.value;save();render()}
+  if(t.id==='fImpEv'&&t.files[0]){
+    const r=new FileReader();r.onload=()=>{try{
+      const d=JSON.parse(r.result);let ne=0,nt=0;
+      (d.events||[]).forEach(e=>{if(e&&e.id&&e.title&&e.date&&!S.events.some(x=>x.id===e.id)){S.events.push({...e,createdBy:S.me});ne++}});
+      (d.tasks||[]).forEach(k=>{if(k&&k.id&&k.title&&!S.tasks.some(x=>x.id===k.id)){S.tasks.push({done:false,created:Date.now(),createdBy:S.me,...k});nt++}});
+      save();alert(`${ne} Kalendereinträge und ${nt} Aufgaben importiert.`);render();
+    }catch(e){alert('Keine gültige Importdatei.')}};r.readAsText(t.files[0]);t.value='';
+  }
   if(t.id==='fSug'&&t.files[0]){
     const r=new FileReader();r.onload=()=>{try{
       const d=JSON.parse(r.result),items=d.suggestions||d;let n=0;
@@ -1035,7 +1108,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}Object.assign(S,{tasks:[],events:[],notes:[],moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}Object.assign(S,{tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
@@ -1046,6 +1119,8 @@ document.addEventListener('click',async ev=>{
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
   if(id==='signOutBtn'){if(window.cloud)await window.cloud.signOut();return}
+  if(id==='verResend'){try{await window.cloud.resendVerification();toast('Mail gesendet')}catch(e){toast(authErr(e))}return}
+  if(id==='verCheck'){try{await window.cloud.refreshVerified()}catch(e){toast(authErr(e))}return}
   if(id!=='authGo'&&id!=='authReset')return;
   const a=cur.auth||(cur.auth={mode:'login'});
   const mail=($('#au-mail').value||'').trim(),pw=$('#au-pw').value||'',nm=a.mode==='reg'?($('#au-name').value||'').trim().replace(/\s+/g,' '):'';
@@ -1062,7 +1137,12 @@ document.addEventListener('click',async ev=>{
   try{a.mode==='reg'?await window.cloud.register(nm,mail,pw):await window.cloud.signIn(mail,pw)}
   catch(e){a.err=authErr(e);render()}
 });
-document.addEventListener('input',ev=>{if(ev.target.id==='au-mail'&&cur.auth)cur.auth.mail=ev.target.value});
+document.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.id==='au-mail'&&cur.auth)cur.auth.mail=t.value;
+  if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
+});
+document.addEventListener('change',ev=>{const t=ev.target;if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value});
 
 render();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

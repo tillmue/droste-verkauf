@@ -24,6 +24,7 @@ function initCloud(FB) {
   const T = window.APP;
   const app = FB.initializeApp(window.FIREBASE_CONFIG);
   const auth = FB.getAuth(app);
+  auth.languageCode = 'de';
   let db;
   try {
     db = FB.initializeFirestore(app, { localCache: FB.persistentLocalCache({ tabManager: FB.persistentMultipleTabManager() }) });
@@ -34,6 +35,7 @@ function initCloud(FB) {
     tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: false },
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: false },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
+    penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,
                 put: m => { T.S.products = Object.values(m).sort((a, b) => a._o - b._o).map(({ _o, ...r }) => r); } },
     stands:   { get: () => T.S.stands.map(x => [x.id, x]), ordered: true, del: true,
@@ -118,15 +120,15 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
-      S.people = arr.map(u => u.name); S.roles = {}; S.approved = {}; S.userIds = {};
-      arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; });
+      S.people = arr.map(u => u.name); S.roles = {}; S.approved = {}; S.userIds = {}; S.emailVerified = {};
+      arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emailVerified[u.name] = u.emailVerified === true; });
       T.softRender();
     }, err => console.error('users', err)));
-    ['tasks', 'events', 'notes', 'products', 'stands'].forEach(listen);
+    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands'].forEach(listen);
     if (p.role !== 'team') ['moves', 'sales'].forEach(listen);
   }
 
@@ -146,7 +148,8 @@ function initCloud(FB) {
       S.roles = S.roles || {}; S.approved = S.approved || {};
       S.roles[profile.name] = profile.role; S.approved[profile.name] = profile.approved === true;
       if (!S.people || !S.people.includes(profile.name)) S.people = [...(S.people || []), profile.name];
-      T.setCloud({ status: 'in', profile: { ...profile, uid: user.uid, email: user.email } });
+      if (user.emailVerified && profile.emailVerified !== true) FB.updateDoc(ref, { emailVerified: true }).catch(() => {});
+      T.setCloud({ status: 'in', profile: { ...profile, uid: user.uid, email: user.email, verified: !!user.emailVerified } });
       if (profile.approved === true) activate(profile, user.uid); else { deactivate(); T.softRender(); }
       T.render();
     }, err => { console.error(err); T.setCloud({ status: 'error', msg: 'Profil konnte nicht geladen werden (' + (err.code || err.message) + ')' }); T.render(); });
@@ -170,7 +173,18 @@ function initCloud(FB) {
       try {
         const cr = await FB.createUserWithEmailAndPassword(auth, email.trim(), pw);
         await FB.setDoc(FB.doc(db, 'users', cr.user.uid), { name: name.trim(), email: email.trim().toLowerCase(), role: 'team', approved: false, created: Date.now() });
+        try { await FB.sendEmailVerification(cr.user); } catch (e) { console.warn('Bestätigungsmail nicht gesendet', e); }
       } finally { registering = false; }
+    },
+    resendVerification: () => FB.sendEmailVerification(auth.currentUser),
+    async refreshVerified() {
+      const u = auth.currentUser; if (!u) return;
+      await u.reload();
+      if (u.emailVerified) {
+        FB.updateDoc(FB.doc(db, 'users', u.uid), { emailVerified: true }).catch(() => {});
+        T.cur.cloud = { ...T.cur.cloud, profile: { ...T.cur.cloud.profile, verified: true } };
+      }
+      T.render();
     },
     signOut: () => FB.signOut(auth),
     setRole: (name, role) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { role }),
