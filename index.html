@@ -542,7 +542,17 @@ const wdD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short'
 const p2=n=>String(n).padStart(2,'0');
 const standNm=id=>{const x=S.stands.find(s=>s.id===id);return x?x.name:''};
 const ST={idee:'Idee',bereit:'Bereit',gepostet:'Gepostet'};
-function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
+function softDel(x){if(x){x.deleted=true;x.deletedBy=S.me;x.deletedAt=Date.now()}}
+function archivHtml(){
+  const del=[
+    ...S.tasks.filter(t=>t.deleted).map(t=>({k:'task',id:t.id,title:t.title,by:t.deletedBy,at:t.deletedAt,tag:'Aufgabe'})),
+    ...S.events.filter(e=>e.deleted).map(e=>({k:'event',id:e.id,title:e.title,by:e.deletedBy,at:e.deletedAt,tag:'Kalender'})),
+    ...S.notes.filter(n=>n.deleted&&(isAdmin()||n.owner===S.me)).map(n=>({k:'note',id:n.id,title:n.text.slice(0,60),by:n.deletedBy,at:n.deletedAt,tag:'Notiz'}))
+  ].sort((a,b)=>(b.at||0)-(a.at||0));
+  if(!del.length)return '';
+  return `<details data-det="archiv" ${cur.det.archiv?'open':''}><summary>Archiv (${del.length})</summary><div class="card">${del.map(d=>`<div class="row"><div style="min-width:0"><div class="n">${esc(d.title)}</div><div class="p">${d.tag} · gelöscht von ${esc(d.by||'?')}${d.at?' am '+new Date(d.at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):''}</div></div><button class="claim" data-pl="restore" data-v="${d.k}:${d.id}">Wiederherstellen</button></div>`).join('')}</div></details>`;
+}
+function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
 function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
 function showCheers(){
   const d=document.createElement('div');d.className='cheers';
@@ -595,8 +605,8 @@ function vPlan(){
 }
 function planKal(){
   const ct=cur.ctab,[y,m]=cur.cal.split('-').map(Number),td=todayStr(),sb=(canSales()&&ct==='saison')?salesByDate():{};
-  const evOn=ds=>S.events.filter(e=>e.cal===ct&&e.date<=ds&&ds<=(e.end||e.date));
-  const mine=ds=>S.tasks.filter(t=>t.person===S.me&&t.date===ds);
+  const evOn=ds=>S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=ds&&ds<=(e.end||e.date));
+  const mine=ds=>S.tasks.filter(t=>!t.deleted&&t.person===S.me&&t.date===ds);
   const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate();
   let cells='<i></i>'.repeat(off);
   for(let d=1;d<=dim;d++){
@@ -615,7 +625,7 @@ function planKal(){
     body=`<h2 style="margin-top:4px">${wdD(cur.cday)}</h2><div class="card">${day.map(t=>taskRow(t,false)).join('')||'<div class="row"><span class="p">Nichts für dich an diesem Tag.</span></div>'}</div>${taskForm()}`;
   }else{
     const first=`${y}-${p2(m)}-01`,last=`${y}-${p2(m)}-${p2(dim)}`;
-    const list=S.events.filter(e=>e.cal===ct&&e.date<=last&&(e.end||e.date)>=first).sort((a,b)=>a.date<b.date?-1:1);
+    const list=S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=last&&(e.end||e.date)>=first).sort((a,b)=>a.date<b.date?-1:1);
     body=`<h2 style="margin-top:4px">${mname}</h2><div class="card">${list.map(evRow).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>${eventForm()}`;
   }
   return chips+`<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>
@@ -625,10 +635,10 @@ function planKal(){
 function planAufg(){
   const td=todayStr(),pfl=cur.pf;
   const keep=t=>!pfl||(pfl==='@me'?t.person===S.me:pfl==='@open'?!t.person:t.person===pfl);
-  const list=S.tasks.filter(keep),open=list.filter(t=>!t.done);
+  const list=S.tasks.filter(t=>!t.deleted&&keep(t)),open=list.filter(t=>!t.done);
   const srt=a=>a.slice().sort((x,y)=>((x.date||'9')+(x.time||''))<((y.date||'9')+(y.time||''))?-1:1);
   const groups=[['Überfällig',open.filter(t=>t.date&&t.date<td)],['Heute',open.filter(t=>t.date===td)],['Demnächst',open.filter(t=>t.date>td)],['Ohne Datum',open.filter(t=>!t.date)]];
-  const done=list.filter(t=>t.done),nOpen=S.notes.filter(n=>n.status!=='zugeordnet'&&(isAdmin()||n.owner===S.me)).length;
+  const done=list.filter(t=>t.done),nOpen=S.notes.filter(n=>!n.deleted&&n.status!=='zugeordnet'&&(isAdmin()||n.owner===S.me)).length;
   const fl=[['','Alle'],['@me','Meine'],['@open','Offen']].concat(S.people.map(p=>[p,p]));
   return `<div class="card pad"><textarea class="t" id="nt-text" rows="2" placeholder="Brain Dump: was fällt dir ein?">${esc(cur.ntext)}</textarea>
     <button class="btn" data-pl="nsave" style="margin-bottom:0">Speichern</button>
@@ -638,10 +648,11 @@ function planAufg(){
   ${cur.tfOpen?taskForm():''}
   ${groups.map(([n,a])=>a.length?`<h3>${n} (${a.length})</h3><div class="card">${srt(a).map(t=>taskRow(t,true)).join('')}</div>`:'').join('')}
   ${done.length?`<h3>Erledigt (${done.length})</h3><div class="card">${srt(done).reverse().slice(0,15).map(t=>taskRow(t,true)).join('')}</div>`:''}
-  ${!S.tasks.length?'<div class="hint">Noch keine Aufgaben.</div>':''}`;
+  ${!S.tasks.some(t=>!t.deleted)?'<div class="hint">Noch keine Aufgaben.</div>':''}
+  ${archivHtml()}`;
 }
 function planNotiz(){
-  const ns=S.notes.filter(n=>isAdmin()||n.owner===S.me).sort((a,b)=>b.created-a.created);
+  const ns=S.notes.filter(n=>!n.deleted&&(isAdmin()||n.owner===S.me)).sort((a,b)=>b.created-a.created);
   return `<div class="card pad"><label class="f">Schnelle Notiz (nur für dich sichtbar${isAdmin()?', du siehst als Admin alle':''})</label>
     <textarea class="t" id="nt-text" placeholder="z. B. Kabeltrommel für Quick fehlt">${esc(cur.ntext)}</textarea>
     <button class="btn" data-pl="nsave" style="margin-bottom:0">Notiz speichern</button></div>
@@ -684,7 +695,7 @@ document.addEventListener('click',ev=>{
     const x=S.tasks.find(x=>x.id===v);x.done=!x.done;
     if(x.done){
       x.doneBy=S.me;x.doneAt=Date.now();
-      const n=S.tasks.filter(k=>k.done&&k.doneBy===S.me&&k.doneAt&&new Date(k.doneAt).toDateString()===new Date().toDateString()).length;
+      const n=S.tasks.filter(k=>!k.deleted&&k.done&&k.doneBy===S.me&&k.doneAt&&new Date(k.doneAt).toDateString()===new Date().toDateString()).length;
       S.cheered=S.cheered||{};
       if(n>=3&&S.cheered[S.me]!==td){S.cheered[S.me]=td;save();render();return showCheers()}
     }else{delete x.doneBy;delete x.doneAt}
@@ -693,7 +704,7 @@ document.addEventListener('click',ev=>{
   if(a==='tedit'){const x=S.tasks.find(x=>x.id===v);cur.tf={id:x.id,title:x.title,date:x.date||'',time:x.time||'',person:x.person||'',stand:x.stand||'',type:x.type||'todo',noteId:null,createdBy:x.createdBy||''};cur.tfOpen=true;return render()}
   if(a==='tnew'){cur.tf=newTf('');cur.tfOpen=true;return render()}
   if(a==='tcancel'){reset();return render()}
-  if(a==='tdel'){if(confirm('Eintrag löschen?')){S.tasks=S.tasks.filter(x=>x.id!==cur.tf.id);reset();save();render()}return}
+  if(a==='tdel'){if(confirm('Aufgabe ins Archiv verschieben?')){softDel(S.tasks.find(x=>x.id===cur.tf.id));reset();save();render()}return}
   if(a==='tsave'){
     const f=cur.tf;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');
     const base={title:f.title.trim(),date:f.date,time:f.time,person:f.person,stand:f.stand,type:f.type};
@@ -704,7 +715,7 @@ document.addEventListener('click',ev=>{
   }
   if(a==='eedit'){const e=S.events.find(x=>x.id===v);cur.ef={...e};return render()}
   if(a==='ecancel'){cur.ef=newEf(calOf(cur.ctab),cur.cday);return render()}
-  if(a==='edel'){if(confirm('Eintrag löschen?')){S.events=S.events.filter(x=>x.id!==cur.ef.id);cur.ef=newEf(calOf(cur.ctab),cur.cday);save();render()}return}
+  if(a==='edel'){if(confirm('Eintrag ins Archiv verschieben?')){softDel(S.events.find(x=>x.id===cur.ef.id));cur.ef=newEf(calOf(cur.ctab),cur.cday);save();render()}return}
   if(a==='esave'){
     const f=cur.ef;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');if(!f.date)return alert('Bitte ein Datum wählen.');
     const base={cal:f.cal,title:f.title.trim(),date:f.date,end:(f.cal==='saison'&&f.end>f.date)?f.end:'',status:f.status||'idee',time:f.cal==='lieferung'?(f.time||''):'',note:f.note||''};
@@ -713,7 +724,8 @@ document.addEventListener('click',ev=>{
   }
   if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu',owner:S.me});cur.ntext='';save();return render()}
   if(a==='n2t'){const n=S.notes.find(n=>n.id===v);cur.tf={...newTf(cur.cday),title:n.text.slice(0,200),noteId:n.id};cur.tfOpen=true;cur.ptab='notiz';window.scrollTo(0,0);return render()}
-  if(a==='ndel'){if(confirm('Notiz löschen?')){S.notes=S.notes.filter(n=>n.id!==v);save();render()}return}
+  if(a==='ndel'){if(confirm('Notiz ins Archiv verschieben?')){softDel(S.notes.find(n=>n.id===v));save();render()}return}
+  if(a==='restore'){const [k,id]=v.split(':'),x=(k==='task'?S.tasks:k==='event'?S.events:S.notes).find(y=>y.id===id);if(x){delete x.deleted;delete x.deletedBy;delete x.deletedAt;save();render()}return}
   if(a==='sugno'){delete S.notes.find(n=>n.id===v).suggest;save();return render()}
   if(a==='sugok'){
     const n=S.notes.find(n=>n.id===v),sg=n.suggest;

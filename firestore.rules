@@ -44,21 +44,22 @@ service cloud.firestore {
     // Aufgaben und Termine
     match /tasks/{id} {
       allow read, create: if isMember();
-      allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen oder abhaken
-      allow delete: if isMember() && (isAdmin() || resource.data.createdBy == request.auth.uid);
+      allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen, abhaken oder ins Archiv schieben
+      allow delete: if false;        // kein echtes Loeschen, nur Archiv (Feld deleted)
     }
 
     // Kalendereintraege (Saison, Lieferungen, Instagram)
     match /events/{id} {
       allow read, create, update: if isMember();
-      allow delete: if isMember() && (isAdmin() || resource.data.createdBy == request.auth.uid);
+      allow delete: if false;
     }
 
     // Brain-Dump-Notizen: nur eigene, Admin sieht alle
     match /notes/{id} {
       allow read: if isMember() && (isAdmin() || resource.data.owner == request.auth.uid);
       allow create: if isMember() && request.resource.data.owner == request.auth.uid;
-      allow update, delete: if isMember() && (isAdmin() || resource.data.owner == request.auth.uid);
+      allow update: if isMember() && (isAdmin() || resource.data.owner == request.auth.uid);
+      allow delete: if false;
     }
 
     // Preisliste und Stände: alle Freigegebenen lesen, Admin pflegt
