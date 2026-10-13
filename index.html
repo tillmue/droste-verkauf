@@ -19,9 +19,9 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body::before{content:'';position:fixed;inset:0;z-index:-2;background:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%)}
-body::after{content:'';position:fixed;inset:0;z-index:-1;background:url(bg.png);opacity:.12;pointer-events:none}
-body{background:var(--bg);color:var(--text);position:relative;font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%)}
+html{min-height:100%;background-color:#0f1b16;background-image:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%);background-repeat:no-repeat;background-size:100% 100vh}
+body{background:transparent;color:var(--text);font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
   padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 header{background:#2c463d;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
@@ -150,6 +150,7 @@ svg .val{fill:var(--text)}
 <script src="firebase-config.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
+const APP_VERSION='2026-10-13 h';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -567,9 +568,10 @@ function loginScreen(){
     ${reg?'<div class="hint">Nach dem Anlegen muss der Admin dich freigeben.</div>':'<button class="btn sec" id="authReset">Passwort vergessen</button>'}`;
 }
 function accountBlock(){
+  const ver=`<div class="hint">App-Version ${APP_VERSION}</div>`;
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
-    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div><button class="btn sec" id="signOutBtn">Abmelden</button>`}
-  return `<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>`;
+    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div><button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
+  return `<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
 }
 function headerStat(){
   if(CLOUD)return ((window.APP&&APP.status)||'')+' · '+ROLE[roleOf(S.me)];
@@ -729,7 +731,9 @@ function planKal(){
   }else{
     const first=`${y}-${p2(m)}-01`,last=`${y}-${p2(m)}-${p2(dim)}`;
     const list=S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=last&&(e.end||e.date)>=first).sort((a,b)=>a.date<b.date?-1:1);
-    body=`<h2 style="margin-top:4px">${mname}</h2><div class="card">${list.map(evRow).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>${eventForm()}`;
+    const up=S.events.filter(e=>!e.deleted&&e.cal===ct&&(e.end||e.date)>=td).sort((a,b)=>a.date<b.date?-1:1).slice(0,6);
+    const upNext=up.length?`<h3>Als Nächstes</h3><div class="card">${up.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${evLabel(e)}${e.time?' · '+esc(e.time):''}</div></div></div>`).join('')}</div>`:'';
+    body=`<h2 style="margin-top:4px">${mname}</h2><div class="card">${list.map(evRow).join('')||'<div class="row"><span class="p">In diesem Monat nichts eingetragen.</span></div>'}</div>${upNext}${eventForm()}`;
   }
   return chips+`<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>
     <div class="cal"><u>Mo</u><u>Di</u><u>Mi</u><u>Do</u><u>Fr</u><u>Sa</u><u>So</u>${cells}</div>
