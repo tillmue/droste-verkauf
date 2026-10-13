@@ -32,8 +32,8 @@ function initCloud(FB) {
 
   /* Sammlungen: get() liefert [id, objekt]-Paare aus S, put(map) schreibt die Dokumente zurück in S */
   const defs = {
-    tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: false },
-    events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: false },
+    tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: true },
+    events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
     penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,

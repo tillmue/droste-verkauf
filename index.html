@@ -946,6 +946,61 @@ function vGesamt(){
 }
 
 /* ---------- Daten / Einstellungen ---------- */
+/* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
+const DEMO_TASKS=['Zaun am Verkaufsstand prüfen','Lichterkette kontrollieren','Kasse und Wechselgeld zählen','Bäume nachsortieren','Netzmaschine reinigen','Plane am Stand festzurren',
+  'Preisschilder aktualisieren','Kabeltrommel zurücklegen','Licht am Trecker prüfen','Becher für Glühwein auffüllen','Waffeleisen reinigen','Streusalz bereitstellen',
+  'Stand fegen und Nadeln zusammenkehren','Bestand zählen und eintragen','Lieferfahrzeug tanken','Spanngurte prüfen','Fotos für Instagram machen','Stempelkarten nachfüllen',
+  'Kunden zurückrufen','Lieferscheine abheften','Mülltonnen leeren','Heizstrahler prüfen','Erste-Hilfe-Kasten kontrollieren','Netze und Ständer sortieren'];
+function demoData(){
+  const year=todayStr().slice(0,4),last=year+'-12-24',days=[];
+  for(let d=todayStr();d<=last;d=shiftDate(d,1))days.push(d);
+  const people=S.people.filter(n=>S.approved[n]!==false),tasks=[],events=[];
+  const have=id=>S.tasks.some(x=>x.id===id)||tasks.some(x=>x.id===id);
+  const add=(t)=>{if(!have(t.id))tasks.push({done:false,created:Date.now(),createdBy:'Beispiel',demo:true,date:'',time:'',stand:'',type:'todo',...t})};
+  days.forEach((ds,di)=>{
+    people.forEach((n,pi)=>{for(let k=0;k<2;k++){
+      const stand=((di+pi+k)%4===0&&S.stands.length)?S.stands[(di+pi)%S.stands.length].id:'';
+      add({id:`demo-t-${ds}-${n.replace(/[\/\s]/g,'_')}-${k}`,title:DEMO_TASKS[(di*2+pi*5+k*7)%DEMO_TASKS.length],person:n,date:ds,stand,time:k===1&&di%3===0?'15:30':''});
+    }});
+    if(di%3===0)add({id:`demo-o-${ds}`,title:DEMO_TASKS[(di*5+3)%DEMO_TASKS.length]+' (offen)',person:'',date:ds});
+  });
+  const E=(id,cal,title,date,extra={})=>{if(!S.events.some(x=>x.id===id))events.push({id,cal,title:'Beispiel: '+title,date,end:'',time:'',status:'idee',note:'',createdBy:'Beispiel',demo:true,...extra})};
+  const Y=year+'-';
+  E('demo-s1','saison','Stände aufbauen',Y+'11-23',{end:Y+'11-25',note:'Media Markt, Kallmeyer, Porta'});
+  E('demo-s2','saison','Verkaufsstart',Y+'11-27',{note:'Alle Stände besetzt'});
+  E('demo-s3','saison','Advents-Wochenende',Y+'11-28',{end:Y+'11-29',note:'1. Advent'});
+  E('demo-s4','saison','Nikolaus-Wochenende',Y+'12-05',{end:Y+'12-06',note:'Tüten für Kinder'});
+  E('demo-s5','saison','3. Advent, Hauptverkaufswochenende',Y+'12-12',{end:Y+'12-13'});
+  E('demo-s6','saison','4. Advent, Hauptverkaufswochenende',Y+'12-19',{end:Y+'12-20'});
+  E('demo-s7','saison','Heiligabend: Stände ab 14 Uhr abbauen',Y+'12-24');
+  E('demo-s8','saison','Abbau und Abrechnung',Y+'12-27',{end:Y+'12-28'});
+  const names=['Familie Muster','Müller','Schmidt','Kirche St. Marien','Firma Beispiel GmbH','Familie Kaiser','Schulze','Bäckerei Korte','Meyer','Familie Brink','Gemeindehaus','Praxis Dr. Beispiel'];
+  const towns=['Osnabrück','Hasbergen','Ankum','Bramsche','Georgsmarienhütte','Belm'],sizes=['150 cm','175 cm','200 cm','225 cm','250 cm'];
+  let r=7;const rnd=m=>{r=(r*1103515245+12345)&0x7fffffff;return r%m};
+  const lastDay=shiftDate(Y+'12-23',0);let n=0;
+  for(let d=Y+'11-30';d<=lastDay&&n<28;d=shiftDate(d,1)){
+    const cnt=1+rnd(2);
+    for(let k=0;k<cnt&&n<28;k++){
+      n++;const name=names[rnd(names.length)],big=/Kirche|Firma|Gemeinde/.test(name),h=8+rnd(8);
+      E(`demo-l${n}`,'lieferung',`${name}, ${towns[rnd(towns.length)]}`,d,{time:`${String(h).padStart(2,'0')}:${rnd(2)?'30':'00'}`,
+        note:`Beispielstraße ${1+rnd(60)}, ${big?(1+rnd(3))+' × Nordmann 350 cm, großer Wagen nötig':'1 × Nordmann '+sizes[rnd(sizes.length)]}`});
+    }
+  }
+  return {tasks,events};
+}
+function seedDemo(){
+  const {tasks,events}=demoData();
+  if(!tasks.length&&!events.length)return alert('Die Beispieldaten sind schon vorhanden.');
+  const big=tasks.length>1500?'\n\nAchtung: Das sind viele Einträge, bei vielen Benutzern kann das das kostenlose Tageslimit von Firebase belasten. Danach bitte wieder entfernen.':'';
+  if(!confirm(`${tasks.length} Beispielaufgaben und ${events.length} Beispieltermine erzeugen? Du kannst sie jederzeit wieder entfernen.${big}`))return;
+  S.tasks.push(...tasks);S.events.push(...events);save();render();
+}
+function removeDemo(){
+  const n=S.tasks.filter(t=>t.demo).length+S.events.filter(e=>e.demo).length;
+  if(!n)return alert('Es gibt keine Beispieldaten.');
+  if(!confirm(`${n} Beispieleinträge endgültig entfernen? Eigene Einträge bleiben erhalten.`))return;
+  S.tasks=S.tasks.filter(t=>!t.demo);S.events=S.events.filter(e=>!e.demo);save();render();
+}
 function importCal(txt){
   try{
     const d=JSON.parse(txt);let ne=0,nt=0;
@@ -986,6 +1041,10 @@ function vDaten(){
   <div class="card pad"><div class="hint">Rollen: Admin sieht alles, Verkauf sieht Verkauf und Zahlen, Team sieht Plan und Preise.</div>
   ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
+  <h2>Beispieldaten</h2>
+  <div class="card pad"><div class="hint">Zum Ausprobieren: pro Benutzer 2 Aufgaben pro Tag bis 24.12., dazu offene Aufgaben, Saison-Termine und Lieferungen. Für neue Benutzer den Knopf später noch einmal tippen. Beispiele sind mit "Beispiel" oder "(offen)" gekennzeichnet und lassen sich mit einem Tipp entfernen.</div>
+  <button class="btn sec" id="bDemoOn">Beispieldaten erzeugen</button>
+  <button class="btn sec" id="bDemoOff" style="color:var(--red)">Beispieldaten entfernen</button></div>
   <h2>Kalender importieren</h2>
   <div class="card pad"><div class="hint">Datei mit Kalendereinträgen (z. B. Instagram-Plan) einspielen. Schon vorhandene Einträge werden übersprungen.</div>
   <button class="btn sec" id="bImpEv">Importdatei wählen …</button>
@@ -1062,6 +1121,8 @@ document.addEventListener('click',ev=>{
   if(t.id==='addPe'){S.people.push('Neu');save();render()}
   if(t.id==='bSug')$('#fSug').click();
   if(t.id==='bImpEv')$('#fImpEv').click();
+  if(t.id==='bDemoOn')seedDemo();
+  if(t.id==='bDemoOff')removeDemo();
   if(t.id==='bImpTxt')importCal($('#impText').value);
   if(t.dataset.delPe!=null&&S.people.length>1&&S.people[+t.dataset.delPe]!==S.me){
     if(CLOUD){const n=S.people[+t.dataset.delPe];if(confirm(`${n} aus dem Team entfernen? Aufgaben bleiben erhalten.`))window.cloud.remove(n).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}

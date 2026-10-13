@@ -45,13 +45,14 @@ service cloud.firestore {
     match /tasks/{id} {
       allow read, create: if isMember();
       allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen, abhaken oder ins Archiv schieben
-      allow delete: if false;        // kein echtes Loeschen, nur Archiv (Feld deleted)
+      // kein echtes Loeschen, nur Archiv (Feld deleted); Ausnahme: Admin darf Beispieldaten (demo) entfernen
+      allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
     // Kalendereintraege (Saison, Lieferungen, Instagram)
     match /events/{id} {
       allow read, create, update: if isMember();
-      allow delete: if false;
+      allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
     // Strafbierkisten: alle sehen, nur Admin vergibt und hakt ab
