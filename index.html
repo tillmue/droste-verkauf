@@ -7,22 +7,23 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Droste">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#213a37">
+<meta name="theme-color" content="#2c463d">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Droste Verkauf</title>
 <style>
 :root{
   color-scheme:dark;
-  --bg:#304b48; --fill:rgba(0,0,0,.26); --card:#213a37; --text:#f5f7f6; --mut:#b4c8c3; --line:rgba(255,255,255,.18);
+  --bg:#2c463d; --fill:rgba(0,0,0,.26); --card:#22372f; --text:#f5f7f6; --mut:#b4c8c3; --line:rgba(255,255,255,.18);
   --green:#2e9e4f; --red:#f0503c; --blue:#0071e3; --link:#7cc0ff; --panel:rgba(124,192,255,.16); --orange:#ffae42;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) url(bg.png)}
+body::before{content:'';position:fixed;inset:0;z-index:-2;background:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%)}
+body::after{content:'';position:fixed;inset:0;z-index:-1;background:url(bg.png);opacity:.12;pointer-events:none}
 body{background:var(--bg);color:var(--text);position:relative;font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
   padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-header{background:var(--card);padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
+header{background:#2c463d;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
 #prof{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:2px;text-align:left;font:inherit}
@@ -107,7 +108,7 @@ tr.tot td{font-weight:700;border-top:2px solid var(--text)}
 h2{font-size:20px;margin:18px 0 8px;letter-spacing:-.01em}
 h3{font-size:15px;margin:14px 0 4px;color:var(--mut);font-weight:600}
 .mini{display:flex;gap:8px}.mini>*{flex:1}
-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;
+nav{position:fixed;bottom:0;left:0;right:0;background:#101d18;border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom);z-index:6}
 nav button{flex:1;border:0;background:none;padding:10px 2px 8px;font-size:11px;color:var(--mut)}
 nav button b{display:block;font-size:20px;font-weight:400}
