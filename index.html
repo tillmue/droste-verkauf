@@ -503,7 +503,10 @@ const meSelect=()=>`<select class="t" data-meselect="1">${S.people.map(n=>`<opti
 function whoScreen(){
   $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='?';$('#hstat').textContent='';
   $('#app').innerHTML=`<h2 style="margin-top:20px">Wer bist du?</h2><div class="hint">Namen antippen. (Testversion, später meldest du dich per E-Mail an.)</div>
-    ${S.people.map(n=>`<button class="btn sec" data-me="${esc(n)}" style="text-align:left;display:flex;justify-content:space-between"><span>${esc(n)}</span><small style="color:var(--mut)">${ROLE[roleOf(n)]}</small></button>`).join('')}`;
+    ${S.people.map(n=>`<button class="btn sec" data-me="${esc(n)}" style="text-align:left;display:flex;justify-content:space-between"><span>${esc(n)}</span><small style="color:var(--mut)">${ROLE[roleOf(n)]}</small></button>`).join('')}
+    <h3>Neu hier?</h3><input class="t" id="reg-name" placeholder="Dein Benutzername" autocapitalize="words">
+    <button class="btn" id="regGo">Als Standardbenutzer anlegen</button>
+    <div class="hint">Mit dem Login kommen später E-Mail und Passwort dazu. Welche Rechte du bekommst, legt der Admin fest.</div>`;
 }
 function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2>
@@ -520,7 +523,8 @@ function vPreise(){
 /* ---------- Plan: Aufgaben, Kalender, Notizen ---------- */
 /* Datenhaltung: S.tasks, S.events, S.notes. Später durch gemeinsamen Cloud-Speicher ersetzbar. */
 const newTf=date=>({id:null,title:'',date:date||'',time:'',person:'',stand:'',type:'todo',noteId:null,createdBy:''});
-const newEf=(cal,date)=>({id:null,cal,title:'',date:date||'',end:'',status:'idee',note:''});
+const newEf=(cal,date)=>({id:null,cal,title:'',date:date||'',end:'',time:'',status:'idee',note:''});
+const calOf=c=>(c==='insta'||c==='lieferung')?c:'saison';
 cur.tf=newTf(cur.cday);cur.ef=newEf('saison',cur.cday);cur.ctab='saison';
 const wdD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
 const p2=n=>String(n).padStart(2,'0');
@@ -559,15 +563,15 @@ function taskForm(){
 function evLabel(e){return e.end&&e.end!==e.date?wdD(e.date)+' bis '+wdD(e.end):wdD(e.date)}
 function evRow(e){
   return `<div class="row" data-pl="eedit" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div>
-    <div class="p">${evLabel(e)}${e.cal==='insta'?' · '+ST[e.status]:''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`;
+    <div class="p">${evLabel(e)}${e.time?' · '+esc(e.time):''}${e.cal==='insta'?' · '+ST[e.status]:''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`;
 }
 function eventForm(){
-  const f=cur.ef,sel=(a,b)=>a===b?'selected':'',insta=f.cal==='insta';
-  return `<div class="card pad"><label class="f">${f.id?'Eintrag bearbeiten':insta?'Neuer Beitrag':'Neuer Termin'}</label>
-    <input class="t" id="ef-title" placeholder="${insta?'Thema des Beitrags':'z. B. Stände aufbauen'}" value="${esc(f.title)}">
+  const f=cur.ef,sel=(a,b)=>a===b?'selected':'',insta=f.cal==='insta',lief=f.cal==='lieferung';
+  return `<div class="card pad"><label class="f">${f.id?'Eintrag bearbeiten':insta?'Neuer Beitrag':lief?'Neue Lieferung':'Neuer Termin'}</label>
+    <input class="t" id="ef-title" placeholder="${insta?'Thema des Beitrags':lief?'Kunde oder Ort':'z. B. Stände aufbauen'}" value="${esc(f.title)}">
     <div class="mini" style="margin-top:8px"><input class="t" type="date" id="ef-date" value="${f.date}" style="min-width:0">
-    ${insta?`<select class="t" id="ef-status">${Object.keys(ST).map(k=>`<option value="${k}" ${sel(k,f.status)}>${ST[k]}</option>`).join('')}</select>`:`<input class="t" type="date" id="ef-end" value="${f.end}" style="min-width:0" title="Ende (optional)">`}</div>
-    <textarea class="t" id="ef-note" rows="2" style="margin-top:8px" placeholder="${insta?'Idee oder Text':'Notiz (optional)'}">${esc(f.note)}</textarea>
+    ${insta?`<select class="t" id="ef-status">${Object.keys(ST).map(k=>`<option value="${k}" ${sel(k,f.status)}>${ST[k]}</option>`).join('')}</select>`:lief?`<input class="t" type="time" id="ef-time" value="${f.time||''}" style="min-width:0">`:`<input class="t" type="date" id="ef-end" value="${f.end}" style="min-width:0" title="Ende (optional)">`}</div>
+    <textarea class="t" id="ef-note" rows="2" style="margin-top:8px" placeholder="${insta?'Idee oder Text':lief?'Adresse, Menge, Baumart, Besonderheiten':'Notiz (optional)'}">${esc(f.note)}</textarea>
     <div class="mini" style="margin-top:8px"><button class="btn" data-pl="esave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${f.id?'<button class="btn sec" data-pl="ecancel" style="margin:0">Abbrechen</button>':''}</div>
     ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}</div>`;
 }
@@ -588,9 +592,9 @@ function planKal(){
     if(sb[ds])dots+='<em class="d g"></em>';
     cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dots}</span></button>`;
   }
-  const chips=`<div class="chips">${[['saison','Saison'],['insta','Instagram'],['meine','Meine']].map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const chips=`<div class="chips">${[['saison','Saison'],['lieferung','Lieferungen'],['insta','Instagram'],['meine','Meine']].map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>`;
   const mname=new Date(y,m-1,1).toLocaleDateString('de-DE',{month:'long',year:'numeric'});
-  const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
+  const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':ct==='lieferung'?'<em class="d b"></em> Lieferung geplant':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
   let body;
   if(ct==='meine'){
     const day=mine(cur.cday).sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:1);
@@ -638,11 +642,17 @@ function planNotiz(){
 document.addEventListener('click',ev=>{
   const me=ev.target.closest('[data-me]');
   if(me){S.me=me.dataset.me;save();tab='plan';cur.ptab='aufg';window.scrollTo(0,0);return render()}
+  if(ev.target.id==='regGo'){
+    const n=($('#reg-name').value||'').trim().replace(/\s+/g,' ');
+    if(!n)return alert('Bitte einen Benutzernamen eingeben.');
+    if(S.people.some(p=>p.toLowerCase()===n.toLowerCase()))return alert('Diesen Namen gibt es schon.');
+    S.people.push(n);S.roles[n]='team';S.me=n;save();tab='plan';cur.ptab='aufg';return render();
+  }
   if(ev.target.closest('.cheers'))return;
   const t=ev.target.closest('[data-pl]');if(!t)return;
   const a=t.dataset.pl,v=t.dataset.v,td=todayStr(),reset=()=>{cur.tf=newTf(cur.cday);cur.tfOpen=false};
   if(a==='ptab'){cur.ptab=v;return render()}
-  if(a==='ctab'){cur.ctab=v;cur.ef=newEf(v==='insta'?'insta':'saison',cur.cday);return render()}
+  if(a==='ctab'){cur.ctab=v;cur.ef=newEf(calOf(v),cur.cday);return render()}
   if(a==='cday'){cur.cday=v;if(!cur.tf.id)cur.tf.date=v;if(!cur.ef.id)cur.ef.date=v;return render()}
   if(a==='cmon'){const [y,m]=cur.cal.split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.cal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
   if(a==='ctoday'){cur.cday=td;cur.cal=td.slice(0,7);if(!cur.tf.id)cur.tf.date=td;if(!cur.ef.id)cur.ef.date=td;return render()}
@@ -671,11 +681,11 @@ document.addEventListener('click',ev=>{
     reset();save();return render();
   }
   if(a==='eedit'){const e=S.events.find(x=>x.id===v);cur.ef={...e};return render()}
-  if(a==='ecancel'){cur.ef=newEf(cur.ctab==='insta'?'insta':'saison',cur.cday);return render()}
-  if(a==='edel'){if(confirm('Eintrag löschen?')){S.events=S.events.filter(x=>x.id!==cur.ef.id);cur.ef=newEf(cur.ctab==='insta'?'insta':'saison',cur.cday);save();render()}return}
+  if(a==='ecancel'){cur.ef=newEf(calOf(cur.ctab),cur.cday);return render()}
+  if(a==='edel'){if(confirm('Eintrag löschen?')){S.events=S.events.filter(x=>x.id!==cur.ef.id);cur.ef=newEf(calOf(cur.ctab),cur.cday);save();render()}return}
   if(a==='esave'){
     const f=cur.ef;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');if(!f.date)return alert('Bitte ein Datum wählen.');
-    const base={cal:f.cal,title:f.title.trim(),date:f.date,end:(f.cal==='saison'&&f.end>f.date)?f.end:'',status:f.status||'idee',note:f.note||''};
+    const base={cal:f.cal,title:f.title.trim(),date:f.date,end:(f.cal==='saison'&&f.end>f.date)?f.end:'',status:f.status||'idee',time:f.cal==='lieferung'?(f.time||''):'',note:f.note||''};
     if(f.id)Object.assign(S.events.find(x=>x.id===f.id),base);else S.events.push({id:uid(),...base,createdBy:S.me});
     cur.ef=newEf(f.cal,cur.cday);save();return render();
   }
