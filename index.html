@@ -6,22 +6,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Droste">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#213a37">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Droste Verkauf</title>
 <style>
 :root{
-  --bg:#fff; --fill:#f5f5f7; --card:#fff; --text:#1d1d1f; --mut:#6e6e73; --line:#d2d2d7;
-  --green:#2e8b3d; --red:#e0381b; --blue:#0071e3; --panel:#e8f2fe; --orange:#e67e22;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#000; --fill:#1c1c1e; --card:#000; --text:#f5f5f7; --mut:#98989d; --line:#38383a; --panel:#10243d}
+  color-scheme:dark;
+  --bg:#304b48; --fill:rgba(0,0,0,.26); --card:#213a37; --text:#f5f7f6; --mut:#b4c8c3; --line:rgba(255,255,255,.18);
+  --green:#2e9e4f; --red:#f0503c; --blue:#0071e3; --link:#7cc0ff; --panel:rgba(124,192,255,.16); --orange:#ffae42;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body{background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) url(bg.png)}
+body{background:var(--bg);color:var(--text);position:relative;font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
   padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 header{background:var(--card);padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
@@ -37,7 +36,7 @@ header img{height:38px;display:block;border-radius:4px;background:#fff}
 .cd b{font-size:14px;font-weight:600}.cd span{height:7px;display:flex;gap:3px}
 .cd.sel{background:var(--blue);color:#fff}.cd.today{border-color:var(--blue)}
 em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:normal}
-.d.b{background:var(--blue)}.d.r{background:var(--red)}.d.g{background:var(--green)}.d.x{background:var(--line)}
+.d.b{background:var(--link)}.d.r{background:var(--red)}.d.g{background:var(--green)}.d.x{background:var(--line)}
 .cd.sel .d.b{background:#fff}
 .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .calhead button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:18px}
@@ -46,17 +45,17 @@ em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:norm
 .done{text-decoration:line-through;color:var(--mut)}
 .dim{opacity:.6}
 .sug{background:var(--panel);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}.sug small{color:var(--mut)}
-.tbanner{background:var(--panel);color:var(--blue);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px;font-weight:600}
+.tbanner{background:var(--panel);color:var(--link);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px;font-weight:600}
 .big{display:flex;align-items:baseline;gap:8px;margin:2px 0 14px}
 .big b{font-size:46px;letter-spacing:-.03em;line-height:1}.big em{font-style:normal;color:var(--mut)}
-.big span{margin-left:auto;font-size:24px;color:var(--blue);font-weight:600}
+.big span{margin-left:auto;font-size:24px;color:var(--link);font-weight:600}
 details{border-top:1px solid var(--line)}
 summary{list-style:none;padding:14px 0;font-weight:600;cursor:pointer;display:flex;justify-content:space-between}
 summary::-webkit-details-marker{display:none}
 summary::after{content:'›';color:var(--mut);font-size:20px;line-height:1;transition:transform .2s}
 details[open] summary::after{transform:rotate(90deg)}
-.claim{flex:none;border:1px solid var(--blue);color:var(--blue);background:none;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
-.who{color:var(--blue);font-weight:600}
+.claim{flex:none;border:1px solid var(--blue);color:var(--link);background:none;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.who{color:var(--link);font-weight:600}
 .cheers{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:20;padding:24px}
 .cheers>div{background:var(--card);color:var(--text);border-radius:20px;padding:28px 22px;text-align:center;max-width:320px}
 .cheers b{display:block;font-size:52px;font-weight:400}.cheers p{font-size:18px;font-weight:600;margin:8px 0 16px}
@@ -89,20 +88,19 @@ main{max-width:600px;margin:0 auto;padding:12px 16px}
 .ctr button.plus{background:var(--green);color:#fff}
 .ctr input{width:46px;height:42px;text-align:center;font-size:19px;font-weight:600;border:0;background:transparent;color:var(--text)}
 .sum{display:flex;justify-content:space-between;padding:14px 0;font-weight:700;font-size:18px}
-.sum span:last-child{color:var(--blue)}
+.sum span:last-child{color:var(--link)}
 label.f{display:block;color:var(--mut);font-size:13px;margin:12px 0 4px}
 label.f:first-child{margin-top:0}
 input.t,textarea.t,select.t{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;font-size:16px;background:var(--fill);color:var(--text);font-family:inherit}
 textarea.t{min-height:76px}
 .btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;margin:8px 0}
-.btn.sec{background:var(--card);color:var(--blue);border:1px solid var(--line)}
+.btn.sec{background:var(--card);color:var(--link);border:1px solid var(--line)}
 .btn.red{background:var(--red)}
 .btn.green{background:var(--green)}
 .hint{color:var(--mut);font-size:13px;margin:6px 2px 8px}
-.warn{background:#fff3e0;color:#8a4b00;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
-@media (prefers-color-scheme:dark){.warn{background:#3a2a10;color:#ffb74d}}
+.warn{background:rgba(255,174,66,.18);color:#ffd08a;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th{background:var(--panel);color:var(--blue);text-align:left;padding:8px 6px;font-size:12px}
+th{background:var(--panel);color:var(--link);text-align:left;padding:8px 6px;font-size:12px}
 td{padding:8px 6px;border-bottom:1px solid var(--line)}
 td.r,th.r{text-align:right}
 tr.tot td{font-weight:700;border-top:2px solid var(--text)}
@@ -113,7 +111,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px
   padding-bottom:env(safe-area-inset-bottom);z-index:6}
 nav button{flex:1;border:0;background:none;padding:10px 2px 8px;font-size:11px;color:var(--mut)}
 nav button b{display:block;font-size:20px;font-weight:400}
-nav button.on{color:var(--blue)}
+nav button.on{color:var(--link)}
 .saved{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));background:#1d1d1f;color:#fff;
   padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .saved.show{opacity:.92}
@@ -123,7 +121,7 @@ nav button.on{color:var(--blue)}
 .tile{background:var(--fill);border-radius:16px;padding:12px 14px}
 .tile small{display:block;color:var(--mut);font-size:12px}
 .tile b{font-size:22px;letter-spacing:-.02em}
-.tile.g b{color:var(--green)}.tile.r b{color:var(--red)}.tile.b b{color:var(--blue)}
+.tile.g b{color:var(--green)}.tile.r b{color:var(--red)}.tile.b b{color:var(--link)}
 .kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
 .kv:last-child{border-bottom:0}.kv span:last-child{font-weight:600}
 .kv.hl{font-weight:700;background:var(--panel);margin:0;padding:9px 10px;border-radius:8px}
@@ -132,7 +130,7 @@ nav button.on{color:var(--blue)}
 .hb{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}
 .hb .l{width:96px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hb .bar{flex:1;background:var(--fill);border-radius:6px;height:20px;position:relative;overflow:hidden}
-.hb .bar i{display:block;height:100%;background:var(--blue);border-radius:6px}
+.hb .bar i{display:block;height:100%;background:var(--link);border-radius:6px}
 .hb .v{width:78px;flex:none;text-align:right;font-weight:600}
 svg text{fill:var(--mut);font-size:10px;font-family:inherit}
 svg .val{fill:var(--text)}
@@ -285,7 +283,7 @@ function stats(sids){
 /* ---------- Diagramme (SVG) ---------- */
 function barChart(items,o={}){
   if(!items.length)return '<div class="hint">Noch keine Daten.</div>';
-  const H=o.h||130,bw=o.bw||30,W=Math.max(300,items.length*bw+16),pad=32,col=o.color||'var(--blue)';
+  const H=o.h||130,bw=o.bw||30,W=Math.max(300,items.length*bw+16),pad=32,col=o.color||'var(--link)';
   const max=Math.max(...items.map(i=>i.v),1);
   const bars=items.map((it,i)=>{
     const h=Math.max(0,(it.v/max)*(H-pad-4)),x=8+i*bw,y=H-h-14;
@@ -948,6 +946,14 @@ function vGesamt(){
 }
 
 /* ---------- Daten / Einstellungen ---------- */
+function importCal(txt){
+  try{
+    const d=JSON.parse(txt);let ne=0,nt=0;
+    (d.events||[]).forEach(e=>{if(e&&e.id&&e.title&&e.date&&!S.events.some(x=>x.id===e.id)){S.events.push({...e,createdBy:S.me});ne++}});
+    (d.tasks||[]).forEach(k=>{if(k&&k.id&&k.title&&!S.tasks.some(x=>x.id===k.id)){S.tasks.push({done:false,created:Date.now(),createdBy:S.me,...k});nt++}});
+    save();alert(`${ne} Kalendereinträge und ${nt} Aufgaben importiert.`);render();
+  }catch(e){alert('Das ist keine gültige Importdatei. Der Text muss mit { beginnen.')}
+}
 function vDaten(){
   if(!isAdmin())return vProfil();
   $('#app').innerHTML=`${backupWarn()}
@@ -983,7 +989,9 @@ function vDaten(){
   <h2>Kalender importieren</h2>
   <div class="card pad"><div class="hint">Datei mit Kalendereinträgen (z. B. Instagram-Plan) einspielen. Schon vorhandene Einträge werden übersprungen.</div>
   <button class="btn sec" id="bImpEv">Importdatei wählen …</button>
-  <input type="file" id="fImpEv" accept=".json,application/json" hidden></div>
+  <input type="file" id="fImpEv" accept=".json,application/json" hidden>
+  <textarea class="t" id="impText" rows="3" placeholder="… oder den Inhalt der Importdatei hier einfügen" style="margin-top:8px"></textarea>
+  <button class="btn sec" id="bImpTxt">Eingefügten Text importieren</button></div>
   <h2>Vorschläge einspielen</h2>
   <div class="card pad"><div class="hint">Datei mit Zuordnungsvorschlägen zu deinen Notizen (von Claude).</div>
   <button class="btn sec" id="bSug">Vorschläge-Datei wählen …</button>
@@ -1054,6 +1062,7 @@ document.addEventListener('click',ev=>{
   if(t.id==='addPe'){S.people.push('Neu');save();render()}
   if(t.id==='bSug')$('#fSug').click();
   if(t.id==='bImpEv')$('#fImpEv').click();
+  if(t.id==='bImpTxt')importCal($('#impText').value);
   if(t.dataset.delPe!=null&&S.people.length>1&&S.people[+t.dataset.delPe]!==S.me){
     if(CLOUD){const n=S.people[+t.dataset.delPe];if(confirm(`${n} aus dem Team entfernen? Aufgaben bleiben erhalten.`))window.cloud.remove(n).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
     S.people.splice(+t.dataset.delPe,1);save();render()}
@@ -1073,12 +1082,7 @@ document.addEventListener('change',ev=>{
     if(CLOUD){window.cloud.setRole(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
     S.roles[n]=t.value;save();render()}
   if(t.id==='fImpEv'&&t.files[0]){
-    const r=new FileReader();r.onload=()=>{try{
-      const d=JSON.parse(r.result);let ne=0,nt=0;
-      (d.events||[]).forEach(e=>{if(e&&e.id&&e.title&&e.date&&!S.events.some(x=>x.id===e.id)){S.events.push({...e,createdBy:S.me});ne++}});
-      (d.tasks||[]).forEach(k=>{if(k&&k.id&&k.title&&!S.tasks.some(x=>x.id===k.id)){S.tasks.push({done:false,created:Date.now(),createdBy:S.me,...k});nt++}});
-      save();alert(`${ne} Kalendereinträge und ${nt} Aufgaben importiert.`);render();
-    }catch(e){alert('Keine gültige Importdatei.')}};r.readAsText(t.files[0]);t.value='';
+    const r=new FileReader();r.onload=()=>importCal(r.result);r.readAsText(t.files[0]);t.value='';
   }
   if(t.id==='fSug'&&t.files[0]){
     const r=new FileReader();r.onload=()=>{try{
