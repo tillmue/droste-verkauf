@@ -8,7 +8,6 @@ service cloud.firestore {
     function isMember() { return signedIn() && exists(userDoc(request.auth.uid)) && get(userDoc(request.auth.uid)).data.approved == true; }
     function role() { return get(userDoc(request.auth.uid)).data.role; }
     function isAdmin() { return isMember() && role() == 'admin'; }
-    function isSales() { return isMember() && role() in ['admin', 'chef', 'verkauf']; }
     // Rechte pro Person (users/{uid}.perms). Ohne Eintrag gelten Voreinstellungen je Rolle.
     function perms() { return get(userDoc(request.auth.uid)).data.get('perms', {}); }
     function dflt(k) { return role() == 'chef' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || k == 'instagram'; }
