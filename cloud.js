@@ -35,8 +35,10 @@ function initCloud(FB) {
     tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: true },
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
-    settings: { get: () => (T.S.hofInfo && T.S.hofInfo.address) ? [['hof', T.S.hofInfo]] : [], put: m => { T.S.hofInfo = { address: (m.hof && m.hof.address) || '' }; }, del: true },
-    packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, merge: true },
+    settings: { get: () => { const h = T.S.hofInfo || {}; return (h.address || h.paypal || (h.vehicles && h.vehicles.length)) ? [['hof', h]] : []; },
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [] }; }, del: true },
+    packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
+    tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops'] },
     shopping: { get: () => T.S.shopping.map(x => [x.id, x]), put: m => { T.S.shopping = Object.values(m); }, del: false },
     penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,
@@ -74,14 +76,16 @@ function initCloud(FB) {
         if (last[id] !== j) {
           const prev = last[id] ? JSON.parse(last[id]) : null;
           last[id] = j;
-          if (d.merge && prev) {
-            /* nur geänderte Häkchen schreiben, damit gleichzeitiges Abhaken sich nicht überschreibt */
-            const patch = {}, pc = prev.checks || {}, cc = cur[id].checks || {}, ck = {};
-            for (const k in cc) if (stable(cc[k]) !== stable(pc[k])) ck[k] = cc[k];
-            if (Object.keys(ck).length) patch.checks = ck;
-            if (stable(cur[id].groups) !== stable(prev.groups)) patch.groups = cur[id].groups;
-            if (stable(cur[id].info) !== stable(prev.info)) patch.info = cur[id].info;
-            if (stable(cur[id].name) !== stable(prev.name)) patch.name = cur[id].name;
+          if (d.maps && prev) {
+            /* nur geänderte Teile schreiben (z. B. einzelne Häkchen oder Stopps), damit sich gleichzeitige Änderungen nicht überschreiben */
+            const patch = {};
+            for (const key of Object.keys(cur[id])) {
+              if (d.maps.includes(key)) {
+                const pm = prev[key] || {}, cm = cur[id][key] || {}, sub = {};
+                for (const k in cm) if (stable(cm[k]) !== stable(pm[k])) sub[k] = cm[k];
+                if (Object.keys(sub).length) patch[key] = sub;
+              } else if (stable(cur[id][key]) !== stable(prev[key])) patch[key] = cur[id][key];
+            }
             if (Object.keys(patch).length) FB.setDoc(FB.doc(db, name, id), patch, { merge: true }).catch(e => permissionNote(name, id, e));
           } else {
             FB.setDoc(FB.doc(db, name, id), cur[id]).catch(e => permissionNote(name, id, e));
@@ -130,22 +134,23 @@ function initCloud(FB) {
   }
 
   function activate(p, id) {
-    const key = id + ':' + p.role;
+    const key = id + ':' + p.role + ':' + JSON.stringify(p.perms || null);
     if (activeKey === key) return;
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.packs = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.packs = []; S.tours = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
-      S.people = arr.map(u => u.name); S.roles = {}; S.approved = {}; S.userIds = {}; S.emailVerified = {};
-      arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emailVerified[u.name] = u.emailVerified === true; });
+      S.people = arr.map(u => u.name); S.roles = {}; S.approved = {}; S.userIds = {}; S.emailVerified = {}; S.perms = {};
+      arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emailVerified[u.name] = u.emailVerified === true; if (u.perms) S.perms[u.name] = u.perms; });
       T.softRender();
     }, err => console.error('users', err)));
     ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs'].forEach(listen);
-    if (p.role !== 'team') ['moves', 'sales'].forEach(listen);
-    if (p.role === 'admin' || p.role === 'chef') listen('shopping');
+    if (T.permFor(p, 'verkauf') || T.permFor(p, 'zahlen')) ['moves', 'sales'].forEach(listen);
+    if (T.permFor(p, 'lieferungen') || T.permFor(p, 'lieferplanung')) listen('tours');
+    if (T.permFor(p, 'einkauf')) listen('shopping');
   }
 
   function watchProfile(user) {
@@ -163,6 +168,7 @@ function initCloud(FB) {
       S.me = profile.name; S.myUid = user.uid;
       S.roles = S.roles || {}; S.approved = S.approved || {};
       S.roles[profile.name] = profile.role; S.approved[profile.name] = profile.approved === true;
+      S.perms = S.perms || {}; if (profile.perms) S.perms[profile.name] = profile.perms; else delete S.perms[profile.name];
       if (!S.people || !S.people.includes(profile.name)) S.people = [...(S.people || []), profile.name];
       if (user.emailVerified && profile.emailVerified !== true) FB.updateDoc(ref, { emailVerified: true }).catch(() => {});
       T.setCloud({ status: 'in', profile: { ...profile, uid: user.uid, email: user.email, verified: !!user.emailVerified } });
@@ -203,7 +209,8 @@ function initCloud(FB) {
       T.render();
     },
     signOut: () => FB.signOut(auth),
-    setRole: (name, role) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { role }),
+    setRole: (name, role) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { role, perms: T.presetFor(role) }),
+    setPerms: (name, perms) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { perms }),
     approve: name => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { approved: true }),
     remove: name => FB.deleteDoc(FB.doc(db, 'users', T.S.userIds[name])),
     afterImport() { for (const k of Object.keys(lastSynced)) lastSynced[k] = lastSynced[k] || {}; sync(); }
