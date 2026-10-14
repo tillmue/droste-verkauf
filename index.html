@@ -27,6 +27,9 @@ header{flex-wrap:wrap;background:#2c463d;padding:calc(8px + env(safe-area-inset-
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
 #hofbar{order:3;flex-basis:100%;margin-top:6px;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.25);color:var(--text);text-decoration:none;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lang{display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
+#lang button{border:0;background:none;color:var(--mut);font-size:12px;font-weight:700;padding:6px 9px;border-radius:999px}
+#lang button.on{background:var(--blue);color:#fff}
 #prof{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:2px;text-align:left;font:inherit}
 #prof b{display:block;font-size:14px;line-height:1.1}
 #prof small{display:block;font-size:11px;color:var(--mut);line-height:1.2}
@@ -156,22 +159,27 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button><a id="hofbar" target="_blank" rel="noopener" style="display:none"></a></header>
+<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button><a id="hofbar" target="_blank" rel="noopener" style="display:none"></a></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
 
 <script src="firebase-config.js"></script>
+<script src="i18n-ro.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
-const APP_VERSION='2026-10-14 m';
+const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'}catch(e){return 'de'}})();
+const LOC=LANG==='ro'?'ro-RO':'de-DE';
+document.documentElement.lang=LANG;
+document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
+const APP_VERSION='2026-10-14 n';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
 const todayStr=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
-const eur=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:2});
-const eur0=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-const num=n=>(n||0).toLocaleString('de-DE');
+const eur=n=>(n||0).toLocaleString(LOC,{style:'currency',currency:'EUR',maximumFractionDigits:2});
+const eur0=n=>(n||0).toLocaleString(LOC,{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const num=n=>(n||0).toLocaleString(LOC);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pf=v=>{const x=parseFloat(String(v).replace(',','.'));return isNaN(x)?0:x};
 
@@ -254,9 +262,10 @@ function prodQty(e,acc){
   (e.extra||[]).forEach(x=>acc[x.pid]=(acc[x.pid]||0)+exq(x));
 }
 const shiftDate=(d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
-const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString(LOC,{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
 const shortD=d=>d.slice(8)+'.'+d.slice(5,7)+'.';
-const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WD=LANG==='ro'?['Du','Lu','Ma','Mi','Jo','Vi','Sâ']:['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WDS=LANG==='ro'?['Lu','Ma','Mi','Jo','Vi','Sâ','Du']:['Mo','Di','Mi','Do','Fr','Sa','So'];
 
 /* ---------- Auswertung ---------- */
 function stats(sids){
@@ -433,7 +442,7 @@ const normT=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/
   .replace(/(\d)[.,](\d)\s*kg/g,'$1$2kg').replace(/[^a-z0-9€\s]/g,' ').replace(/\s+/g,' ').trim();
 const tokMatch=(a,b)=>a===b||(a.length>=4&&b.length>=4&&Math.abs(a.length-b.length)<=2&&(a.startsWith(b)||b.startsWith(a)));
 const ptoks=p=>normT(p.name).split(' ').filter(t=>t&&t!=='€');
-const ALIAS={schnittgrun:'handbund',schnittgruen:'handbund',bund:'handbund',bunde:'handbund',bunden:'handbund',buendel:'handbund',handbunde:'handbund',handbunden:'handbund',scheibe:'holzscheibe',scheiben:'holzscheibe',holzscheiben:'holzscheibe'};
+const ALIAS={albastru:'blau',galben:'gelb',portocaliu:'orange',verde:'grun',mov:'lila',rosu:'rot',buchet:'handbund',buchete:'handbund',legatura:'handbund',schnittgrun:'handbund',schnittgruen:'handbund',bund:'handbund',bunde:'handbund',bunden:'handbund',buendel:'handbund',handbunde:'handbund',handbunden:'handbund',scheibe:'holzscheibe',scheiben:'holzscheibe',holzscheiben:'holzscheibe'};
 const NOISE=['mal','x','stk','stuck','st','€','euro','eur','je','a','und','usw','etc','ca'];
 function resolveItem(toks,pr,cnt,txt){
   toks=toks.map(t=>ALIAS[t]||t).filter((t,i,a)=>i===0||t!==a[i-1]);
@@ -603,7 +612,7 @@ function hofbarUpdate(hide){
 }
 function headerStat(){
   if(CLOUD)return ((window.APP&&APP.status)||'')+' · '+ROLE[roleOf(S.me)];
-  return isAdmin()?(S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup'):ROLE[roleOf(S.me)];
+  return isAdmin()?(S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup'):ROLE[roleOf(S.me)];
 }
 function freigaben(){
   const p=pendingNames();if(!p.length)return '';
@@ -661,7 +670,7 @@ function wxHtml(){
   const days=wxData.days.filter(x=>x.ic&&lab[x.d]);
   if(!days.length)return '<div class="hint">Wetter gerade nicht verfügbar.</div>';
   const storm=days.filter(x=>x.gust>=60);
-  const at=new Date(wxData.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const at=new Date(wxData.at).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'});
   return `<div class="wxrow">${days.map(x=>`<div class="wxd"><small>${lab[x.d]}</small><div class="ic">${x.ic}</div><b>${x.tmin}° / ${x.tmax}°</b>
     <small>${x.txt}</small><small>${x.rain>=0.1?x.rain.toFixed(1).replace('.',',')+' mm':'trocken'}${x.pp?' · '+x.pp+' %':''}</small><small>Böen ${x.gust} km/h</small></div>`).join('')}</div>
     ${storm.length?`<div class="warn" style="margin-top:8px">Starker Wind: ${storm.map(x=>lab[x.d]+' bis '+x.gust+' km/h').join(', ')}. Planen, Schilder und Ständer sichern.</div>`:''}
@@ -688,7 +697,7 @@ function vIch(){
   const cnt=live.filter(t=>t.done&&t.doneBy).reduce((m,t)=>(m[t.doneBy]=(m[t.doneBy]||0)+1,m),{});
   const rank=Object.entries(cnt).map(([l,v])=>({l,v})).sort((a,b)=>b.v-a.v).slice(0,5);
   const openPen=S.penalties.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0));
-  const hello=now.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
+  const hello=now.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});
   const pn=cur.pen;
   $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>
   <div id="wx" style="margin:8px 0">${wxHtml()}</div>
@@ -707,7 +716,7 @@ function vIch(){
     <div class="tile b"><small>Serie</small><b>${streak} ${streak===1?'Tag':'Tage'}</b></div></div>
   ${rank.length?`<h3>Team: erledigte Aufgaben</h3><div class="card pad">${hbars(rank,v=>v+' erledigt')}</div>`:''}
   <h2>Strafbierkisten</h2>
-  <div class="card">${openPen.map(p=>`<div class="row"><div><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')} · ${new Date(p.at||Date.now()).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</div></div>${isAdmin()?`<button class="claim" data-pl="penpaid" data-v="${p.id}">bezahlt</button>`:''}</div>`).join('')||'<div class="row"><span class="p">Keine offenen Kisten. Weiter so.</span></div>'}</div>
+  <div class="card">${openPen.map(p=>`<div class="row"><div><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div>${isAdmin()?`<button class="claim" data-pl="penpaid" data-v="${p.id}">bezahlt</button>`:''}</div>`).join('')||'<div class="row"><span class="p">Keine offenen Kisten. Weiter so.</span></div>'}</div>
   ${isAdmin()?`<div class="card pad"><label class="f">Kiste vergeben</label>
     <select class="t" id="pn-person">${S.people.map(n=>`<option ${n===(pn.person||S.people[0])?'selected':''}>${esc(n)}</option>`).join('')}</select>
     <input class="t" id="pn-reason" placeholder="Grund" value="${esc(pn.reason||'')}" style="margin-top:8px">
@@ -736,7 +745,7 @@ const newTf=date=>({id:null,title:'',date:date||'',time:'',person:'',stand:'',ty
 const newEf=(cal,date)=>({id:null,cal,title:'',date:date||'',end:'',time:'',status:'idee',note:''});
 const calOf=c=>(c==='insta'||c==='lieferung')?c:'saison';
 cur.tf=newTf(cur.cday);cur.ef=newEf('saison',cur.cday);cur.ctab='saison';
-const wdD=d=>new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
+const wdD=d=>new Date(d+'T12:00:00').toLocaleDateString(LOC,{weekday:'short',day:'2-digit',month:'2-digit'});
 const p2=n=>String(n).padStart(2,'0');
 const standNm=id=>{const x=S.stands.find(s=>s.id===id);return x?x.name:''};
 const ST={idee:'Idee',bereit:'Bereit',gepostet:'Gepostet'};
@@ -750,7 +759,7 @@ function archivHtml(){
     ...S.notes.filter(n=>n.deleted&&(isAdmin()||n.owner===S.me)).map(n=>({k:'note',id:n.id,title:n.text.slice(0,60),by:n.deletedBy,at:n.deletedAt,tag:'Notiz'}))
   ].sort((a,b)=>(b.at||0)-(a.at||0));
   if(!del.length)return '';
-  return `<details data-det="archiv" ${cur.det.archiv?'open':''}><summary>Archiv (${del.length})</summary><div class="card">${del.map(d=>`<div class="row"><div style="min-width:0"><div class="n">${esc(d.title)}</div><div class="p">${d.tag} · gelöscht von ${esc(d.by||'?')}${d.at?' am '+new Date(d.at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):''}</div></div><button class="claim" data-pl="restore" data-v="${d.k}:${d.id}">Wiederherstellen</button></div>`).join('')}</div></details>`;
+  return `<details data-det="archiv" ${cur.det.archiv?'open':''}><summary>Archiv (${del.length})</summary><div class="card">${del.map(d=>`<div class="row"><div style="min-width:0"><div class="n">${esc(d.title)}</div><div class="p">${d.tag} · gelöscht von ${esc(d.by||'?')}${d.at?' am '+new Date(d.at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'}):''}</div></div><button class="claim" data-pl="restore" data-v="${d.k}:${d.id}">Wiederherstellen</button></div>`).join('')}</div></details>`;
 }
 function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
 function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
@@ -834,7 +843,7 @@ function planKal(){
     cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dots}</span></button>`;
   }
   const chips=`<div class="chips">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine']].filter(Boolean).map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>`;
-  const mname=new Date(y,m-1,1).toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  const mname=new Date(y,m-1,1).toLocaleDateString(LOC,{month:'long',year:'numeric'});
   const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':ct==='lieferung'?'<em class="d b"></em> Lieferung geplant':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
   let body;
   if(ct==='meine'){
@@ -850,7 +859,7 @@ function planKal(){
       <details data-det="mlist"><summary>Alle Einträge im ${mname}</summary><div class="card">${list.map(evRow).join('')||'<div class="row"><span class="p">In diesem Monat nichts eingetragen.</span></div>'}</div></details>${upNext}`;
   }
   return chips+`<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>
-    <div class="cal"><u>Mo</u><u>Di</u><u>Mi</u><u>Do</u><u>Fr</u><u>Sa</u><u>So</u>${cells}</div>
+    <div class="cal">${WDS.map(x=>`<u>${x}</u>`).join('')}${cells}</div>
     <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`+body;
 }
 function planAufg(){
@@ -890,7 +899,7 @@ function planNotiz(){
     ${cur.tfOpen&&cur.tf.noteId?taskForm():''}
     ${isAdmin()?'<div class="hint">Abends: Backup sichern, Datei in den Eingang-Ordner legen und mir „Notizen zuordnen“ sagen. Du bekommst Vorschläge, die du hier mit einem Tipp übernimmst.</div>':''}
     ${ns.map(n=>{const sg=n.suggest;return `<div class="card pad ${n.status==='zugeordnet'?'dim':''}"><div>${esc(n.text)}</div>
-      <div style="color:var(--mut);font-size:12px;margin-top:4px">${new Date(n.created).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${isAdmin()&&n.owner?' · '+esc(n.owner):''}${n.status==='zugeordnet'?' · zugeordnet':''}</div>
+      <div style="color:var(--mut);font-size:12px;margin-top:4px">${new Date(n.created).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${isAdmin()&&n.owner?' · '+esc(n.owner):''}${n.status==='zugeordnet'?' · zugeordnet':''}</div>
       ${sg?`<div class="sug"><b>Vorschlag:</b> ${esc(sg.title||n.text)}<br><small>${esc([sg.date&&wdD(sg.date),sg.time,sg.person,standNm(sg.stand)||sg.stand].filter(Boolean).join(' · '))}</small>
         <div class="mini" style="margin-top:6px"><button class="btn green" data-pl="sugok" data-v="${n.id}" style="margin:0">Übernehmen</button><button class="btn sec" data-pl="sugno" data-v="${n.id}" style="margin:0">Verwerfen</button></div></div>`:''}
       <div class="mini" style="margin-top:8px">${n.status!=='zugeordnet'?`<button class="btn sec" data-pl="n2t" data-v="${n.id}" style="margin:0">→ Aufgabe</button>`:''}<button class="btn sec" data-pl="ndel" data-v="${n.id}" style="margin:0;color:var(--red)">Löschen</button></div></div>`}).join('')||'<div class="hint">Noch keine Notizen.</div>'}`;
@@ -1057,11 +1066,11 @@ function kvList(a){
 }
 function insights(a){
   const out=[];
-  if(a.avg)out.push(['Ø Verkäufe pro Verkaufstag',a.avg.toLocaleString('de-DE',{maximumFractionDigits:1})+' Stk.']);
+  if(a.avg)out.push(['Ø Verkäufe pro Verkaufstag',a.avg.toLocaleString(LOC,{maximumFractionDigits:1})+' Stk.']);
   if(a.verk)out.push(['Ø Preis pro Baum',eur(a.umsatz/a.verk)]);
   if(a.verk)out.push(['Ø Gewinn pro Baum (nach allen Kosten)',eur(a.gewinn/a.verk)]);
   if(a.best)out.push(['Bester Tag',shortD(a.best)+' · '+eur0(a.byDay[a.best].r)]);
-  if(a.avg3&&a.soll>0)out.push(['Bestand reicht noch ca.',(a.soll/a.avg3).toLocaleString('de-DE',{maximumFractionDigits:1})+' Tage (Ø letzte 3 Tage)']);
+  if(a.avg3&&a.soll>0)out.push(['Bestand reicht noch ca.',(a.soll/a.avg3).toLocaleString(LOC,{maximumFractionDigits:1})+' Tage (Ø letzte 3 Tage)']);
   if(a.fixed>0&&a.verk>0&&a.umsatz>a.pcost){const mg=(a.umsatz-a.pcost)/a.verk,m=(a.fixed-(a.umsatz-a.pcost))/mg;out.push(['Gewinnschwelle',m<=0?'erreicht':'noch ca. '+Math.ceil(m)+' Bäume'])}
   return out.length?`<div class="card">${out.map(([l,v])=>`<div class="kv"><span>${l}</span><span>${v}</span></div>`).join('')}</div>`:'';
 }
@@ -1199,12 +1208,12 @@ function stopForm(){
 function vLieferungen(){
   const day=cur.lday||todayStr(),plan=has('lieferplanung'),td=todayStr();
   const mon=shiftDate(day,-((new Date(day+'T12:00:00').getDay()+6)%7)),live=S.tours.filter(t=>!t.deleted);
-  const strip=['Mo','Di','Mi','Do','Fr','Sa','So'].map((wd,i)=>{const d=shiftDate(mon,i),n=live.filter(t=>t.date===d).length;
+  const strip=WDS.map((wd,i)=>{const d=shiftDate(mon,i),n=live.filter(t=>t.date===d).length;
     return `<button class="dy ${d===day?'sel':''} ${d===td?'today':''}" data-pl="lday" data-v="${d}"><small>${wd}</small><b>${d.slice(8)}</b><span>${n?'<em class="d b"></em>'.repeat(Math.min(n,3)):''}</span></button>`}).join('');
   const tours=live.filter(t=>t.date===day).sort((a,b)=>(a.driver||'~').localeCompare(b.driver||'~'));
   $('#app').innerHTML=`${backupWarn()}<div class="datebar"><button data-pl="ldelta" data-v="-1">‹</button><input type="date" id="lday-in" value="${day}"><button data-pl="ldelta" data-v="1">›</button></div>
     <div class="week">${strip}</div>
-    <h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}</h2>
+    <h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>
     ${tours.map(t=>tourCard(t,plan)).join('')||'<div class="hint">Für diesen Tag sind keine Touren geplant.</div>'}
     ${plan?'<button class="btn" data-pl="tournew">+ Neue Tour für diesen Tag</button>':''}${cur.tourOpen?tourForm():''}${cur.stopOpen?stopForm():''}`;
 }
@@ -1468,6 +1477,8 @@ const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,up
 window.APP=APP;
 
 document.addEventListener('click',async ev=>{
+  const lg=ev.target.closest('[data-lang]');
+  if(lg){try{localStorage.setItem('droste-lang',lg.dataset.lang)}catch(e){}location.reload();return}
   const m=ev.target.closest('[data-authmode]');
   if(m){cur.auth=Object.assign(cur.auth||{},{mode:m.dataset.authmode,err:'',info:''});return render()}
   const id=ev.target.id;
@@ -1510,7 +1521,31 @@ document.addEventListener('change',ev=>{
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
 });
 
+/* ---------- Sprache: Übersetzung der Oberfläche (Deutsch / Rumänisch) ---------- */
+const RO=window.RO_DICT||{},ROP=window.RO_PATTERNS||[];
+function trs(str){
+  if(LANG!=='ro'||!str)return str;
+  const k=str.trim();if(!k)return str;
+  let r=RO[k];
+  if(r===undefined)for(const [re,fn] of ROP){const m=k.match(re);if(m){r=fn(...m);break}}
+  return r===undefined?str:str.replace(k,()=>r);
+}
+function i18nTree(n){
+  if(LANG!=='ro'||!n)return;
+  if(n.nodeType===3){const v=trs(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v;return}
+  if(n.nodeType!==1)return;
+  for(const a of ['placeholder','title','aria-label','alt']){if(n.hasAttribute(a)){const v=trs(n.getAttribute(a));if(v!==n.getAttribute(a))n.setAttribute(a,v)}}
+  if(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.tagName))return;
+  n.childNodes.forEach(i18nTree);
+}
+if(LANG==='ro'){
+  const _al=window.alert.bind(window),_cf=window.confirm.bind(window);
+  window.alert=m=>_al(trs(String(m)));window.confirm=m=>_cf(trs(String(m)));
+  new MutationObserver(ms=>ms.forEach(m=>{m.addedNodes.forEach(i18nTree);if(m.type==='characterData')i18nTree(m.target)})).observe(document.body,{childList:true,subtree:true,characterData:true});
+}
+
 render();
+if(LANG==='ro')i18nTree(document.body);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 <script type="module" src="cloud.js"></script>

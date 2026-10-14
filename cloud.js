@@ -24,7 +24,7 @@ function initCloud(FB) {
   const T = window.APP;
   const app = FB.initializeApp(window.FIREBASE_CONFIG);
   const auth = FB.getAuth(app);
-  auth.languageCode = 'de';
+  auth.languageCode = (() => { try { return localStorage.getItem('droste-lang') === 'ro' ? 'ro' : 'de'; } catch (e) { return 'de'; } })();
   let db;
   try {
     db = FB.initializeFirestore(app, { localCache: FB.persistentLocalCache({ tabManager: FB.persistentMultipleTabManager() }) });
