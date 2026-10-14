@@ -27,7 +27,15 @@ header{flex-wrap:wrap;background:#2c463d;padding:calc(8px + env(safe-area-inset-
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
 #hofbar{order:3;flex-basis:100%;margin-top:6px;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.25);color:var(--text);text-decoration:none;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#lang{display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
+.sw{flex:none;width:20px;height:20px;border-radius:6px;border:1px solid rgba(255,255,255,.35)}
+.fn{min-width:32px;text-align:center;font-size:18px}
+.ctr button.fb{width:44px;font-size:15px;font-weight:700;padding:0}
+.ctr button.fb[data-pl=fall]{width:64px}
+header img{flex:none}
+#prof{flex:1 1 0;min-width:0;justify-content:flex-end}
+#prof>span:last-child{min-width:0}
+#prof b,#prof small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+#lang{flex:none;display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
 #lang button{border:0;background:none;color:var(--mut);font-size:12px;font-weight:700;padding:6px 9px;border-radius:999px}
 #lang button.on{background:var(--blue);color:#fff}
 #prof{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:2px;text-align:left;font:inherit}
@@ -172,7 +180,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-14 n';
+const APP_VERSION='2026-10-15 o';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -207,12 +215,12 @@ const DEFAULT=()=>({
     {id:'p16',name:'Nordmann 25 €',price:25,cost:0},
     {id:'p17',name:'Nordmann 26 €',price:26,cost:0},
     {id:'f1',name:'Nordmann (Einzelpreis)',price:0,cost:0,free:true}],
-  entries:{}, moves:[], tasks:[], notes:[], events:[], penalties:[], shopping:[], packs:[], tours:[], perms:{}, people:['Cedric','Felix','Magnus','Lukas','Till','Rolf'], roles:{Till:'admin',Rolf:'verkauf'}, me:'', lastExport:0, lastChange:0
+  entries:{}, moves:[], tasks:[], notes:[], events:[], penalties:[], shopping:[], packs:[], tours:[], feld:[], perms:{}, people:['Cedric','Felix','Magnus','Lukas','Till','Rolf'], roles:{Till:'admin',Rolf:'verkauf'}, me:'', lastExport:0, lastChange:0
 });
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.packs=S.packs||[];S.tours=S.tours||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -361,12 +369,13 @@ function render(){
   if(tab==='erfassen'&&!has('verkauf'))tab='staende';
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
-  const items=[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Lieferungen']:null,['preise','€','Preise']].filter(Boolean);
+  if(tab==='feld'&&!has('feld'))tab='plan';
+  const items=[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Lieferungen']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
   $('#hstat').textContent=headerStat();hofbarUpdate();
-  ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
+  ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,feld:vFeld,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
   if(tab==='staende'||tab==='erfassen'||tab==='zahlen'){const sg=standSeg();if(sg)$('#app').insertAdjacentHTML('afterbegin',sg)}
 }
 
@@ -542,7 +551,7 @@ document.addEventListener('input',ev=>{
 const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team'};
 const roleOf=n=>(S.roles&&S.roles[n])||'team';
 const isAdmin=()=>roleOf(S.me)==='admin';
-const PERMS=[['verkauf','Verkauf eintragen'],['zahlen','Zahlen ansehen'],['lieferungen','Lieferungen ansehen'],['lieferplanung','Touren planen'],['einkauf','Einkaufsliste'],['archiv','Archiv'],['instagram','Instagram-Kalender']];
+const PERMS=[['verkauf','Verkauf eintragen'],['zahlen','Zahlen ansehen'],['lieferungen','Lieferungen ansehen'],['lieferplanung','Touren planen'],['einkauf','Einkaufsliste'],['archiv','Archiv'],['instagram','Instagram-Kalender'],['feld','Feld: Netzen und Abfahren']];
 const PRESET={admin:'*',chef:'*',verkauf:['verkauf','zahlen','instagram'],team:['instagram']};
 function presetFor(role){const q=PRESET[role]||[],o={};PERMS.forEach(([k])=>{o[k]=q==='*'||q.includes(k)});return o}
 const permsOf=n=>(S.perms&&S.perms[n])||presetFor(roleOf(n));
@@ -942,6 +951,16 @@ document.addEventListener('click',ev=>{
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
   if(a==='penadd'){const per=cur.pen.person||S.people[0];S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
   if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
+  if(a==='fs'){cur.fs=v;cur.fg='';cur.frest=false;return render()}
+  if(a==='fg'){cur.fg=v;return render()}
+  if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
+  if(a==='fch'){const [sid,dl]=v.split('|');feldChange(curOrt(),sid,+dl,cur.fmode==='abfahrt'?'abfahrt':'netz');return}
+  if(a==='fall'){const o=curOrt();feldChange(o,v,-feldQ(o,v),'abfahrt');return}
+  if(a==='fset'){const o=curOrt(),q0=feldQ(o,v),r=prompt('Exakte Anzahl hier:',String(q0));if(r===null)return;const n=parseInt(r);if(isNaN(n)||n<0)return alert('Bitte eine Zahl eingeben.');feldChange(o,v,n-q0,'rest');return}
+  if(a==='frest'){cur.frest=true;cur.fextra=[];return render()}
+  if(a==='frestno'){cur.frest=false;return render()}
+  if(a==='frestsave'){const o=curOrt();document.querySelectorAll('[data-fr]').forEach(inp=>{const sid=inp.dataset.fr,q0=feldQ(o,sid),n=parseInt(inp.value);if(!isNaN(n)&&n>=0&&n!==q0)feldChange(o,sid,n-q0,'rest',true)});cur.frest=false;save();return render()}
+  if(a==='fgo'){const ort=v,os=orteList();let s=ort,g='';const hit=os.find(x=>x.name===ort);if(!hit){const i=ort.indexOf(' · ');if(i>0){s=ort.slice(0,i);g=ort.slice(i+3)}}cur.fs=s;cur.fg=g;cur.fmode='abfahrt';cur.frest=false;window.scrollTo(0,0);return render()}
   if(a==='lday'){cur.lday=v;return render()}
   if(a==='ldelta'){cur.lday=shiftDate(cur.lday||td,+v);return render()}
   if(a==='tournew'){cur.tour=newTour(cur.lday||td);cur.tourOpen=true;cur.stopOpen=false;return render()}
@@ -1217,6 +1236,86 @@ function vLieferungen(){
     ${tours.map(t=>tourCard(t,plan)).join('')||'<div class="hint">Für diesen Tag sind keine Touren geplant.</div>'}
     ${plan?'<button class="btn" data-pl="tournew">+ Neue Tour für diesen Tag</button>':''}${cur.tourOpen?tourForm():''}${cur.stopOpen?stopForm():''}`;
 }
+/* ---------- Feld: Netzen und Abfahren der Bäume ---------- */
+const SORT=[['Rot','1.','120/150'],['Lila','1.','170/210'],['Gelb','1.','210/260'],['Rot/weiß','1.','260/320'],['Lila/weiß','1.','320/360'],['Gelb/Band','1.','400/600'],
+  ['Blau/weiß','Mix','140/170'],['Blau/schmal','Mix','170/220'],['Grün/schmal','Mix','220/260'],['Lila/gelb','Mix','260/400'],['Blau/Band','Mix','400/600'],
+  ['Grün/weiß','2/3','160/210'],['Blau/breit','2.','100/150'],['Gelb/breit','2.','140/170'],['Orange/breit','2.','170/210'],['Grün/breit','2.','220/250'],['Lila/gelb schmal','2.','250/350'],
+  ['Weiß/breit','Aktion','100/170'],['Rot/breit','Aktion','150/300'],['Rot/weiß','Deko','150/250'],['Gelb/weiß schmal','Deko','250/400'],
+  ['Lila/breit','Holzs.','60/100'],['Gelb/weiß schmal','Holzs. 2.','60/100'],['Topf Rot','','40/60'],['Topf Grün','','60/100'],['Topf Gelb','','100/120'],
+  ['Kaufland/weiß','2-','100/150'],['Kaufland/rot','2-','160/210'],['Kaufland/orange','2-','220/300']].map((r,i)=>({id:'k'+(i+1),f:r[0],q:r[1],h:r[2]}));
+const FARBEN={rot:'#d9532b',lila:'#a64fc6',gelb:'#ffe14d',blau:'#4aa9e0','grün':'#7cc242',orange:'#f09a2a','weiß':'#ffffff'};
+const SORT_RO={rot:'roșu',lila:'mov',gelb:'galben',blau:'albastru','grün':'verde',orange:'portocaliu','weiß':'alb',schmal:'îngust',breit:'lat',band:'bandă',topf:'ghiveci'};
+const sortById=id=>SORT.find(k=>k.id===id);
+const sortGroup=k=>/^Topf/.test(k.f)?'Topf':/^Kaufland/.test(k.f)?'Kaufland':(/^Holzs/.test(k.q)?'Holzs.':(k.q||'Sonst'));
+const SGN={'1.':'1. Qualität','Mix':'Mix','2/3':'2. und 3. Qualität','2.':'2. Qualität','Aktion':'Aktion','Deko':'Deko','Holzs.':'Holzs.','Topf':'Topf','Kaufland':'Kaufland'};
+function swatchCss(f){const c=[...new Set(f.toLowerCase().split(/[\/ ]+/).filter(t=>FARBEN[t]).map(t=>FARBEN[t]))];return !c.length?'#9aa5a0':c.length===1?c[0]:`linear-gradient(90deg,${c[0]} 50%,${c[1]} 50%)`}
+function sorteLabel(k){
+  let f=k.f;
+  if(LANG==='ro')f=f.replace(/[A-Za-zäöüÄÖÜß]+/g,w=>{const r=SORT_RO[w.toLowerCase()];return r?(w[0]===w[0].toUpperCase()?r[0].toUpperCase()+r.slice(1):r):w});
+  return f+(k.q?' · '+k.q:'')+' · '+k.h;
+}
+const DEF_ORTE='Vorgewände\n'+[1,2,3,4].map(n=>`Schonung ${n}: `+Array.from({length:8},(_,i)=>'Gang '+(i+1)).join(', ')).join('\n');
+const parseOrte=t=>t.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf(':');return i<0?{name:l,gaenge:[]}:{name:l.slice(0,i).trim(),gaenge:l.slice(i+1).split(',').map(x=>x.trim()).filter(Boolean)}});
+const orteText=()=>(S.hofInfo&&S.hofInfo.orte)||DEF_ORTE;
+const orteList=()=>parseOrte(orteText());
+cur.fmode='netz';cur.fs='';cur.fg='';cur.frest=false;cur.fextra=[];
+function curOrt(){
+  const os=orteList();let s=(cur.fs&&os.some(x=>x.name===cur.fs))?cur.fs:(os[0]||{name:'Vorgewände'}).name;cur.fs=s;
+  const o=os.find(x=>x.name===s)||{gaenge:[]};
+  if(o.gaenge.length){if(!o.gaenge.includes(cur.fg))cur.fg=o.gaenge[0]}else cur.fg='';
+  return cur.fg?`${s} · ${cur.fg}`:s;
+}
+const feldSlug=x=>x.toLowerCase().replace(/[^a-z0-9äöüß]+/g,'-').replace(/^-+|-+$/g,'')||'ort';
+const feldDoc=(ort,create)=>{let d=S.feld.find(x=>x.ort===ort);if(!d&&create){d={id:feldSlug(ort),ort,bal:{}};S.feld.push(d)}return d};
+const feldQ=(ort,sid)=>{const d=feldDoc(ort),b=d&&d.bal[sid];return b?b.q:0};
+function feldChange(ort,sid,delta,typ,quiet){
+  const d=feldDoc(ort,true),b=d.bal[sid]||(d.bal[sid]={q:0,in:0,out:0});
+  const nq=Math.max(0,b.q+delta),real=nq-b.q;if(!real)return;
+  b.q=nq;
+  if(typ==='netz')b.in+=real;else if(typ==='abfahrt')b.out+=-real;else if(real<0)b.out+=-real;else b.in+=real;
+  b.by=S.me;b.at=Date.now();b.typ=typ;
+  if(!quiet){save();render()}
+}
+function vFeld(){
+  const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]};
+  const chips=`<div class="chips">${os.map(x=>`<button class="chip ${x.name===cur.fs?'on':''}" data-pl="fs" data-v="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
+    ${o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:''}`;
+  const seg=`<div class="chips">${[['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].map(([k,l])=>`<button class="chip ${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if(mode==='uebersicht'){
+    const tot=S.feld.reduce((a,d)=>{Object.values(d.bal||{}).forEach(b=>{a.q+=b.q;a.in+=b.in||0;a.out+=b.out||0});return a},{q:0,in:0,out:0});
+    const perOrt=S.feld.map(d=>({d,q:Object.values(d.bal||{}).reduce((a,b)=>a+b.q,0)})).filter(x=>x.q>0).sort((a,b)=>b.q-a.q);
+    const perSort={};S.feld.forEach(d=>Object.entries(d.bal||{}).forEach(([sid,b])=>{if(b.q>0)perSort[sid]=(perSort[sid]||0)+b.q}));
+    const rows=Object.entries(perSort).map(([sid,q])=>({k:sortById(sid),q})).filter(x=>x.k).sort((a,b)=>b.q-a.q);
+    $('#app').innerHTML=`${chips}${seg}<div class="tiles"><div class="tile b"><small>Liegen noch auf dem Feld</small><b>${num(tot.q)}</b></div><div class="tile"><small>Genetzt (gesamt)</small><b>${num(tot.in)}</b></div>
+      <div class="tile g"><small>Abgefahren (gesamt)</small><b>${num(tot.out)}</b></div></div>
+      <h3>Nach Weg</h3><div class="card">${perOrt.map(x=>`<div class="row" data-pl="fgo" data-v="${esc(x.d.ort)}"><div class="n">${esc(x.d.ort)}</div><b>${num(x.q)}</b></div>`).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>
+      <h3>Nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${num(x.q)}</b></div>`).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>`;
+    return;
+  }
+  const qOf=k=>feldQ(ort,k.id);
+  if(mode==='abfahrt'&&cur.frest){
+    const ids=[...new Set([...SORT.filter(k=>qOf(k)>0).map(k=>k.id),...cur.fextra])];
+    $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(ort)}</h2><div class="hint">Was liegt hier noch? Schätze die Anzahl.</div>
+      <div class="card">${ids.map(id=>{const k=sortById(id);return `<div class="row"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0">${esc(sorteLabel(k))}</div><input class="t" style="width:90px;text-align:center;font-size:20px" type="number" inputmode="numeric" min="0" data-fr="${k.id}" value="${qOf(k)}"></div>`}).join('')||'<div class="row"><span class="p">Nichts mehr hier.</span></div>'}</div>
+      <select class="t" id="frest-add"><option value="">Sorte hinzufügen …</option>${SORT.filter(k=>!ids.includes(k.id)).map(k=>`<option value="${k.id}">${esc(sorteLabel(k))}</option>`).join('')}</select>
+      <div class="mini" style="margin-top:12px"><button class="btn green" data-pl="frestsave" style="margin:0">Rest speichern</button><button class="btn sec" data-pl="frestno" style="margin:0">Abbrechen</button></div>`;
+    return;
+  }
+  const items=mode==='abfahrt'?SORT.filter(k=>qOf(k)>0):SORT;
+  const groups=Object.keys(SGN).map(g=>({g,its:items.filter(k=>sortGroup(k)===g)})).filter(x=>x.its.length);
+  const rowN=k=>{const q=qOf(k);
+    return `<div class="row" style="padding:7px 0"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0;font-size:15px">${esc(sorteLabel(k))}</div>
+      <div class="ctr">${mode==='abfahrt'
+        ?`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−1</button><button class="fb" data-pl="fch" data-v="${k.id}|-10">−10</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fall" data-v="${k.id}">Alles</button>`
+        :`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fch" data-v="${k.id}|1">+1</button><button class="plus fb" data-pl="fch" data-v="${k.id}|10">+10</button>`}</div></div>`};
+  const sec=g=>{const key='fl-'+mode+'-'+g.g,sum=g.its.reduce((a,k)=>a+qOf(k),0),open=cur.det[key]===true||(cur.det[key]===undefined&&(mode==='abfahrt'||sum>0));
+    return `<details data-det="${key}" ${open?'open':''}><summary><span>${esc(SGN[g.g])}</span><span class="p" style="margin-left:auto;margin-right:10px">${sum}</span></summary><div class="card">${g.its.map(rowN).join('')}</div></details>`};
+  $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(ort)}</h2>
+    <div class="hint">${mode==='netz'?'Netzfahrer: trage ein, wie viele Bäume hier am Weg liegen.':'Palettenfahrer: tippe, was abgefahren wurde. Ist die Palette voll, melde den Rest.'}</div>
+    ${mode==='abfahrt'&&!items.length?'<div class="hint">Nichts mehr hier.</div>':''}
+    ${groups.map(sec).join('')}
+    ${mode==='abfahrt'?'<button class="btn" data-pl="frest" style="margin-top:14px">Palette voll: Rest melden</button>':''}`;
+}
 /* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
 const DEMO_TASKS=['Zaun am Verkaufsstand prüfen','Lichterkette kontrollieren','Kasse und Wechselgeld zählen','Bäume nachsortieren','Netzmaschine reinigen','Plane am Stand festzurren',
   'Preisschilder aktualisieren','Kabeltrommel zurücklegen','Licht am Trecker prüfen','Becher für Glühwein auffüllen','Waffeleisen reinigen','Streusalz bereitstellen',
@@ -1307,7 +1406,9 @@ function vDaten(){
   <label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
   <input class="t" id="hof-paypal" value="${esc((S.hofInfo&&S.hofInfo.paypal)||'')}" placeholder="https://www.paypal.com/paypalme/…" autocapitalize="none">
   <label class="f">Fahrzeuge für Touren (eins pro Zeile)</label>
-  <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea></div>
+  <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea>
+  <label class="f">Orte im Feld (eine Zeile pro Schonung: Name: Gang 1, Gang 2 …)</label>
+  <textarea class="t" id="hof-orte" rows="6">${esc(orteText())}</textarea></div>
   <h2>Backup</h2>
   <div class="card pad"><div class="hint">Täglich abends sichern (iCloud Drive, Mail oder AirDrop).</div>
   <button class="btn" id="bJson">Backup sichern (JSON)</button>
@@ -1471,7 +1572,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{tours:[],perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>pr.role==='admin'||!!((pr.perms||presetFor(pr.role))[k]),ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
@@ -1515,6 +1616,8 @@ document.addEventListener('change',ev=>{
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
   if(t.id==='hof-addr'){S.hofInfo={...S.hofInfo,address:t.value.trim()};save();hofbarUpdate()}
   if(t.id==='hof-paypal'){S.hofInfo={...S.hofInfo,paypal:t.value.trim()};save()}
+  if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
+  if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id==='lday-in'&&t.value){cur.lday=t.value;render()}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
@@ -1540,7 +1643,7 @@ function i18nTree(n){
 }
 if(LANG==='ro'){
   const _al=window.alert.bind(window),_cf=window.confirm.bind(window);
-  window.alert=m=>_al(trs(String(m)));window.confirm=m=>_cf(trs(String(m)));
+  window.alert=m=>_al(trs(String(m)));window.confirm=m=>_cf(trs(String(m)));const _pr=window.prompt.bind(window);window.prompt=(m,d)=>_pr(trs(String(m)),d);
   new MutationObserver(ms=>ms.forEach(m=>{m.addedNodes.forEach(i18nTree);if(m.type==='characterData')i18nTree(m.target)})).observe(document.body,{childList:true,subtree:true,characterData:true});
 }
 

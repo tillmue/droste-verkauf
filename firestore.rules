@@ -76,6 +76,9 @@ service cloud.firestore {
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
+    // Feld (Netzen und Abfahren): Recht "feld"
+    match /feld/{id} { allow read, create, update: if perm('feld'); allow delete: if false; }
+
     // Einkaufsliste: Recht "einkauf"
     match /shopping/{id} {
       allow read, create, update: if perm('einkauf');
