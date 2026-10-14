@@ -36,6 +36,8 @@ function initCloud(FB) {
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
     settings: { get: () => (T.S.hofInfo && T.S.hofInfo.address) ? [['hof', T.S.hofInfo]] : [], put: m => { T.S.hofInfo = { address: (m.hof && m.hof.address) || '' }; }, del: true },
+    packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, merge: true },
+    shopping: { get: () => T.S.shopping.map(x => [x.id, x]), put: m => { T.S.shopping = Object.values(m); }, del: false },
     penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,
                 put: m => { T.S.products = Object.values(m).sort((a, b) => a._o - b._o).map(({ _o, ...r }) => r); } },
@@ -70,8 +72,20 @@ function initCloud(FB) {
       for (const id in cur) {
         const j = stable(cur[id]);
         if (last[id] !== j) {
+          const prev = last[id] ? JSON.parse(last[id]) : null;
           last[id] = j;
-          FB.setDoc(FB.doc(db, name, id), cur[id]).catch(e => permissionNote(name, id, e));
+          if (d.merge && prev) {
+            /* nur geänderte Häkchen schreiben, damit gleichzeitiges Abhaken sich nicht überschreibt */
+            const patch = {}, pc = prev.checks || {}, cc = cur[id].checks || {}, ck = {};
+            for (const k in cc) if (stable(cc[k]) !== stable(pc[k])) ck[k] = cc[k];
+            if (Object.keys(ck).length) patch.checks = ck;
+            if (stable(cur[id].groups) !== stable(prev.groups)) patch.groups = cur[id].groups;
+            if (stable(cur[id].info) !== stable(prev.info)) patch.info = cur[id].info;
+            if (stable(cur[id].name) !== stable(prev.name)) patch.name = cur[id].name;
+            if (Object.keys(patch).length) FB.setDoc(FB.doc(db, name, id), patch, { merge: true }).catch(e => permissionNote(name, id, e));
+          } else {
+            FB.setDoc(FB.doc(db, name, id), cur[id]).catch(e => permissionNote(name, id, e));
+          }
         }
       }
       if (d.del) for (const id in last) if (!(id in cur)) {
@@ -121,7 +135,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.packs = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -129,8 +143,9 @@ function initCloud(FB) {
       arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emailVerified[u.name] = u.emailVerified === true; });
       T.softRender();
     }, err => console.error('users', err)));
-    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings'].forEach(listen);
+    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs'].forEach(listen);
     if (p.role !== 'team') ['moves', 'sales'].forEach(listen);
+    if (p.role === 'admin' || p.role === 'chef') listen('shopping');
   }
 
   function watchProfile(user) {

@@ -65,6 +65,7 @@ details[open] summary::after{transform:rotate(90deg)}
 .wxd{background:var(--fill);border-radius:14px;padding:10px 4px;text-align:center}
 .wxd small{display:block;color:var(--mut);font-size:12px;line-height:1.35}
 .wxd .ic{font-size:30px;line-height:1.25}.wxd b{font-size:15px}
+.chk.big{width:38px;height:38px;font-size:22px}
 .barw{height:10px;background:var(--fill);border-radius:6px;overflow:hidden}
 .barw i{display:block;height:100%;background:var(--green);border-radius:6px}
 .tile small+b+small{margin-top:2px}
@@ -155,7 +156,7 @@ svg .val{fill:var(--text)}
 <script src="firebase-config.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
-const APP_VERSION='2026-10-14 j';
+const APP_VERSION='2026-10-14 l';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -190,12 +191,12 @@ const DEFAULT=()=>({
     {id:'p16',name:'Nordmann 25 €',price:25,cost:0},
     {id:'p17',name:'Nordmann 26 €',price:26,cost:0},
     {id:'f1',name:'Nordmann (Einzelpreis)',price:0,cost:0,free:true}],
-  entries:{}, moves:[], tasks:[], notes:[], events:[], penalties:[], people:['Cedric','Felix','Magnus','Lukas','Till','Rolf'], roles:{Till:'admin',Rolf:'verkauf'}, me:'', lastExport:0, lastChange:0
+  entries:{}, moves:[], tasks:[], notes:[], events:[], penalties:[], shopping:[], packs:[], people:['Cedric','Felix','Magnus','Lukas','Till','Rolf'], roles:{Till:'admin',Rolf:'verkauf'}, me:'', lastExport:0, lastChange:0
 });
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.packs=S.packs||[];S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -341,12 +342,13 @@ function render(){
     if(S.approved[S.me]===false)return waitScreen();
   }
   if(!canSales()&&(tab==='erfassen'||tab==='zahlen'))tab='plan';
-  const items=[['ich','◉','Ich'],['plan','◫','Plan'],['erfassen','✎','Verkauf',1],['zahlen','▤','Zahlen',1],['preise','€','Preise']].filter(i=>!i[3]||canSales());
+  const items=[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],['erfassen','✎','Verkauf',1],['preise','€','Preise']].filter(i=>!i[3]||canSales());
   const nav=$('#nav'),oc=openCount();nav.style.display='';
-  nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${i[0]===tab?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
+  nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='erfassen'&&tab==='zahlen'))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
   $('#hstat').textContent=headerStat();hofbarUpdate();
-  ({ich:vIch,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
+  ({ich:vIch,staende:vStaende,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
+  if(tab==='erfassen'||tab==='zahlen')$('#app').insertAdjacentHTML('afterbegin',salesSeg());
 }
 
 /* ---------- Drehrad ---------- */
@@ -518,10 +520,11 @@ document.addEventListener('input',ev=>{
 });
 
 /* ---------- Benutzer und Rollen (Testversion, später Login) ---------- */
-const ROLE={admin:'Admin',verkauf:'Verkauf',team:'Team'};
+const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team'};
 const roleOf=n=>(S.roles&&S.roles[n])||'team';
 const isAdmin=()=>roleOf(S.me)==='admin';
 const canSales=()=>roleOf(S.me)!=='team';
+const canAll=()=>['admin','chef'].includes(roleOf(S.me));
 const meSelect=()=>`<select class="t" data-meselect="1">${S.people.map(n=>`<option ${n===S.me?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
 function whoScreen(){
   $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='?';$('#hstat').textContent='';
@@ -706,7 +709,7 @@ function vPreise(){
 
 /* ---------- Plan: Aufgaben, Kalender, Notizen ---------- */
 /* Datenhaltung: S.tasks, S.events, S.notes. Später durch gemeinsamen Cloud-Speicher ersetzbar. */
-const newTf=date=>({id:null,title:'',date:date||'',time:'',person:'',stand:'',type:'todo',noteId:null,createdBy:''});
+const newTf=date=>({id:null,title:'',date:date||'',time:'',person:'',stand:'',type:'todo',note:'',noteId:null,createdBy:''});
 const newEf=(cal,date)=>({id:null,cal,title:'',date:date||'',end:'',time:'',status:'idee',note:''});
 const calOf=c=>(c==='insta'||c==='lieferung')?c:'saison';
 cur.tf=newTf(cur.cday);cur.ef=newEf('saison',cur.cday);cur.ctab='saison';
@@ -716,6 +719,7 @@ const standNm=id=>{const x=S.stands.find(s=>s.id===id);return x?x.name:''};
 const ST={idee:'Idee',bereit:'Bereit',gepostet:'Gepostet'};
 function softDel(x){if(x){x.deleted=true;x.deletedBy=S.me;x.deletedAt=Date.now()}}
 function archivHtml(){
+  if(!canAll())return '';
   const del=[
     ...S.tasks.filter(t=>t.deleted).map(t=>({k:'task',id:t.id,title:t.title,by:t.deletedBy,at:t.deletedAt,tag:'Aufgabe'})),
     ...S.events.filter(e=>e.deleted).map(e=>({k:'event',id:e.id,title:e.title,by:e.deletedBy,at:e.deletedAt,tag:'Kalender'})),
@@ -726,6 +730,23 @@ function archivHtml(){
 }
 function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
 function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
+function askConfirm(msg,ok,cb){
+  const d=document.createElement('div');d.className='cheers';
+  d.innerHTML=`<div><p>${esc(msg)}</p><button class="btn green" data-ok="1" style="padding:18px">${esc(ok)}</button><div style="height:26px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
+  d.addEventListener('click',e=>{const t=e.target;if(t.dataset.ok){d.remove();cb()}else if(t.dataset.no||t===d)d.remove()});
+  document.body.appendChild(d);
+}
+function completeTask(id){
+  const td=todayStr(),x=S.tasks.find(x=>x.id===id);if(!x)return;
+  x.done=!x.done;
+  if(x.done){
+    x.doneBy=S.me;x.doneAt=Date.now();
+    const n=S.tasks.filter(k=>!k.deleted&&k.done&&k.doneBy===S.me&&k.doneAt&&new Date(k.doneAt).toDateString()===new Date().toDateString()).length;
+    S.cheered=S.cheered||{};
+    if(n>=3&&S.cheered[S.me]!==td){S.cheered[S.me]=td;save();render();return showCheers()}
+  }else{delete x.doneBy;delete x.doneAt}
+  save();render();
+}
 function showCheers(){
   const d=document.createElement('div');d.className='cheers';
   d.innerHTML='<div><b>🍺</b><p>Drei Aufgaben erledigt. Das Feierabendbier ist verdient.</p><button class="btn" style="margin-bottom:0">Prost</button></div>';
@@ -738,7 +759,7 @@ function taskRow(t,showDate){
   return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
     <div style="min-width:0;flex:1" data-pl="tedit" data-v="${t.id}"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
-    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div></div></div>
+    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
     ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}</div>`;
 }
 function taskForm(){
@@ -750,6 +771,7 @@ function taskForm(){
     <div class="mini" style="margin-top:8px"><input class="t" type="date" id="tf-date" value="${f.date}" style="min-width:0"><input class="t" type="time" id="tf-time" value="${f.time}" style="min-width:0"></div>
     <div class="mini" style="margin-top:8px"><select class="t" id="tf-person"><option value="">Offen (jeder kann übernehmen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>
     <select class="t" id="tf-stand"><option value="">Hof (Standard)</option>${S.stands.map(x=>`<option value="${x.id}" ${sel(x.id,f.stand)}>${esc(x.name)}</option>`).join('')}</select></div>
+    <textarea class="t" id="tf-note" rows="2" placeholder="Notiz zur Aufgabe (optional)" style="margin-top:8px">${esc(f.note||'')}</textarea>
     <div class="mini" style="margin-top:8px"><button class="btn" data-pl="tsave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${(f.id||cur.tfOpen)?'<button class="btn sec" data-pl="tcancel" style="margin:0">Abbrechen</button>':''}</div>
     ${canDel?'<button class="btn red" data-pl="tdel">Löschen</button>':''}</div>`;
 }
@@ -769,10 +791,10 @@ function eventForm(){
     ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}</div>`;
 }
 function vPlan(){
-  const seg=`<div class="chips">${[['aufg','Aufgaben'],['kal','Kalender'],['notiz','Notizen']].map(([k,l])=>`<button class="chip ${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="chips">${[['aufg','Aufgaben'],['kal','Kalender'],['notiz','Notizen'],canAll()?['einkauf','Einkauf']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
   const np=isAdmin()?pendingNames().length:0;
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
-  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz})[cur.ptab]();
+  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz,einkauf:canAll()?planEinkauf:planAufg})[cur.ptab]();
 }
 function planKal(){
   const ct=cur.ctab,[y,m]=cur.cal.split('-').map(Number),td=todayStr(),sb=(canSales()&&ct==='saison')?salesByDate():{};
@@ -823,6 +845,16 @@ function planAufg(){
   ${done.length?`<h3>Erledigt (${done.length})</h3><div class="card">${srt(done).reverse().slice(0,15).map(t=>taskRow(t,true)).join('')}</div>`:''}
   ${!S.tasks.some(t=>!t.deleted)?'<div class="hint">Noch keine Aufgaben.</div>':''}
   ${archivHtml()}`;
+}
+function planEinkauf(){
+  const live=S.shopping.filter(x=>!x.deleted),open=live.filter(x=>!x.done).sort((a,b)=>(b.at||0)-(a.at||0)),done=live.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const row=x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${x.done?'on':''}" data-pl="shopdone" data-v="${x.id}">${x.done?'✓':''}</button>
+    <div style="min-width:0"><div class="n ${x.done?'done':''}">${esc(x.text)}</div><div class="p">${esc(x.by||'')}${x.done&&x.doneBy?' · gekauft von '+esc(x.doneBy):''}</div></div></div></div>`;
+  return `<div class="card pad"><label class="f">Einkaufsliste für Chef und Admin</label>
+    <input class="t" id="sh-text" placeholder="Was muss gekauft werden?" value="${esc(cur.shtext||'')}">
+    <button class="btn" data-pl="shopadd" style="margin-bottom:0">Hinzufügen</button></div>
+    <h3>Zu kaufen (${open.length})</h3><div class="card">${open.map(row).join('')||'<div class="row"><span class="p">Nichts auf der Liste.</span></div>'}</div>
+    ${done.length?`<h3>Gekauft (${done.length})</h3><div class="card">${done.slice(0,20).map(row).join('')}</div><button class="btn sec" data-pl="shopclear">Gekaufte aus der Liste entfernen</button>`:''}`;
 }
 function planNotiz(){
   const ns=S.notes.filter(n=>!n.deleted&&(isAdmin()||n.owner===S.me)).sort((a,b)=>b.created-a.created);
@@ -875,24 +907,34 @@ document.addEventListener('click',ev=>{
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
   if(a==='penadd'){const per=cur.pen.person||S.people[0];S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
   if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
+  if(a==='stab'){tab=v;cur.zst=false;window.scrollTo(0,0);return render()}
+  if(a==='ps'){cur.pstand=v;return render()}
+  if(a==='pmode'){cur.pmode=v;return render()}
+  if(a==='packck'){
+    const pk=S.packs.find(x=>x.id===cur.pstand);if(!pk)return;
+    const m=cur.pmode||'a';pk.checks=pk.checks||{};const c=pk.checks[v]||(pk.checks[v]={a:false,z:false});
+    c[m]=!c[m];c.by=S.me;save();return render();
+  }
+  if(a==='packreset'){
+    const pk=S.packs.find(x=>x.id===cur.pstand);if(!pk)return;
+    if(confirm(`Alle Häkchen der Packliste ${pk.name} zurücksetzen?`)){pk.groups.forEach(g=>g.items.forEach(i=>{pk.checks[i.id]={a:false,z:false}}));save();render()}
+    return;
+  }
+  if(a==='shopadd'){const x=($('#sh-text').value||'').trim();if(!x)return;S.shopping.push({id:uid(),text:x,by:S.me,at:Date.now(),done:false});cur.shtext='';save();return render()}
+  if(a==='shopdone'){const x=S.shopping.find(y=>y.id===v);if(x){x.done=!x.done;if(x.done){x.doneBy=S.me;x.doneAt=Date.now()}else{delete x.doneBy;delete x.doneAt}save();render()}return}
+  if(a==='shopclear'){if(confirm('Gekaufte Einträge aus der Liste entfernen?')){S.shopping.filter(x=>x.done).forEach(softDel);save();render()}return}
   if(a==='tclaim'){const x=S.tasks.find(x=>x.id===v);x.person=S.me;save();return render()}
   if(a==='tdone'){
-    const x=S.tasks.find(x=>x.id===v);x.done=!x.done;
-    if(x.done){
-      x.doneBy=S.me;x.doneAt=Date.now();
-      const n=S.tasks.filter(k=>!k.deleted&&k.done&&k.doneBy===S.me&&k.doneAt&&new Date(k.doneAt).toDateString()===new Date().toDateString()).length;
-      S.cheered=S.cheered||{};
-      if(n>=3&&S.cheered[S.me]!==td){S.cheered[S.me]=td;save();render();return showCheers()}
-    }else{delete x.doneBy;delete x.doneAt}
-    save();return render();
+    const x=S.tasks.find(x=>x.id===v);if(!x)return;
+    return x.done?askConfirm('Wieder auf offen setzen?','Ja, wieder öffnen',()=>completeTask(v)):askConfirm(`„${x.title}“ wirklich als erledigt markieren?`,'Ja, erledigt',()=>completeTask(v));
   }
-  if(a==='tedit'){const x=S.tasks.find(x=>x.id===v);cur.tf={id:x.id,title:x.title,date:x.date||'',time:x.time||'',person:x.person||'',stand:x.stand||'',type:x.type||'todo',noteId:null,createdBy:x.createdBy||''};cur.tfOpen=true;return render()}
+  if(a==='tedit'){const x=S.tasks.find(x=>x.id===v);cur.tf={id:x.id,title:x.title,date:x.date||'',time:x.time||'',person:x.person||'',stand:x.stand||'',type:x.type||'todo',note:x.note||'',noteId:null,createdBy:x.createdBy||''};cur.tfOpen=true;return render()}
   if(a==='tnew'){cur.tf=newTf('');cur.tfOpen=true;return render()}
   if(a==='tcancel'){reset();return render()}
   if(a==='tdel'){if(confirm('Aufgabe ins Archiv verschieben?')){softDel(S.tasks.find(x=>x.id===cur.tf.id));reset();save();render()}return}
   if(a==='tsave'){
     const f=cur.tf;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');
-    const base={title:f.title.trim(),date:f.date,time:f.time,person:f.person,stand:f.stand,type:f.type};
+    const base={title:f.title.trim(),date:f.date,time:f.time,person:f.person,stand:f.stand,type:f.type,note:(f.note||'').trim()};
     if(f.id)Object.assign(S.tasks.find(x=>x.id===f.id),base);
     else{const task={id:uid(),...base,done:false,created:Date.now(),createdBy:S.me};S.tasks.push(task);
       if(f.noteId){const n=S.notes.find(n=>n.id===f.noteId);if(n){n.status='zugeordnet';n.taskId=task.id;delete n.suggest}}}
@@ -910,7 +952,7 @@ document.addEventListener('click',ev=>{
   if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu',owner:S.me,ownerUid:S.myUid||''});cur.ntext='';save();return render()}
   if(a==='n2t'){const n=S.notes.find(n=>n.id===v);cur.tf={...newTf(cur.cday),title:n.text.slice(0,200),noteId:n.id};cur.tfOpen=true;cur.ptab='notiz';window.scrollTo(0,0);return render()}
   if(a==='ndel'){if(confirm('Notiz ins Archiv verschieben?')){softDel(S.notes.find(n=>n.id===v));save();render()}return}
-  if(a==='restore'){const [k,id]=v.split(':'),x=(k==='task'?S.tasks:k==='event'?S.events:S.notes).find(y=>y.id===id);if(x){delete x.deleted;delete x.deletedBy;delete x.deletedAt;save();render()}return}
+  if(a==='restore'){if(!canAll())return;const [k,id]=v.split(':'),x=(k==='task'?S.tasks:k==='event'?S.events:S.notes).find(y=>y.id===id);if(x){delete x.deleted;delete x.deletedBy;delete x.deletedAt;save();render()}return}
   if(a==='sugno'){delete S.notes.find(n=>n.id===v).suggest;save();return render()}
   if(a==='sugok'){
     const n=S.notes.find(n=>n.id===v),sg=n.suggest;
@@ -1017,6 +1059,27 @@ function vGesamt(){
 }
 
 /* ---------- Daten / Einstellungen ---------- */
+/* ---------- Stände: Packlisten zum Abhaken ---------- */
+const PMODE={a:'Aufbau',z:'Abbau'};
+const packModes=g=>g.single?(g.key==='besonderheiten'?['a']:['z']):['a','z'];
+const salesSeg=()=>`<div class="chips">${[['erfassen','Eintragen'],['zahlen','Zahlen']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-pl="stab" data-v="${k}">${l}</button>`).join('')}</div>`;
+function vStaende(){
+  const sid=(cur.pstand&&S.stands.some(x=>x.id===cur.pstand))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
+  const mode=cur.pmode||'a',pk=S.packs.find(x=>x.id===sid);
+  const chips=`<div class="chips">${S.stands.map(x=>`<button class="chip ${x.id===sid?'on':''}" data-pl="ps" data-v="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
+  if(!pk){$('#app').innerHTML=chips+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
+  const chk=pk.checks||{},on=i=>!!(chk[i.id]&&chk[i.id][mode]);
+  const groups=pk.groups.filter(g=>packModes(g).includes(mode)),all=groups.flatMap(g=>g.items),done=all.filter(on).length;
+  const seg=`<div class="chips">${['a','z'].map(m=>`<button class="chip ${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
+  const info=Object.entries(pk.info||{}).map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
+  const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key;
+    return `<details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="p" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${g.items.map(i=>`<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0;flex:1"><button class="chk big ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`).join('')}</div></details>`};
+  $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${seg}
+    <div class="card pad"><div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin:6px 0 0">${done} von ${all.length} ${mode==='a'?'aufgebaut und eingepackt':'abgebaut und zurück'}</div></div>
+    ${info?`<div class="card pad">${info}</div>`:''}
+    ${groups.map(sec).join('')}
+    ${isAdmin()?`<button class="btn sec" data-pl="packreset" style="margin-top:14px;color:var(--red)">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
+}
 /* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
 const DEMO_TASKS=['Zaun am Verkaufsstand prüfen','Lichterkette kontrollieren','Kasse und Wechselgeld zählen','Bäume nachsortieren','Netzmaschine reinigen','Plane am Stand festzurren',
   'Preisschilder aktualisieren','Kabeltrommel zurücklegen','Licht am Trecker prüfen','Becher für Glühwein auffüllen','Waffeleisen reinigen','Streusalz bereitstellen',
@@ -1077,7 +1140,10 @@ function importCal(txt){
     const d=JSON.parse(txt);let ne=0,nt=0;
     (d.events||[]).forEach(e=>{if(e&&e.id&&e.title&&e.date&&!S.events.some(x=>x.id===e.id)){S.events.push({...e,createdBy:S.me});ne++}});
     (d.tasks||[]).forEach(k=>{if(k&&k.id&&k.title&&!S.tasks.some(x=>x.id===k.id)){S.tasks.push({done:false,created:Date.now(),createdBy:S.me,...k});nt++}});
-    save();alert(`${ne} Kalendereinträge und ${nt} Aufgaben importiert.`);render();
+    let np=0;
+    (d.packs||[]).forEach(pk=>{if(!pk||!pk.id||!pk.groups)return;const ex=S.packs.find(x=>x.id===pk.id);
+      if(ex){ex.name=pk.name||ex.name;ex.info=pk.info||{};ex.groups=pk.groups;ex.checks=ex.checks||{}}else S.packs.push({checks:{},info:{},...pk});np++});
+    save();alert(`${ne} Kalendereinträge, ${nt} Aufgaben und ${np} Packlisten importiert.`);render();
   }catch(e){alert('Das ist keine gültige Importdatei. Der Text muss mit { beginnen.')}
 }
 function vDaten(){
@@ -1119,8 +1185,8 @@ function vDaten(){
   <div class="card pad"><div class="hint">Zum Ausprobieren: pro Benutzer 2 Aufgaben pro Tag bis 24.12., dazu offene Aufgaben, Saison-Termine und Lieferungen. Für neue Benutzer den Knopf später noch einmal tippen. Beispiele sind mit "Beispiel" oder "(offen)" gekennzeichnet und lassen sich mit einem Tipp entfernen.</div>
   <button class="btn sec" id="bDemoOn">Beispieldaten erzeugen</button>
   <button class="btn sec" id="bDemoOff" style="color:var(--red)">Beispieldaten entfernen</button></div>
-  <h2>Kalender importieren</h2>
-  <div class="card pad"><div class="hint">Datei mit Kalendereinträgen (z. B. Instagram-Plan) einspielen. Schon vorhandene Einträge werden übersprungen.</div>
+  <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
+  <div class="card pad"><div class="hint">Datei einspielen (z. B. Instagram-Plan oder Packlisten der Stände). Schon vorhandene Einträge werden übersprungen.</div>
   <button class="btn sec" id="bImpEv">Importdatei wählen …</button>
   <input type="file" id="fImpEv" accept=".json,application/json" hidden>
   <textarea class="t" id="impText" rows="3" placeholder="… oder den Inhalt der Importdatei hier einfügen" style="margin-top:8px"></textarea>
@@ -1247,7 +1313,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
@@ -1279,6 +1345,7 @@ document.addEventListener('click',async ev=>{
 document.addEventListener('input',ev=>{
   const t=ev.target;
   if(t.id==='au-mail'&&cur.auth)cur.auth.mail=t.value;
+  if(t.id==='sh-text')cur.shtext=t.value;
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
 });
 document.addEventListener('change',ev=>{

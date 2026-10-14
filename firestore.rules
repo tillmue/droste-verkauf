@@ -8,7 +8,7 @@ service cloud.firestore {
     function isMember() { return signedIn() && exists(userDoc(request.auth.uid)) && get(userDoc(request.auth.uid)).data.approved == true; }
     function role() { return get(userDoc(request.auth.uid)).data.role; }
     function isAdmin() { return isMember() && role() == 'admin'; }
-    function isSales() { return isMember() && role() in ['admin', 'verkauf']; }
+    function isSales() { return isMember() && role() in ['admin', 'chef', 'verkauf']; }
     function myEmail() { return request.auth.token.email.lower(); }
     function inviteDoc(email) { return /databases/$(database)/documents/invites/$(email); }
 
@@ -53,6 +53,20 @@ service cloud.firestore {
     match /events/{id} {
       allow read, create, update: if isMember();
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
+    }
+
+    // Packlisten der Stände: alle sehen und haken ab, Aufbau der Liste nur Admin
+    match /packs/{id} {
+      allow read: if isMember();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isMember() && request.resource.data.groups == resource.data.groups);
+      allow delete: if false;
+    }
+
+    // Einkaufsliste: nur Admin und Chef
+    match /shopping/{id} {
+      allow read, create, update: if isMember() && role() in ['admin', 'chef'];
+      allow delete: if false;
     }
 
     // Einstellungen (z. B. Hof-Adresse): alle lesen, Admin pflegt
