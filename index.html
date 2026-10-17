@@ -182,7 +182,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 b';
+const APP_VERSION='2026-10-17 c';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -753,7 +753,8 @@ function loadQr(text){
 /* ---------- Plan: Aufgaben, Kalender, Notizen ---------- */
 /* Datenhaltung: S.tasks, S.events, S.notes. Später durch gemeinsamen Cloud-Speicher ersetzbar. */
 const newTf=date=>({id:null,title:'',date:date||'',time:'',person:'',stand:'',type:'todo',note:'',noteId:null,createdBy:''});
-const newEf=(cal,date)=>({id:null,cal,title:'',date:date||'',end:'',time:'',status:'idee',note:''});
+const newEf=(cal,date)=>({id:null,cal,title:'',date:date||'',end:'',time:'',status:'idee',note:'',place:'',person:'',remind:'',repeat:'',rUntil:'',series:''});
+cur.cview='monat';
 const calOf=c=>(c==='insta'||c==='lieferung')?c:'saison';
 cur.tf=newTf(cur.cday);cur.ef=newEf('saison',cur.cday);cur.ctab='saison';
 const wdD=d=>new Date(d+'T12:00:00').toLocaleDateString(LOC,{weekday:'short',day:'2-digit',month:'2-digit'});
@@ -820,19 +821,26 @@ function taskForm(){
     ${canDel?'<button class="btn red" data-pl="tdel">Löschen</button>':''}</div>`;
 }
 function evLabel(e){return e.end&&e.end!==e.date?wdD(e.date)+' bis '+wdD(e.end):wdD(e.date)}
-function evRow(e){
+function evMeta(e,noDate){return [noDate?'':evLabel(e),e.time,e.place,e.person,e.cal==='insta'?ST[e.status]:'',e.note?e.note.slice(0,40):''].filter(Boolean).map(esc).join(' · ')}
+function evRow(e,noDate){
   return `<div class="row" data-pl="eedit" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div>
-    <div class="p">${evLabel(e)}${e.time?' · '+esc(e.time):''}${e.cal==='insta'?' · '+ST[e.status]:''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`;
+    <div class="p">${evMeta(e,noDate)}</div></div></div>`;
 }
 function eventForm(){
-  const f=cur.ef,sel=(a,b)=>a===b?'selected':'',insta=f.cal==='insta',lief=f.cal==='lieferung';
+  const f=cur.ef,sel=(a,b)=>a===b?'selected':'',insta=f.cal==='insta',lief=f.cal==='lieferung',sais=!insta&&!lief;
   return `<div class="card pad"><label class="f">${f.id?'Eintrag bearbeiten':insta?'Neuer Beitrag':lief?'Neue Lieferung':'Neuer Termin'}</label>
     <input class="t" id="ef-title" placeholder="${insta?'Thema des Beitrags':lief?'Kunde oder Ort':'z. B. Stände aufbauen'}" value="${esc(f.title)}">
     <div class="mini" style="margin-top:8px"><input class="t" type="date" id="ef-date" value="${f.date}" style="min-width:0">
-    ${insta?`<select class="t" id="ef-status">${Object.keys(ST).map(k=>`<option value="${k}" ${sel(k,f.status)}>${ST[k]}</option>`).join('')}</select>`:lief?`<input class="t" type="time" id="ef-time" value="${f.time||''}" style="min-width:0">`:`<input class="t" type="date" id="ef-end" value="${f.end}" style="min-width:0" title="Ende (optional)">`}</div>
+    ${insta?`<select class="t" id="ef-status">${Object.keys(ST).map(k=>`<option value="${k}" ${sel(k,f.status)}>${ST[k]}</option>`).join('')}</select>`:lief?`<input class="t" type="time" id="ef-time" value="${f.time||''}" style="min-width:0">`:`<input class="t" type="date" id="ef-end" value="${f.end||''}" style="min-width:0" title="Ende (optional)">`}</div>
+    ${lief?'':`<div class="mini" style="margin-top:8px"><input class="t" type="time" id="ef-time" value="${f.time||''}" style="min-width:0">${sais?`<input class="t" id="ef-place" list="ef-places" placeholder="Ort oder Stand (optional)" value="${esc(f.place||'')}" style="min-width:0"><datalist id="ef-places">${S.stands.map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist>`:`<select class="t" id="ef-person"><option value="">Zuständig (optional)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>`}</div>`}
+    ${sais?`<div class="mini" style="margin-top:8px"><select class="t" id="ef-person"><option value="">Zuständig (optional)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>
+    <select class="t" id="ef-remind"><option value="">Keine Erinnerung</option><option value="1h" ${sel('1h',f.remind)}>1 Stunde vorher</option><option value="1d" ${sel('1d',f.remind)}>1 Tag vorher</option></select></div>
+    ${f.remind?'<div class="hint">Erinnerung per Push, sobald Push-Nachrichten aktiv sind.</div>':''}
+    ${f.id?(f.series?'<div class="hint">Dieser Eintrag gehört zu einer Wiederholung, Änderungen gelten nur für diesen Termin.</div>':''):`<div class="mini" style="margin-top:8px"><select class="t" id="ef-repeat"><option value="">Keine Wiederholung</option><option value="daily" ${sel('daily',f.repeat)}>Täglich wiederholen</option><option value="weekly" ${sel('weekly',f.repeat)}>Wöchentlich wiederholen</option></select>
+    ${f.repeat?`<input class="t" type="date" id="ef-rUntil" value="${f.rUntil||''}" style="min-width:0" title="Wiederholen bis">`:''}</div>${f.repeat?'<div class="hint">Wiederholen bis zum gewählten Datum.</div>':''}`}`:''}
     <textarea class="t" id="ef-note" rows="2" style="margin-top:8px" placeholder="${insta?'Idee oder Text':lief?'Adresse, Menge, Baumart, Besonderheiten':'Notiz (optional)'}">${esc(f.note)}</textarea>
     <div class="mini" style="margin-top:8px"><button class="btn" data-pl="esave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${f.id?'<button class="btn sec" data-pl="ecancel" style="margin:0">Abbrechen</button>':''}</div>
-    ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}</div>`;
+    ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}${f.id&&f.series?'<button class="btn red" data-pl="edelser">Ganze Serie ins Archiv</button>':''}</div>`;
 }
 function vPlan(){
   const seg=`<div class="chips">${[['aufg','Aufgaben'],['kal','Kalender'],['notiz','Notizen'],has('einkauf')?['einkauf','Einkauf']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
@@ -840,38 +848,76 @@ function vPlan(){
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
   $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
 }
+const canHof=()=>has('lieferungen')||has('lieferplanung');
+function calItems(ct,ds){
+  if(ct==='meine')return [...S.tasks.filter(t=>!t.deleted&&t.person===S.me&&t.date===ds).map(o=>({k:'task',o})),
+    ...S.events.filter(e=>!e.deleted&&e.cal==='saison'&&e.person===S.me&&e.date<=ds&&ds<=(e.end||e.date)).map(o=>({k:'ev',o}))];
+  if(ct==='hof')return S.tours.filter(t=>!t.deleted&&t.date===ds).map(o=>({k:o.type==='abholung'?'pick':'tour',o}));
+  return S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=ds&&ds<=(e.end||e.date)).map(o=>({k:'ev',o}));
+}
+function calTime(it){return it.k==='tour'?'':it.k==='pick'?'':(it.o.time||'')}
+function calRow(it,noDate){
+  const o=it.o;
+  if(it.k==='task')return taskRow(o,false);
+  if(it.k==='ev')return evRow(o,noDate);
+  if(it.k==='tour'){const st=tourStops(o),done=st.filter(x=>x.done).length;
+    return `<div class="row" data-pl="goliefer" data-v="${o.date}"><div style="min-width:0"><div class="n">${esc(o.vehicle||'Fahrzeug offen')}</div>
+    <div class="p">${o.driver?'Fahrer: <span class="who">'+esc(o.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div></div></div>`}
+  return tourStops(o).map(x=>`<div class="row" data-pl="goliefer" data-v="${o.date}"><div style="min-width:0"><div class="n">${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
+    <div class="p"><span>Abholung</span> · <span>${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</span>${x.items?' · '+esc(x.items):''}</div></div></div>`).join('')||`<div class="row" data-pl="goliefer" data-v="${o.date}"><span class="p">Abholungen auf dem Hof</span></div>`;
+}
+function calDay(ct,ds){return calItems(ct,ds).sort((a,b)=>calTime(a)<calTime(b)?-1:calTime(a)>calTime(b)?1:0).map(it=>calRow(it,true)).join('')}
 function planKal(){
-  const ct=cur.ctab,[y,m]=cur.cal.split('-').map(Number),td=todayStr(),sb=(has('zahlen')&&ct==='saison')?salesByDate():{};
-  const evOn=ds=>S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=ds&&ds<=(e.end||e.date));
-  const mine=ds=>S.tasks.filter(t=>!t.deleted&&t.person===S.me&&t.date===ds);
+  const ct=(cur.ctab==='hof'&&!canHof())?'saison':cur.ctab,[y,m]=cur.cal.split('-').map(Number),td=todayStr(),sb=(has('zahlen')&&ct==='saison')?salesByDate():{},cv=cur.cview||'monat';
   const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate();
+  const dotsOf=ds=>{
+    if(ct==='meine'){const its=calItems(ct,ds),open=its.filter(i=>i.k==='ev'||!i.o.done).length;return open?`<em class="d ${ds<td&&its.some(i=>i.k==='task'&&!i.o.done)?'r':'b'}"></em>`:its.length?'<em class="d x"></em>':''}
+    let d=calItems(ct,ds).slice(0,3).map(i=>`<em class="d ${ct==='insta'?({idee:'x',bereit:'b',gepostet:'g'}[i.o.status]||'x'):'b'}"></em>`).join('');
+    if(sb[ds])d+='<em class="d g"></em>';return d;
+  };
   let cells='<i></i>'.repeat(off);
-  for(let d=1;d<=dim;d++){
-    const ds=`${y}-${p2(m)}-${p2(d)}`;let dots='';
-    if(ct==='meine'){const ts=mine(ds),open=ts.filter(t=>!t.done).length;dots=open?`<em class="d ${ds<td?'r':'b'}"></em>`:ts.length?'<em class="d x"></em>':''}
-    else dots=evOn(ds).slice(0,3).map(e=>`<em class="d ${ct==='insta'?({idee:'x',bereit:'b',gepostet:'g'}[e.status]||'x'):'b'}"></em>`).join('');
-    if(sb[ds])dots+='<em class="d g"></em>';
-    cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dots}</span></button>`;
-  }
-  const chips=`<div class="chips">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine']].filter(Boolean).map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  for(let d=1;d<=dim;d++){const ds=`${y}-${p2(m)}-${p2(d)}`;
+    cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dotsOf(ds)}</span></button>`}
+  const chips=`<div class="chips">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine'],canHof()?['hof','Hof']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>
+    <div class="chips">${[['monat','Monat'],['woche','Woche'],['liste','Liste']].map(([k,l])=>`<button class="chip ${cv===k?'on':''}" data-pl="cview" data-v="${k}">${l}</button>`).join('')}</div>`;
   const mname=new Date(y,m-1,1).toLocaleDateString(LOC,{month:'long',year:'numeric'});
-  const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':ct==='lieferung'?'<em class="d b"></em> Lieferung geplant':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
-  let body;
-  if(ct==='meine'){
-    const day=mine(cur.cday).sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:1);
-    body=`<h2 style="margin-top:4px">${wdD(cur.cday)}</h2><div class="card">${day.map(t=>taskRow(t,false)).join('')||'<div class="row"><span class="p">Nichts für dich an diesem Tag.</span></div>'}</div>${taskForm()}`;
+  const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':ct==='hof'?'<em class="d b"></em> Tour oder Abholung':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
+  const form=ct==='meine'?taskForm():ct==='hof'?'':eventForm();
+  const empty=t=>`<div class="row"><span class="p">${t}</span></div>`;
+  let head='',body='';
+  if(cv==='monat'){
+    head=`<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>
+      <div class="cal">${WDS.map(x=>`<u>${x}</u>`).join('')}${cells}</div>
+      <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
+    const dayH=`<h2 style="margin-top:4px">${wdD(cur.cday)}</h2><div class="card">${calDay(ct,cur.cday)||empty(ct==='meine'?'Nichts für dich an diesem Tag.':ct==='hof'?'Keine Touren oder Abholungen an diesem Tag.':'Für diesen Tag ist nichts eingetragen.')}</div>${form}`;
+    if(ct==='meine'||ct==='hof')body=dayH;
+    else{
+      const first=`${y}-${p2(m)}-01`,last=`${y}-${p2(m)}-${p2(dim)}`;
+      const list=S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=last&&(e.end||e.date)>=first).sort((a,b)=>a.date<b.date?-1:1);
+      const up=S.events.filter(e=>!e.deleted&&e.cal===ct&&(e.end||e.date)>=td).sort((a,b)=>a.date<b.date?-1:1).slice(0,6);
+      const upNext=up.length?`<h3>Als Nächstes</h3><div class="card">${up.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${evLabel(e)}${e.time?' · '+esc(e.time):''}</div></div></div>`).join('')}</div>`:'';
+      body=dayH+`<details data-det="mlist"><summary>Alle Einträge im ${mname}</summary><div class="card">${list.map(e=>evRow(e)).join('')||empty('In diesem Monat nichts eingetragen.')}</div></details>${upNext}`;
+    }
+  }else if(cv==='woche'){
+    const mon=shiftDate(cur.cday,-((new Date(cur.cday+'T12:00:00').getDay()+6)%7)),sun=shiftDate(mon,6);
+    const days=[0,1,2,3,4,5,6].map(i=>shiftDate(mon,i));
+    head=`<div class="card pad"><div class="calhead"><button data-pl="cwk" data-v="-1">‹</button><b>${wdD(mon)} – ${wdD(sun)}</b><button data-pl="cwk" data-v="1">›</button></div>
+      <div class="week" style="margin:8px 0">${days.map((ds,i)=>`<button class="dy ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><small>${WDS[i]}</small><b>${ds.slice(8)}</b><span>${dotsOf(ds)}</span></button>`).join('')}</div>
+      <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
+    body=days.map(ds=>{const r=calDay(ct,ds);return `<h3 data-pl="cday" data-v="${ds}" style="${ds===td?'color:var(--link)':''}">${wdD(ds)}</h3><div class="card">${r||empty('–')}</div>`}).join('')+form;
   }else{
-    const first=`${y}-${p2(m)}-01`,last=`${y}-${p2(m)}-${p2(dim)}`;
-    const list=S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=last&&(e.end||e.date)>=first).sort((a,b)=>a.date<b.date?-1:1);
-    const up=S.events.filter(e=>!e.deleted&&e.cal===ct&&(e.end||e.date)>=td).sort((a,b)=>a.date<b.date?-1:1).slice(0,6);
-    const upNext=up.length?`<h3>Als Nächstes</h3><div class="card">${up.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${evLabel(e)}${e.time?' · '+esc(e.time):''}</div></div></div>`).join('')}</div>`:'';
-    const dayEv=S.events.filter(e=>!e.deleted&&e.cal===ct&&e.date<=cur.cday&&cur.cday<=(e.end||e.date)).sort((a,b)=>(a.time||'')<(b.time||'')?-1:1);
-    body=`<h2 style="margin-top:4px">${wdD(cur.cday)}</h2><div class="card">${dayEv.map(evRow).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts eingetragen.</span></div>'}</div>${eventForm()}
-      <details data-det="mlist"><summary>Alle Einträge im ${mname}</summary><div class="card">${list.map(evRow).join('')||'<div class="row"><span class="p">In diesem Monat nichts eingetragen.</span></div>'}</div></details>${upNext}`;
+    const lim=shiftDate(td,90),by={};
+    const put=(k,html)=>{if(k>lim)return;(by[k]=by[k]||[]).push(html)};
+    if(ct==='meine'){
+      S.tasks.filter(t=>!t.deleted&&t.person===S.me&&t.date&&t.date>=td&&!t.done).forEach(t=>put(t.date,taskRow(t,false)));
+      S.events.filter(e=>!e.deleted&&e.cal==='saison'&&e.person===S.me&&(e.end||e.date)>=td).forEach(e=>put(e.date<td?td:e.date,evRow(e,true)));
+    }else if(ct==='hof'){
+      S.tours.filter(t=>!t.deleted&&t.date>=td).forEach(t=>put(t.date,calRow({k:t.type==='abholung'?'pick':'tour',o:t})));
+    }else S.events.filter(e=>!e.deleted&&e.cal===ct&&(e.end||e.date)>=td).forEach(e=>put(e.date<td?td:e.date,evRow(e,true)));
+    const ks=Object.keys(by).sort();
+    body=(ks.map(k=>`<h3>${wdD(k)}</h3><div class="card">${by[k].join('')}</div>`).join('')||`<div class="card">${empty('Nichts geplant in den nächsten Tagen.')}</div>`)+form;
   }
-  return chips+`<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>
-    <div class="cal">${WDS.map(x=>`<u>${x}</u>`).join('')}${cells}</div>
-    <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`+body;
+  return chips+head+body;
 }
 function planAufg(){
   const td=todayStr(),pfl=cur.pf;
@@ -945,6 +991,9 @@ document.addEventListener('click',ev=>{
   const a=t.dataset.pl,v=t.dataset.v,td=todayStr(),reset=()=>{cur.tf=newTf(cur.cday);cur.tfOpen=false};
   if(a==='ptab'){cur.ptab=v;return render()}
   if(a==='ctab'){cur.ctab=v;cur.ef=newEf(calOf(v),cur.cday);return render()}
+  if(a==='cview'){cur.cview=v;return render()}
+  if(a==='cwk'){cur.cday=shiftDate(cur.cday,7*(+v));cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
+  if(a==='goliefer'){tab='lieferungen';cur.lday=v;window.scrollTo(0,0);return render()}
   if(a==='cday'){cur.cday=v;if(!cur.tf.id)cur.tf.date=v;if(!cur.ef.id)cur.ef.date=v;return render()}
   if(a==='cmon'){const [y,m]=cur.cal.split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.cal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
   if(a==='ctoday'){cur.cday=td;cur.cal=td.slice(0,7);if(!cur.tf.id)cur.tf.date=td;if(!cur.ef.id)cur.ef.date=td;return render()}
@@ -1044,11 +1093,18 @@ document.addEventListener('click',ev=>{
   }
   if(a==='eedit'){const e=S.events.find(x=>x.id===v);cur.ef={...e};return render()}
   if(a==='ecancel'){cur.ef=newEf(calOf(cur.ctab),cur.cday);return render()}
+  if(a==='edelser'){const s0=cur.ef.series;if(s0&&confirm('Ganze Serie ins Archiv verschieben?')){S.events.filter(x=>x.series===s0&&!x.deleted).forEach(softDel);cur.ef=newEf(calOf(cur.ctab),cur.cday);save();render()}return}
   if(a==='edel'){if(confirm('Eintrag ins Archiv verschieben?')){softDel(S.events.find(x=>x.id===cur.ef.id));cur.ef=newEf(calOf(cur.ctab),cur.cday);save();render()}return}
   if(a==='esave'){
     const f=cur.ef;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');if(!f.date)return alert('Bitte ein Datum wählen.');
-    const base={cal:f.cal,title:f.title.trim(),date:f.date,end:(f.cal==='saison'&&f.end>f.date)?f.end:'',status:f.status||'idee',time:f.cal==='lieferung'?(f.time||''):'',note:f.note||''};
-    if(f.id)Object.assign(S.events.find(x=>x.id===f.id),base);else S.events.push({id:uid(),...base,createdBy:S.me});
+    const lief=f.cal==='lieferung',sais=f.cal==='saison';
+    const base={cal:f.cal,title:f.title.trim(),date:f.date,end:(sais&&f.end>f.date)?f.end:'',status:f.status||'idee',time:f.time||'',note:f.note||'',place:sais?(f.place||'').trim():'',person:lief?'':(f.person||''),remind:sais?(f.remind||''):''};
+    if(f.id){Object.assign(S.events.find(x=>x.id===f.id),base)}
+    else if(sais&&f.repeat){
+      if(!f.rUntil||f.rUntil<=f.date)return alert('Bitte ein Enddatum für die Wiederholung wählen.');
+      const step=f.repeat==='weekly'?7:1,sid=uid(),span=base.end?Math.round((new Date(base.end)-new Date(base.date))/864e5):0;let d=f.date,n=0;
+      while(d<=f.rUntil&&n<120){S.events.push({id:uid(),...base,date:d,end:span?shiftDate(d,span):'',series:sid,createdBy:S.me});d=shiftDate(d,step);n++}
+    }else S.events.push({id:uid(),...base,createdBy:S.me});
     cur.ef=newEf(f.cal,cur.cday);save();return render();
   }
   if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu',owner:S.me,ownerUid:S.myUid||''});cur.ntext='';save();return render()}
@@ -1073,6 +1129,7 @@ document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
+  if(t.id==='ef-repeat'||t.id==='ef-remind')render();
   if(t.dataset.meselect){S.me=t.value;save();tab='plan';cur.ptab='aufg';render()}
 });
 
