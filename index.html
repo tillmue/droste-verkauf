@@ -53,6 +53,17 @@ header img{flex:none}
 em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:normal}
 .d.b{background:var(--link)}.d.r{background:var(--red)}.d.g{background:var(--green)}.d.x{background:var(--line)}
 .cd.sel .d.b{background:#fff}
+.mcal{display:grid;grid-template-columns:20px repeat(7,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin:0 -4px 10px;background:var(--fill);border-radius:6px;overflow:hidden}
+.mcal>*{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.mcal u{text-decoration:none;text-align:center;font-size:11px;color:var(--mut);padding:4px 0}
+.mcal .kw{display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--mut)}
+.mcal .kw span{writing-mode:vertical-rl;transform:rotate(180deg)}
+.md{min-height:84px;padding:2px 1px;display:flex;flex-direction:column;gap:2px;align-items:stretch;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:none;color:var(--text);font:inherit;text-align:left;min-width:0}
+.md>b{font-size:11px;text-align:right;padding-right:3px;font-weight:600}
+.md.out{opacity:.4}.md.today>b{color:var(--link)}.md.sel{background:var(--panel);box-shadow:inset 0 0 0 2px var(--blue)}
+.md i{display:block;font-style:normal;font-size:9px;line-height:1.25;padding:1px 2px;border:1px solid var(--link);border-radius:3px;overflow:hidden;white-space:nowrap;text-overflow:clip;color:var(--text)}
+.md i.c-x{border-color:#8e99a0}.md i.c-g{border-color:var(--green)}.md i.c-o{border-color:var(--orange)}.md i.c-t{border-color:#3fc7b0}.md i.c-v{border-color:#c06be8}
+.md em.more{font-style:normal;font-size:9px;color:var(--mut);padding-left:2px}
 .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .calhead button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:18px}
 .chk{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:none;color:#fff;font-size:15px;padding:0}
@@ -182,7 +193,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 d';
+const APP_VERSION='2026-10-17 e';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -878,6 +889,21 @@ function planKal(){
   let cells='<i></i>'.repeat(off);
   for(let d=1;d<=dim;d++){const ds=`${y}-${p2(m)}-${p2(d)}`;
     cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dotsOf(ds)}</span></button>`}
+  const kwOf=ds=>{const d=new Date(ds+'T12:00:00');d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7)};
+  const chipOf=it=>{const o=it.o;
+    if(it.k==='task')return `<i class="c-x">${esc(o.title)}</i>`;
+    if(it.k==='tour')return `<i class="c-t">${esc(o.vehicle||'Tour')}</i>`;
+    if(it.k==='pick')return `<i class="c-o">${esc(tourStops(o).map(x=>x.name).join(', ')||'Abholung')}</i>`;
+    const c=ct==='insta'?({idee:'c-x',bereit:'',gepostet:'c-g'}[o.status]||''):(ct==='meine'?'c-v':'');
+    return `<i class="${c}">${esc(o.title)}</i>`};
+  const monGrid=()=>{
+    const first=`${y}-${p2(m)}-01`,start=shiftDate(first,-off),rows=Math.ceil((off+dim)/7);let g='<u></u>'+WDS.map(x=>`<u>${x}</u>`).join('');
+    for(let r=0;r<rows;r++){
+      g+=`<div class="kw"><span>KW ${kwOf(shiftDate(start,r*7))}</span></div>`;
+      for(let c=0;c<7;c++){const ds=shiftDate(start,r*7+c),its=calItems(ct,ds),inM=ds.slice(0,7)===cur.cal.slice(0,7);
+        g+=`<button class="md ${inM?'':'out'} ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${+ds.slice(8)}</b>${its.slice(0,3).map(chipOf).join('')}${its.length>3?`<em class="more">+${its.length-3}</em>`:''}</button>`}
+    }
+    return `<div class="mcal">${g}</div>`};
   const chips=`<div class="chips">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine'],canHof()?['hof','Hof']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>
     <div class="chips">${[['monat','Monat'],['woche','Woche'],['tag','Tag'],['liste','Liste']].map(([k,l])=>`<button class="chip ${cv===k?'on':''}" data-pl="cview" data-v="${k}">${l}</button>`).join('')}</div>`;
   const mname=new Date(y,m-1,1).toLocaleDateString(LOC,{month:'long',year:'numeric'});
@@ -886,9 +912,8 @@ function planKal(){
   const empty=t=>`<div class="row"><span class="p">${t}</span></div>`;
   let head='',body='';
   if(cv==='monat'){
-    head=`<div class="card pad"><div class="calhead"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>
-      <div class="cal">${WDS.map(x=>`<u>${x}</u>`).join('')}${cells}</div>
-      <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
+    head=`<div class="calhead" style="margin-top:4px"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>${monGrid()}
+      <button class="btn sec" data-pl="ctoday" style="margin:0 0 12px">Heute</button>`;
     const dayH=`<h2 style="margin-top:4px">${wdD(cur.cday)}</h2><div class="card">${calDay(ct,cur.cday)||empty(ct==='meine'?'Nichts für dich an diesem Tag.':ct==='hof'?'Keine Touren oder Abholungen an diesem Tag.':'Für diesen Tag ist nichts eingetragen.')}</div>${form}`;
     if(ct==='meine'||ct==='hof')body=dayH;
     else{

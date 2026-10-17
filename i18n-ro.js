@@ -589,6 +589,7 @@ window.RO_PATTERNS=[
   [/^(\d+) (?:Abholung|Abholungen) · (\d+) abgeholt$/,(m,a,b)=>`${a} ${+a===1?'ridicare':'ridicări'} · ${b} ${+b===1?'ridicată':'ridicate'}`],
   [/^„(.*)“ als abgeholt markieren\?$/,(m,x)=>`Marchezi „${x}” ca ridicat?`],
  [/^Vergangene Einträge \((\d+) Tage\)$/,(m,n)=>`Intrări trecute (${n} ${+n===1?"zi":"zile"})`],
+ [/^KW (\d+)$/,(m,n)=>`Săpt. ${n}`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
