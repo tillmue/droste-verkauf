@@ -3,7 +3,7 @@
    2. Morgennachricht 07:00 (Berlin): offene Aufgaben und Termine des Tages
    3. Erinnerungen vor Terminen (Feld "remind": 1h oder 1d), alle 10 Minuten geprüft
    Tokens liegen in users/{uid}.fcmTokens, Sprache in users/{uid}.lang (de oder ro). */
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
@@ -19,6 +19,12 @@ const T = {
     de: (n, d, role) => `Neue Tour für dich: ${n} am ${d} (${role === 'driver' ? 'Fahrer' : 'Beifahrer'})`,
     ro: (n, d, role) => `Tur nou pentru tine: ${n} pe ${d} (${role === 'driver' ? 'șofer' : 'însoțitor'})`
   },
+  report: {
+    de: (u, c, o, t) => `${u ? 'DRINGEND: ' : ''}Neue Meldung (${c}${o ? ', ' + o : ''}): ${t}`,
+    ro: (u, c, o, t) => `${u ? 'URGENT: ' : ''}Raportare nouă (${c}${o ? ', ' + o : ''}): ${t}`
+  },
+  repWork: { de: t => `Deine Meldung wird bearbeitet: ${t}`, ro: t => `Raportarea ta este în lucru: ${t}` },
+  repDone: { de: t => `Deine Meldung ist erledigt: ${t}`, ro: t => `Raportarea ta este rezolvată: ${t}` },
   title: { de: 'Hof Droste', ro: 'Hof Droste' },
   morning: {
     de: (n, a, e) => `Guten Morgen ${n}: ${a} offene ${a === 1 ? 'Aufgabe' : 'Aufgaben'}${e ? `, ${e} ${e === 1 ? 'Termin' : 'Termine'} heute` : ''}.`,
@@ -94,6 +100,42 @@ exports.tourAssigned = onDocumentWritten('tours/{id}', async event => {
     const u = users.find(x => x.name === who);
     if (u) await pushTo(u, lang => T.newTour[lang](name, date, role));
   }
+});
+
+/* 1c. Meldungen: neue Meldung an Admin und Chef, Statuswechsel an den Melder */
+const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'] };
+async function repObjName(r) {
+  if (r.cat !== 'stand' || !r.obj) return r.obj || '';
+  const d = await db.collection('stands').doc(r.obj).get();
+  return d.exists ? d.data().name : r.obj;
+}
+exports.reportCreated = onDocumentCreated('reports/{id}', async event => {
+  const r = event.data.data();
+  const obj = await repObjName(r);
+  const users = (await approvedUsers()).filter(u => ['admin', 'chef'].includes(u.role) && u.id !== r.byUid);
+  for (const u of users) {
+    const li = u.lang === 'ro' ? 1 : 0;
+    await pushTo(u, lang => T.report[lang](!!r.urgent, RCAT[r.cat] ? RCAT[r.cat][lang === 'ro' ? 1 : 0] : r.cat, obj, r.text || ''));
+  }
+});
+exports.reportUpdated = onDocumentUpdated('reports/{id}', async event => {
+  const b = event.data.before.data(), a = event.data.after.data();
+  if (b.status === a.status || !a.byUid || !['arbeit', 'erledigt'].includes(a.status)) return;
+  const users = await approvedUsers();
+  const u = users.find(x => x.id === a.byUid);
+  if (!u) return;
+  await pushTo(u, lang => T[a.status === 'erledigt' ? 'repDone' : 'repWork'][lang](a.text || ''));
+});
+/* Wird die zugewiesene Aufgabe erledigt, gilt die Meldung als erledigt */
+exports.reportTaskDone = onDocumentWritten('tasks/{id}', async event => {
+  const a = event.data.after.exists ? event.data.after.data() : null;
+  const b = event.data.before.exists ? event.data.before.data() : null;
+  if (!a || !a.reportId || !!a.done === !!(b && b.done)) return;
+  const ref = db.collection('reports').doc(a.reportId);
+  const d = await ref.get();
+  if (!d.exists) return;
+  if (a.done) await ref.update({ status: 'erledigt', doneAt: Date.now(), doneBy: a.doneBy || '' });
+  else if (d.data().status === 'erledigt') await ref.update({ status: 'arbeit' });
 });
 
 /* 2. Morgennachricht */

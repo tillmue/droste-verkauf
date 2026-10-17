@@ -83,6 +83,14 @@ service cloud.firestore {
     // Feld (Netzen und Abfahren): Recht "feld"
     match /feld/{id} { allow read, create, update: if perm('feld'); allow delete: if false; }
 
+    // Meldungen (Fahrzeug, Maschine, Hof, Stand): jeder meldet, Admin und Chef sehen alle und bearbeiten, Melder sieht eigene
+    match /reports/{id} {
+      allow read: if isMember() && (role() == 'admin' || role() == 'chef' || resource.data.byUid == request.auth.uid);
+      allow create: if isMember() && request.resource.data.byUid == request.auth.uid;
+      allow update: if isMember() && (role() == 'admin' || role() == 'chef');
+      allow delete: if false;
+    }
+
     // Einkaufsliste: Recht "einkauf"
     match /shopping/{id} {
       allow read, create, update: if perm('einkauf');

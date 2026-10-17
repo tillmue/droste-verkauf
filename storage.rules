@@ -5,6 +5,11 @@ service firebase.storage {
     function member() { return request.auth != null && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) && userDoc().data.approved == true; }
     function editor() { return member() && userDoc().data.role in ['admin', 'chef']; }
     // Bilder (Schonungen, Standpläne): alle freigegebenen Mitglieder lesen, nur Admin und Chef laden hoch
+    // Fotos zu Meldungen: jedes freigegebene Mitglied darf hochladen
+    match /meldungen/{file} {
+      allow read: if member();
+      allow write: if member() && request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+    }
     match /{allPaths=**} {
       allow read: if member();
       allow write: if editor() && request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*');

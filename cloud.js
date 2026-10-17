@@ -36,11 +36,12 @@ function initCloud(FB) {
     tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: true },
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
-    settings: { get: () => { const h = T.S.hofInfo || {}; return (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || (h.schonungen && Object.keys(h.schonungen).length)) ? [['hof', h]] : []; },
-                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', schonungen: h.schonungen || {} }; }, del: true },
+    settings: { get: () => { const h = T.S.hofInfo || {}; return (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || h.machines || (h.schonungen && Object.keys(h.schonungen).length)) ? [['hof', h]] : []; },
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', machines: h.machines || '', schonungen: h.schonungen || {} }; }, del: true },
     packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
     feld:     { get: () => T.S.feld.map(x => [x.id, x]), put: m => { T.S.feld = Object.values(m); }, del: false, maps: ['bal'] },
     tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops', 'loaded'] },
+    reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
     shopping: { get: () => T.S.shopping.map(x => [x.id, x]), put: m => { T.S.shopping = Object.values(m); }, del: false },
     penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,
@@ -130,6 +131,7 @@ function initCloud(FB) {
     const base = FB.collection(db, name);
     let qs = [base];
     if (name === 'notes' && profile.role !== 'admin') qs = [FB.query(base, FB.where('ownerUid', '==', uid))];
+    if (name === 'reports' && profile.role !== 'admin' && profile.role !== 'chef') qs = [FB.query(base, FB.where('byUid', '==', uid))];
     /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
     if (name === 'tasks' && profile.role !== 'admin' && profile.role !== 'chef')
       qs = [FB.query(base, FB.where('person', '==', profile.name)), FB.query(base, FB.where('person', '==', ''))];
@@ -166,7 +168,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -174,7 +176,7 @@ function initCloud(FB) {
       arr.forEach(u => { S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emailVerified[u.name] = u.emailVerified === true; if (u.perms) S.perms[u.name] = u.perms; });
       T.softRender();
     }, err => console.error('users', err)));
-    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs'].forEach(listen);
+    ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs', 'reports'].forEach(listen);
     if (T.permFor(p, 'verkauf') || T.permFor(p, 'zahlen')) ['moves', 'sales'].forEach(listen);
     if (T.permFor(p, 'lieferungen') || T.permFor(p, 'lieferplanung')) listen('tours');
     if (T.permFor(p, 'einkauf')) listen('shopping');
