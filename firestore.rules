@@ -10,7 +10,8 @@ service cloud.firestore {
     function isAdmin() { return isMember() && role() == 'admin'; }
     // Rechte pro Person (users/{uid}.perms). Ohne Eintrag gelten Voreinstellungen je Rolle.
     function perms() { return get(userDoc(request.auth.uid)).data.get('perms', {}); }
-    function dflt(k) { return role() == 'chef' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || k == 'instagram'; }
+    function dflt(k) { return role() == 'chef' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || (role() == 'schonung' && k == 'feld') || (role() != 'schonung' && k == 'instagram'); }
+    function myName() { return get(userDoc(request.auth.uid)).data.name; }
     function perm(k) { return isMember() && (role() == 'admin' || perms().get(k, dflt(k)) == true); }
     function myEmail() { return request.auth.token.email.lower(); }
     function inviteDoc(email) { return /databases/$(database)/documents/invites/$(email); }
@@ -47,7 +48,8 @@ service cloud.firestore {
 
     // Aufgaben und Termine
     match /tasks/{id} {
-      allow read, create: if isMember();
+      allow read: if isMember() && (role() == 'admin' || role() == 'chef' || resource.data.person == '' || resource.data.person == myName());
+      allow create: if isMember();
       allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen, abhaken oder ins Archiv schieben
       // kein echtes Loeschen, nur Archiv (Feld deleted); Ausnahme: Admin darf Beispieldaten (demo) entfernen
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;

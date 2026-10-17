@@ -127,22 +127,30 @@ function initCloud(FB) {
 
   function listen(name) {
     const d = defs[name];
-    let q = FB.collection(db, name);
-    if (name === 'notes' && profile.role !== 'admin') q = FB.query(q, FB.where('ownerUid', '==', uid));
-    unsubs.push(FB.onSnapshot(q, snap => {
+    const base = FB.collection(db, name);
+    let qs = [base];
+    if (name === 'notes' && profile.role !== 'admin') qs = [FB.query(base, FB.where('ownerUid', '==', uid))];
+    /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
+    if (name === 'tasks' && profile.role !== 'admin' && profile.role !== 'chef')
+      qs = [FB.query(base, FB.where('person', '==', profile.name)), FB.query(base, FB.where('person', '==', ''))];
+    const parts = qs.map(() => null);
+    qs.forEach((q, qi) => unsubs.push(FB.onSnapshot(q, snap => {
       const m = {};
       snap.forEach(ds => { m[ds.id] = ds.data(); });
-      const map = {}; for (const id in m) map[id] = clean(m[id]);
+      parts[qi] = { m, pend: !!(snap.metadata && snap.metadata.hasPendingWrites), meta: snap.metadata };
+      if (parts.some(p => !p)) return;
+      const all = {}; parts.forEach(p => Object.assign(all, p.m));
+      const map = {}; for (const id in all) map[id] = clean(all[id]);
       lastSynced[name] = {}; for (const id in map) lastSynced[name][id] = stable(map[id]);
-      pending[name] = !!(snap.metadata && snap.metadata.hasPendingWrites);
-      d.put(name === 'sales' ? map : map);
+      pending[name] = parts.some(p => p.pend);
+      d.put(map);
       hydrated[name] = true;
       if (name === 'tasks' && T.rollTasks) T.rollTasks();
-      seedIfEmpty(name, snap);
+      seedIfEmpty(name, { size: Object.keys(map).length, metadata: parts[0].meta });
       T.ready = hydrated.stands && hydrated.products;
       setStatus();
       T.softRender();
-    }, err => { console.error(name, err); T.toast('Fehler beim Laden: ' + name); }));
+    }, err => { console.error(name, err); T.toast('Fehler beim Laden: ' + name); })));
   }
 
   function deactivate() {

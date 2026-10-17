@@ -35,6 +35,10 @@ header img{flex:none}
 #prof{flex:1 1 0;min-width:0;justify-content:flex-end}
 #prof>span:last-child{min-width:0}
 #prof b,#prof small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+body.authed #lang{display:none}
+.seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:2px;margin:4px 0 10px}
+.seg button{flex:1;min-width:0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:9px;white-space:nowrap}
+.seg button.on{background:var(--blue);color:#fff}
 #refresh{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:20px;line-height:1;padding:0;margin-right:8px}
 #refresh.spin{animation:rspin .8s linear infinite}@keyframes rspin{to{transform:rotate(360deg)}}
 #lang{flex:none;display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
@@ -180,7 +184,7 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button><a id="hofbar" target="_blank" rel="noopener" style="display:none"></a></header>
+<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -193,7 +197,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 b';
+const APP_VERSION='2026-10-18 c';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -368,6 +372,7 @@ function backupWarn(){
 }
 const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
+  document.body.classList.remove('authed');
   if(CLOUD){
     const c=cur.cloud||{status:'loading'};
     if(c.status==='loading')return infoScreen('Lade …');
@@ -379,11 +384,14 @@ function render(){
     if(!S.me||!S.people.includes(S.me))return whoScreen();
     if(S.approved[S.me]===false)return waitScreen();
   }
+  document.body.classList.add('authed');
   if(tab==='erfassen'&&!has('verkauf'))tab='staende';
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
-  const items=[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Lieferungen']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
+  const sch=roleOf(S.me)==='schonung';
+  const items=sch?[['ich','◉','Ich'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Lieferungen']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
+  if(sch&&(tab==='staende'||tab==='lieferungen'||tab==='preise'||tab==='erfassen'||tab==='zahlen'))tab='plan';
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
@@ -561,12 +569,13 @@ document.addEventListener('input',ev=>{
 });
 
 /* ---------- Benutzer und Rollen (Testversion, später Login) ---------- */
-const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team'};
+const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team',schonung:'Schonung'};
 const roleOf=n=>(S.roles&&S.roles[n])||'team';
 const isAdmin=()=>roleOf(S.me)==='admin';
 const canCal=()=>isAdmin()||roleOf(S.me)==='chef';
+const seeAllTasks=()=>isAdmin()||roleOf(S.me)==='chef';
 const PERMS=[['verkauf','Verkauf eintragen'],['zahlen','Zahlen ansehen'],['lieferungen','Lieferungen ansehen'],['lieferplanung','Touren planen'],['einkauf','Einkaufsliste'],['archiv','Archiv'],['instagram','Instagram-Kalender'],['feld','Feld: Netzen und Abfahren']];
-const PRESET={admin:'*',chef:'*',verkauf:['verkauf','zahlen','instagram'],team:['instagram']};
+const PRESET={admin:'*',chef:'*',verkauf:['verkauf','zahlen','instagram'],team:['instagram'],schonung:['feld']};
 function presetFor(role){const q=PRESET[role]||[],o={};PERMS.forEach(([k])=>{o[k]=q==='*'||q.includes(k)});return o}
 const permsOf=n=>(S.perms&&S.perms[n])||presetFor(roleOf(n));
 const has=k=>isAdmin()||!!permsOf(S.me)[k];
@@ -633,16 +642,12 @@ function pushBlock(){
 }
 function accountBlock(){
   const ver=`<div class="hint">App-Version ${APP_VERSION}</div>`;
+  const lang=`<label class="f">Sprache</label><div class="seg"><button data-lang="de" class="${LANG==='de'?'on':''}">Deutsch</button><button data-lang="ro" class="${LANG==='ro'?'on':''}">Română</button></div>`;
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
-    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
-  return `<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
+    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${lang}${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
+  return `${lang}<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
 }
-function hofbarUpdate(hide){
-  const hb=$('#hofbar');if(!hb)return;
-  const a=(!hide&&S.hofInfo&&S.hofInfo.address)||'';
-  hb.style.display=a?'':'none';
-  if(a){hb.textContent='📍 Hof: '+a;hb.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a)}
-}
+function hofbarUpdate(){}
 function headerStat(){
   if(CLOUD)return ((window.APP&&APP.status)||'')+' · '+ROLE[roleOf(S.me)];
   return isAdmin()?(S.lastExport?'Backup '+new Date(S.lastExport).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Kein Backup'):ROLE[roleOf(S.me)];
@@ -841,7 +846,7 @@ function taskRow(t,showDate){
   return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
     <div style="min-width:0;flex:1" data-pl="tedit" data-v="${t.id}"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
-    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.handedFrom&&!t.done?`<div class="p">Abgegeben von ${esc(t.handedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
+    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${(()=>{const by=t.assignedBy||t.createdBy;return by&&by!==t.person?`<div class="p">Von ${esc(by)}</div>`:''})()}${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.handedFrom&&!t.done?`<div class="p">Abgegeben von ${esc(t.handedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
     ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${(t.person&&!t.done&&(t.person===S.me||isAdmin()))?`<button class="claim" data-pl="thand" data-v="${t.id}">Abgeben</button>`:''}</div>`;
 }
 function taskForm(){
@@ -880,10 +885,11 @@ function eventForm(){
     ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}${f.id&&f.series?'<button class="btn red" data-pl="edelser">Ganze Serie ins Archiv</button>':''}</div>`;
 }
 function vPlan(){
-  const seg=`<div class="chips">${[['aufg','Aufgaben'],['kal','Kalender'],['notiz','Notizen'],has('einkauf')?['einkauf','Einkauf']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if(roleOf(S.me)==='schonung')cur.ptab='aufg';
+  const seg=roleOf(S.me)==='schonung'?'':`<div class="seg">${[['aufg','Aufgaben'],['kal','Kalender'],has('einkauf')?['einkauf','Einkauf']:null].filter(Boolean).map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
   const np=isAdmin()?pendingNames().length:0;
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
-  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,notiz:planNotiz,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
+  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
 }
 const canHof=()=>has('lieferungen')||has('lieferplanung');
 function calItems(ct,ds){
@@ -930,8 +936,8 @@ function planKal(){
         g+=`<button class="md ${inM?'':'out'} ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${+ds.slice(8)}</b>${its.slice(0,3).map(chipOf).join('')}${its.length>3?`<em class="more">+${its.length-3}</em>`:''}</button>`}
     }
     return `<div class="mcal">${g}</div>`};
-  const chips=`<div class="chips">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine'],canHof()?['hof','Hof']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>
-    <div class="chips">${[['monat','Monat'],['woche','Woche'],['tag','Tag'],['liste','Liste']].map(([k,l])=>`<button class="chip ${cv===k?'on':''}" data-pl="cview" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const chips=`<div class="seg">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine'],canHof()?['hof','Hof']:null].filter(Boolean).map(([k,l])=>`<button class="${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>
+    <div class="seg">${[['monat','Monat'],['woche','Woche'],['tag','Tag'],['liste','Liste']].map(([k,l])=>`<button class="${cv===k?'on':''}" data-pl="cview" data-v="${k}">${l}</button>`).join('')}</div>`;
   const mname=new Date(y,m-1,1).toLocaleDateString(LOC,{month:'long',year:'numeric'});
   const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':ct==='hof'?'<em class="d b"></em> Tour oder Abholung':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
   const form=ct==='meine'?taskForm():ct==='hof'?'':canCal()?eventForm():'<div class="hint">Dieser Kalender wird vom Chef und vom Admin gepflegt.</div>';
@@ -978,15 +984,12 @@ function planKal(){
 function planAufg(){
   const td=todayStr(),pfl=cur.pf;
   const keep=t=>!pfl||(pfl==='@me'?t.person===S.me:pfl==='@open'?!t.person:t.person===pfl);
-  const list=S.tasks.filter(t=>!t.deleted&&keep(t)),open=list.filter(t=>!t.done);
+  const list=S.tasks.filter(t=>!t.deleted&&keep(t)&&(seeAllTasks()||!t.person||t.person===S.me)),open=list.filter(t=>!t.done);
   const srt=a=>a.slice().sort((x,y)=>((x.date||'9')+(x.time||''))<((y.date||'9')+(y.time||''))?-1:1);
   const groups=[['Überfällig',open.filter(t=>t.date&&t.date<td)],['Heute',open.filter(t=>t.date===td)],['Demnächst',open.filter(t=>t.date>td)],['Ohne Datum',open.filter(t=>!t.date)]];
-  const done=list.filter(t=>t.done),nOpen=S.notes.filter(n=>!n.deleted&&n.status!=='zugeordnet'&&(isAdmin()||n.owner===S.me)).length;
-  const fl=[['','Alle'],['@me','Meine'],['@open','Offen']].concat(S.people.map(p=>[p,p]));
-  return `<div class="card pad"><textarea class="t" id="nt-text" rows="2" placeholder="Brain Dump: was fällt dir ein?">${esc(cur.ntext)}</textarea>
-    <button class="btn" data-pl="nsave" style="margin-bottom:0">Speichern</button>
-    ${nOpen?`<div class="hint" data-pl="ptab" data-v="notiz" style="cursor:pointer;margin-bottom:0">${nOpen} Notiz${nOpen>1?'en':''} warte${nOpen>1?'n':'t'} auf Einordnung →</div>`:''}</div>
-  <div class="chips">${fl.map(([v,l])=>`<button class="chip ${pfl===v?'on':''}" data-pl="pf" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>
+  const done=list.filter(t=>t.done);
+  const fl=[['','Alle'],['@me','Meine'],['@open','Offen']].concat(seeAllTasks()?S.people.map(p=>[p,p]):[]);
+  return `  <div class="chips">${fl.map(([v,l])=>`<button class="chip ${pfl===v?'on':''}" data-pl="pf" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>
   <button class="btn" data-pl="tnew" style="margin-top:0">+ Neue Aufgabe</button>
   ${cur.tfOpen?taskForm():''}
   ${groups.map(([n,a])=>a.length?`<h3>${n} (${a.length})</h3><div class="card">${srt(a).map(t=>taskRow(t,true)).join('')}</div>`:'').join('')}
@@ -1003,19 +1006,6 @@ function planEinkauf(){
     <button class="btn" data-pl="shopadd" style="margin-bottom:0">Hinzufügen</button></div>
     <h3>Zu kaufen (${open.length})</h3><div class="card">${open.map(row).join('')||'<div class="row"><span class="p">Nichts auf der Liste.</span></div>'}</div>
     ${done.length?`<h3>Gekauft (${done.length})</h3><div class="card">${done.slice(0,20).map(row).join('')}</div><button class="btn sec" data-pl="shopclear">Gekaufte aus der Liste entfernen</button>`:''}`;
-}
-function planNotiz(){
-  const ns=S.notes.filter(n=>!n.deleted&&(isAdmin()||n.owner===S.me)).sort((a,b)=>b.created-a.created);
-  return `<div class="card pad"><label class="f">Schnelle Notiz (nur für dich sichtbar${isAdmin()?', du siehst als Admin alle':''})</label>
-    <textarea class="t" id="nt-text" placeholder="z. B. Kabeltrommel für Quick fehlt">${esc(cur.ntext)}</textarea>
-    <button class="btn" data-pl="nsave" style="margin-bottom:0">Notiz speichern</button></div>
-    ${cur.tfOpen&&cur.tf.noteId?taskForm():''}
-    ${isAdmin()?'<div class="hint">Abends: Backup sichern, Datei in den Eingang-Ordner legen und mir „Notizen zuordnen“ sagen. Du bekommst Vorschläge, die du hier mit einem Tipp übernimmst.</div>':''}
-    ${ns.map(n=>{const sg=n.suggest;return `<div class="card pad ${n.status==='zugeordnet'?'dim':''}"><div>${esc(n.text)}</div>
-      <div style="color:var(--mut);font-size:12px;margin-top:4px">${new Date(n.created).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}${isAdmin()&&n.owner?' · '+esc(n.owner):''}${n.status==='zugeordnet'?' · zugeordnet':''}</div>
-      ${sg?`<div class="sug"><b>Vorschlag:</b> ${esc(sg.title||n.text)}<br><small>${esc([sg.date&&wdD(sg.date),sg.time,sg.person,standNm(sg.stand)||sg.stand].filter(Boolean).join(' · '))}</small>
-        <div class="mini" style="margin-top:6px"><button class="btn green" data-pl="sugok" data-v="${n.id}" style="margin:0">Übernehmen</button><button class="btn sec" data-pl="sugno" data-v="${n.id}" style="margin:0">Verwerfen</button></div></div>`:''}
-      <div class="mini" style="margin-top:8px">${n.status!=='zugeordnet'?`<button class="btn sec" data-pl="n2t" data-v="${n.id}" style="margin:0">→ Aufgabe</button>`:''}<button class="btn sec" data-pl="ndel" data-v="${n.id}" style="margin:0;color:var(--red)">Löschen</button></div></div>`}).join('')||'<div class="hint">Noch keine Notizen.</div>'}`;
 }
 document.addEventListener('click',ev=>{
   const me=ev.target.closest('[data-me]');
@@ -1167,21 +1157,10 @@ document.addEventListener('click',ev=>{
     }else S.events.push({id:uid(),...base,createdBy:S.me});
     cur.ef=newEf(f.cal,cur.cday);save();return render();
   }
-  if(a==='nsave'){const x=($('#nt-text').value||'').trim();if(!x)return;S.notes.push({id:uid(),text:x,created:Date.now(),status:'neu',owner:S.me,ownerUid:S.myUid||''});cur.ntext='';save();return render()}
-  if(a==='n2t'){const n=S.notes.find(n=>n.id===v);cur.tf={...newTf(cur.cday),title:n.text.slice(0,200),noteId:n.id};cur.tfOpen=true;cur.ptab='notiz';window.scrollTo(0,0);return render()}
-  if(a==='ndel'){if(confirm('Notiz ins Archiv verschieben?')){softDel(S.notes.find(n=>n.id===v));save();render()}return}
   if(a==='restore'){if(!has('archiv'))return;const [k,id]=v.split(':'),x=(k==='task'?S.tasks:k==='event'?S.events:k==='tour'?S.tours:S.notes).find(y=>y.id===id);if(x){delete x.deleted;delete x.deletedBy;delete x.deletedAt;save();render()}return}
-  if(a==='sugno'){delete S.notes.find(n=>n.id===v).suggest;save();return render()}
-  if(a==='sugok'){
-    const n=S.notes.find(n=>n.id===v),sg=n.suggest;
-    const st=S.stands.find(x=>x.id===sg.stand||x.name.toLowerCase()===String(sg.stand||'').toLowerCase());
-    const task={id:uid(),assignedBy:S.me,title:sg.title||n.text,date:sg.date||'',time:sg.time||'',person:sg.person||'',stand:st?st.id:'',type:sg.type==='termin'?'termin':'todo',done:false,created:Date.now(),createdBy:S.me};
-    S.tasks.push(task);n.status='zugeordnet';n.taskId=task.id;delete n.suggest;save();return render();
-  }
 });
 document.addEventListener('input',ev=>{
   const t=ev.target;
-  if(t.id==='nt-text')cur.ntext=t.value;
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
 });
@@ -1290,14 +1269,15 @@ function vStaende(){
   const sid=(cur.pstand&&S.stands.some(x=>x.id===cur.pstand))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
   const mode=cur.pmode||'a',pk=S.packs.find(x=>x.id===sid);
   const chips=`<div class="chips">${S.stands.map(x=>`<button class="chip ${x.id===sid?'on':''}" data-pl="ps" data-v="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
-  if(!pk){$('#app').innerHTML=chips+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
+  const stN=S.stands.find(x=>x.id===sid)||{},addrBox=stN.address?`<div class="card pad"><div class="n">${esc(stN.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div></div>`:'';
+  if(!pk){$('#app').innerHTML=chips+addrBox+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
   const chk=pk.checks||{},on=i=>!!(chk[i.id]&&chk[i.id][mode]);
   const groups=pk.groups.filter(g=>packModes(g).includes(mode)),all=groups.flatMap(g=>g.items),done=all.filter(on).length;
   const seg=`<div class="chips">${['a','z'].map(m=>`<button class="chip ${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
   const info=Object.entries(pk.info||{}).map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
   const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key;
     return `<details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="p" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${g.items.map(i=>`<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0;flex:1"><button class="chk big ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`).join('')}</div></details>`};
-  $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${seg}
+  $('#app').innerHTML=`${chips}${addrBox}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${seg}
     <div class="card pad"><div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin:6px 0 0">${done} von ${all.length} ${mode==='a'?'aufgebaut und eingepackt':'abgebaut und zurück'}</div></div>
     ${info?`<div class="card pad">${info}</div>`:''}
     ${groups.map(sec).join('')}
@@ -1313,9 +1293,13 @@ cur.tour=newTour(todayStr());cur.stop=newStop('');cur.lday=todayStr();
 const mapUrl=a=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a);
 function routeUrl(stops){
   const ad=stops.filter(x=>x.address).map(x=>x.address).slice(0,10);if(!ad.length)return '';
-  const org=(S.hofInfo&&S.hofInfo.address)||'',dest=ad[ad.length-1],wp=ad.slice(0,-1).slice(0,9);
+  const org='',dest=ad[ad.length-1],wp=ad.slice(0,-1).slice(0,9);
   return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(dest)+(wp.length?'&waypoints='+encodeURIComponent(wp.join('|')):'')+(org?'&origin='+encodeURIComponent(org):'');
 }
+const gmapsUrl=a=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(a);
+const appleUrl=a=>'https://maps.apple.com/?dirflg=d&daddr='+encodeURIComponent(a);
+function appleRoute(stops){const ad=stops.filter(x=>x.address).map(x=>x.address).slice(0,10);return ad.length?'https://maps.apple.com/?dirflg=d&daddr='+ad.map(encodeURIComponent).join('+to:'):''}
+function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Google Maps</a><a class="btn sec" href="${a}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Karten</a>`:''}
 function stopRow(t,x,i,n,plan){
   const pk=t.type==='abholung';
   return `<div class="row ${x.done?'dim':''}" style="align-items:flex-start"><div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0">
@@ -1342,7 +1326,7 @@ function tourCard(t,plan){
     ${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}">Tour ändern</button>`:''}</div>
     ${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}
     <div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Stopps.</span></div>'}</div>
-    <div class="mini">${url?`<a class="btn sec" href="${url}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Route in Maps</a>`:''}${plan?`<button class="btn sec" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div></div>`;
+    <div class="mini">${routeBtns(url,appleRoute(st))}${plan?`<button class="btn sec" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div></div>`;
 }
 function tourForm(){
   const f=cur.tour,sel=(a,b)=>a===b?'selected':'';
@@ -1542,9 +1526,7 @@ function vDaten(){
   <h2 ${pendingNames().length?'':'style="margin-top:4px"'}>Profil</h2>
   <div class="card pad">${accountBlock()}</div>
   <h2>Einstellungen</h2>
-  <div class="card pad"><label class="f">Hof-Adresse (steht oben in der App, leer lassen blendet sie aus)</label>
-  <input class="t" id="hof-addr" value="${esc((S.hofInfo&&S.hofInfo.address)||'')}" placeholder="Straße Nr., PLZ Ort" autocomplete="street-address">
-  <label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
+  <div class="card pad"><label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
   <input class="t" id="hof-paypal" value="${esc((S.hofInfo&&S.hofInfo.paypal)||'')}" placeholder="https://www.paypal.com/paypalme/…" autocapitalize="none">
   <label class="f">Fahrzeuge für Touren (eins pro Zeile)</label>
   <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea>
@@ -1558,6 +1540,7 @@ function vDaten(){
   <input type="file" id="fImp" accept=".json,application/json" hidden></div>
   <h2>Stände & Kosten</h2>
   ${S.stands.map(s=>`<div class="card pad"><div class="edit"><input class="t" data-sn="${s.id}" value="${esc(s.name)}"><button class="x" data-del-s="${s.id}">×</button></div>
+    <label class="f">Adresse des Stands (für die Route in Google Maps und Karten)</label><input class="t" data-sa="${s.id}" value="${esc(s.address||'')}" placeholder="Straße Nr., PLZ Ort" autocomplete="street-address">
     <div class="mini">
     <div><label class="f">Standgebühr €</label><input class="t" inputmode="decimal" data-sc="fee" data-sid="${s.id}" value="${String(s.fee||0).replace('.',',')}"></div>
     <div><label class="f">Personal €</label><input class="t" inputmode="decimal" data-sc="staff" data-sid="${s.id}" value="${String(s.staff||0).replace('.',',')}"></div></div>
@@ -1573,7 +1556,7 @@ function vDaten(){
     <button class="x" data-del-p="${p.id}">×</button></div>`).join('')}
   <button class="btn sec" id="addP">+ Produkt</button></div>
   <h2>Team</h2>
-  <div class="card pad"><div class="hint">Rollen: Admin sieht alles, Verkauf sieht Verkauf und Zahlen, Team sieht Plan und Preise.</div>
+  <div class="card pad"><div class="hint">Rollen: Admin sieht alles. Chef sieht alles außer Verwaltung. Verkauf sieht Verkauf und Zahlen. Team ist die Standardrolle. Schonung sieht nur Feld und eigene Aufgaben.</div>
   ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
   <h2>Beispieldaten</h2>
@@ -1586,10 +1569,6 @@ function vDaten(){
   <input type="file" id="fImpEv" accept=".json,application/json" hidden>
   <textarea class="t" id="impText" rows="3" placeholder="… oder den Inhalt der Importdatei hier einfügen" style="margin-top:8px"></textarea>
   <button class="btn sec" id="bImpTxt">Eingefügten Text importieren</button></div>
-  <h2>Vorschläge einspielen</h2>
-  <div class="card pad"><div class="hint">Datei mit Zuordnungsvorschlägen zu deinen Notizen (von Claude).</div>
-  <button class="btn sec" id="bSug">Vorschläge-Datei wählen …</button>
-  <input type="file" id="fSug" accept=".json,application/json" hidden></div>
   <h2>Gefahrenzone</h2>
   <div class="card pad"><button class="btn red" id="reset">Alle Daten löschen</button></div>
   <div class="hint" style="text-align:center">Alle Daten liegen nur auf diesem Gerät.</div>`;
@@ -1648,13 +1627,13 @@ document.addEventListener('change',ev=>{
   if(t.dataset.pp){prod(t.dataset.pp).price=pf(t.value);save()}
   if(t.dataset.pc){prod(t.dataset.pc).cost=pf(t.value);save()}
   if(t.dataset.sn){S.stands.find(s=>s.id===t.dataset.sn).name=t.value||'?';save()}
+  if(t.dataset.sa){S.stands.find(s=>s.id===t.dataset.sa).address=t.value.trim();save()}
   if(t.dataset.sc){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sc]=pf(t.value);save()}
 });
 
 document.addEventListener('click',ev=>{
   const t=ev.target;
   if(t.id==='addPe'){S.people.push('Neu');save();render()}
-  if(t.id==='bSug')$('#fSug').click();
   if(t.id==='bImpEv')$('#fImpEv').click();
   if(t.id==='bDemoOn')seedDemo();
   if(t.id==='bDemoOff')removeDemo();
@@ -1684,13 +1663,6 @@ document.addEventListener('change',ev=>{
   }
   if(t.id==='fImpEv'&&t.files[0]){
     const r=new FileReader();r.onload=()=>importCal(r.result);r.readAsText(t.files[0]);t.value='';
-  }
-  if(t.id==='fSug'&&t.files[0]){
-    const r=new FileReader();r.onload=()=>{try{
-      const d=JSON.parse(r.result),items=d.suggestions||d;let n=0;
-      items.forEach(it=>{const note=S.notes.find(x=>x.id===it.noteId);if(note&&note.status!=='zugeordnet'){note.suggest={title:it.title,date:it.date,time:it.time,person:it.person,stand:it.stand,type:it.type};n++}});
-      save();alert(n+' Vorschläge eingespielt. Sie stehen unter Plan, Notizen.');
-    }catch(e){alert('Keine gültige Vorschläge-Datei.')}};r.readAsText(t.files[0]);
   }
 });
 
@@ -1758,7 +1730,6 @@ document.addEventListener('input',ev=>{
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
-  if(t.id==='hof-addr'){S.hofInfo={...S.hofInfo,address:t.value.trim()};save();hofbarUpdate()}
   if(t.id==='hof-paypal'){S.hofInfo={...S.hofInfo,paypal:t.value.trim()};save()}
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}

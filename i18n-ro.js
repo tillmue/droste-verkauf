@@ -1,4 +1,10 @@
 window.RO_DICT={
+"Karten": "Hărți",
+"Google Maps": "Google Maps",
+"Adresse des Stands (für die Route in Google Maps und Karten)": "Adresa standului (pentru traseu în Google Maps și Hărți)",
+"Rollen: Admin sieht alles. Chef sieht alles außer Verwaltung. Verkauf sieht Verkauf und Zahlen. Team ist die Standardrolle. Schonung sieht nur Feld und eigene Aufgaben.": "Roluri: Adminul vede tot. Șeful vede tot, în afară de administrare. Vânzare vede vânzările și cifrele. Echipa este rolul standard. Plantația vede doar Câmpul și sarcinile proprii.",
+"Schonung": "Plantație",
+"Sprache": "Limbă",
 "Benachrichtigungen sind blockiert. Bitte in den Geräteeinstellungen für diese App erlauben.": "Notificările sunt blocate. Te rugăm să le permiți în setările dispozitivului pentru această aplicație.",
 "Benachrichtigungen gehen auf dem iPhone nur, wenn die App zum Home-Bildschirm hinzugefügt ist (Teilen, Zum Home-Bildschirm).": "Notificările funcționează pe iPhone doar dacă aplicația este adăugată pe ecranul principal (Partajare, Adaugă pe ecranul principal).",
 "Benachrichtigungen konnten nicht eingeschaltet werden": "Notificările nu au putut fi pornite",
@@ -605,6 +611,7 @@ window.RO_PATTERNS=[
  [/^KW (\d+)$/,(m,n)=>`Săpt. ${n}`],
  [/^Verschoben von (.+)$/,(m,d)=>`Mutat de la ${d}`],
  [/^Abgegeben von (.+)$/,(m,d)=>`Predat de ${d}`],
+ [/^Von (.+)$/,(m,n)=>`De la ${n}`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
