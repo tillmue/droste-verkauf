@@ -193,7 +193,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 g';
+const APP_VERSION='2026-10-17 h';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -799,6 +799,15 @@ function askConfirm(msg,ok,cb){
   d.addEventListener('click',e=>{const t=e.target;if(t.dataset.ok){d.remove();cb()}else if(t.dataset.no||t===d)d.remove()});
   document.body.appendChild(d);
 }
+function handOver(id){
+  const t=S.tasks.find(x=>x.id===id);if(!t)return;
+  const d=document.createElement('div');d.className='cheers';
+  d.innerHTML=`<div><p>${esc(t.title)}</p><label class="f">Aufgabe abgeben an</label><select class="t" id="hand-to"><option value="">Offen (jeder kann übernehmen)</option>${S.people.filter(p=>p!==t.person).map(p=>`<option>${esc(p)}</option>`).join('')}</select><div style="height:18px"></div><button class="btn green" data-ok="1" style="padding:18px">Abgeben</button><div style="height:18px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
+  d.addEventListener('click',e=>{const x=e.target;
+    if(x.dataset.ok){const to=d.querySelector('#hand-to').value;d.remove();t.handedFrom=t.person||S.me;t.person=to;save();render()}
+    else if(x.dataset.no||x===d)d.remove()});
+  document.body.appendChild(d);
+}
 function completeTask(id){
   const td=todayStr(),x=S.tasks.find(x=>x.id===id);if(!x)return;
   x.done=!x.done;
@@ -822,8 +831,8 @@ function taskRow(t,showDate){
   return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
     <div style="min-width:0;flex:1" data-pl="tedit" data-v="${t.id}"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
-    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
-    ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}</div>`;
+    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.handedFrom&&!t.done?`<div class="p">Abgegeben von ${esc(t.handedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
+    ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${(t.person&&!t.done&&(t.person===S.me||isAdmin()))?`<button class="claim" data-pl="thand" data-v="${t.id}">Abgeben</button>`:''}</div>`;
 }
 function taskForm(){
   const f=cur.tf,sel=(a,b)=>a===b?'selected':'';
@@ -1026,6 +1035,7 @@ document.addEventListener('click',ev=>{
   if(ev.target.closest('.cheers'))return;
   const t=ev.target.closest('[data-pl]');if(!t)return;
   const a=t.dataset.pl,v=t.dataset.v,td=todayStr(),reset=()=>{cur.tf=newTf(cur.cday);cur.tfOpen=false};
+  if(a==='thand'){handOver(v);return}
   if(a==='ptab'){cur.ptab=v;return render()}
   if(a==='ctab'){cur.ctab=v;cur.ef=newEf(calOf(v),cur.cday);return render()}
   if(a==='cview'){cur.cview=v;return render()}

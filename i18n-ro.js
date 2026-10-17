@@ -1,4 +1,6 @@
 window.RO_DICT={
+"Aufgabe abgeben an": "Predă sarcina către",
+"Abgeben": "Predă",
 "Dieser Kalender wird vom Chef und vom Admin gepflegt.": "Acest calendar este întreținut de șef și de admin.",
 "Vergangene Einträge": "Intrări trecute",
 "Monat": "Lună",
@@ -592,6 +594,7 @@ window.RO_PATTERNS=[
  [/^Vergangene Einträge \((\d+) Tage\)$/,(m,n)=>`Intrări trecute (${n} ${+n===1?"zi":"zile"})`],
  [/^KW (\d+)$/,(m,n)=>`Săpt. ${n}`],
  [/^Verschoben von (.+)$/,(m,d)=>`Mutat de la ${d}`],
+ [/^Abgegeben von (.+)$/,(m,d)=>`Predat de ${d}`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
