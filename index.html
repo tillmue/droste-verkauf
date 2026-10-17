@@ -35,6 +35,8 @@ header img{flex:none}
 #prof{flex:1 1 0;min-width:0;justify-content:flex-end}
 #prof>span:last-child{min-width:0}
 #prof b,#prof small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+#refresh{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:20px;line-height:1;padding:0;margin-right:8px}
+#refresh.spin{animation:rspin .8s linear infinite}@keyframes rspin{to{transform:rotate(360deg)}}
 #lang{flex:none;display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
 #lang button{border:0;background:none;color:var(--mut);font-size:12px;font-weight:700;padding:6px 9px;border-radius:999px}
 #lang button.on{background:var(--blue);color:#fff}
@@ -167,7 +169,7 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button><a id="hofbar" target="_blank" rel="noopener" style="display:none"></a></header>
+<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button><a id="hofbar" target="_blank" rel="noopener" style="display:none"></a></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -180,7 +182,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 a';
+const APP_VERSION='2026-10-17 b';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1606,6 +1608,7 @@ document.addEventListener('click',async ev=>{
   if(m){cur.auth=Object.assign(cur.auth||{},{mode:m.dataset.authmode,err:'',info:''});return render()}
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
+  if(ev.target.closest('#refresh')){const b=$('#refresh');b.classList.add('spin');try{if(window.cloud&&window.cloud.resume)await Promise.race([window.cloud.resume(),new Promise(r=>setTimeout(r,2500))])}catch(e){}location.reload();return}
   if(id==='signOutBtn'){if(window.cloud)await window.cloud.signOut();return}
   if(id==='verResend'){try{await window.cloud.resendVerification();toast('Mail gesendet')}catch(e){toast(authErr(e))}return}
   if(id==='verCheck'){try{await window.cloud.refreshVerified()}catch(e){toast(authErr(e))}return}

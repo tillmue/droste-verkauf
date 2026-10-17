@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Aktualisieren": "Actualizează",
 "Abholungen auf dem Hof": "Ridicări de la fermă",
 "Noch keine Abholungen.": "Încă nu există ridicări.",
 "+ Abholung auf dem Hof": "+ Ridicare de la fermă",

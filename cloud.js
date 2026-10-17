@@ -27,7 +27,7 @@ function initCloud(FB) {
   auth.languageCode = (() => { try { return localStorage.getItem('droste-lang') === 'ro' ? 'ro' : 'de'; } catch (e) { return 'de'; } })();
   let db;
   try {
-    db = FB.initializeFirestore(app, { localCache: FB.persistentLocalCache({ tabManager: FB.persistentMultipleTabManager() }) });
+    db = FB.initializeFirestore(app, { experimentalAutoDetectLongPolling: true, localCache: FB.persistentLocalCache({ tabManager: FB.persistentMultipleTabManager() }) });
   } catch (e) { console.warn('Offline-Cache nicht verfügbar', e); db = FB.getFirestore(app); }
 
   /* Sammlungen: get() liefert [id, objekt]-Paare aus S, put(map) schreibt die Dokumente zurück in S */
@@ -59,6 +59,22 @@ function initCloud(FB) {
   }
   window.addEventListener('online', setStatus);
   window.addEventListener('offline', setStatus);
+
+  /* iOS friert die Home-Screen-App im Hintergrund ein; die Live-Verbindung bleibt dann tot.
+     Beim Zurückkehren Verbindung neu aufbauen, damit Änderungen sofort ankommen. */
+  async function resume() {
+    if (!FB.disableNetwork || !FB.enableNetwork) return;
+    try { await FB.disableNetwork(db); } catch (e) {}
+    try { await FB.enableNetwork(db); } catch (e) {}
+    setStatus();
+  }
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+    else if (uid && hiddenAt && Date.now() - hiddenAt > 15000) resume();
+  });
+  window.addEventListener('pageshow', e => { if (e.persisted && uid) resume(); });
+  window.addEventListener('online', () => { if (uid) resume(); });
 
   function permissionNote(name, id, err) {
     console.error('Schreiben fehlgeschlagen', name, id, err);
@@ -189,7 +205,7 @@ function initCloud(FB) {
   }, err => { T.setCloud({ status: 'error', msg: 'Anmeldung nicht möglich (' + (err.code || err.message) + ')' }); T.render(); });
 
   window.cloud = {
-    sync,
+    sync, resume,
     signIn: (email, pw) => FB.signInWithEmailAndPassword(auth, email.trim(), pw),
     reset: email => FB.sendPasswordResetEmail(auth, email.trim()),
     async register(name, email, pw) {
