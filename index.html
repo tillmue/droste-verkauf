@@ -193,7 +193,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 a';
+const APP_VERSION='2026-10-18 b';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1726,7 +1726,7 @@ document.addEventListener('click',async ev=>{
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
   if(ev.target.closest('#refresh')){const b=$('#refresh');b.classList.add('spin');try{if(window.cloud&&window.cloud.resume)await Promise.race([window.cloud.resume(),new Promise(r=>setTimeout(r,2500))])}catch(e){}location.reload();return}
-  if(id==='pushOn'){try{await window.cloud.enablePush();toast('Benachrichtigungen sind an')}catch(e){toast(e&&e.message==='denied'?'Benachrichtigungen wurden nicht erlaubt':'Benachrichtigungen konnten nicht eingeschaltet werden')}return render()}
+  if(id==='pushOn'){try{await window.cloud.enablePush();toast('Benachrichtigungen sind an')}catch(e){if(e&&e.message==='denied')toast('Benachrichtigungen wurden nicht erlaubt');else alert('Benachrichtigungen konnten nicht eingeschaltet werden.\n\nFehler: '+((e&&(e.code||e.message))||'unbekannt'))}return render()}
   if(id==='pushOff'){try{await window.cloud.disablePush();toast('Benachrichtigungen sind aus')}catch(e){}return render()}
   if(id==='signOutBtn'){if(window.cloud)await window.cloud.signOut();return}
   if(id==='verResend'){try{await window.cloud.resendVerification();toast('Mail gesendet')}catch(e){toast(authErr(e))}return}
