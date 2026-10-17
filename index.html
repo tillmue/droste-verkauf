@@ -207,7 +207,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 j';
+const APP_VERSION='2026-10-18 k';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -866,7 +866,7 @@ function planMeld(){
   const card=r=>{const url=r.photo?imgUrl(r.photo):'';
     return `<div class="card pad ${r.urgent&&r.status!=='erledigt'?'urg':''}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div class="n">${r.urgent?'<span class="bdg">Dringend</span>':''}${catName(r.cat)}${repObj(r)?' · '+esc(repObj(r)):''}</div><span class="p"><b style="color:${r.status==='erledigt'?'var(--green)':r.status==='arbeit'?'var(--orange)':'var(--link)'}">${RST[r.status]||RST.neu}</b></span></div>
       <div style="margin-top:4px">${esc(r.text)}</div>
-      ${r.photo?(url?`<img class="rimg" src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">`:'<div class="hint">Foto wird geladen …</div>'):''}
+      ${r.photo?(url?`<img class="rimg" src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">`:`<div class="hint">${IMGERR[r.photo]?'Foto konnte nicht geladen werden (Fehler: '+esc(IMGERR[r.photo])+').':'Foto wird geladen …'}</div>`):''}
       <div class="p" style="margin-top:6px">Gemeldet von ${esc(r.by||'?')} · ${new Date(r.created||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}${r.assignedTo?' · zugewiesen an '+esc(r.assignedTo):''}</div>
       ${all&&r.status!=='erledigt'?`<div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="rassign" data-v="${r.id}" style="margin:0">Zuweisen</button>${r.status==='neu'?`<button class="btn sec" data-pl="rwork" data-v="${r.id}" style="margin:0">In Arbeit</button>`:''}<button class="btn green" data-pl="rdone" data-v="${r.id}" style="margin:0">Erledigt</button></div>`:''}</div>`};
   return `<button class="btn" data-pl="rnew" style="margin-top:0">+ Melden</button>${cur.rOpen?reportForm():''}${seg}${list.map(card).join('')||'<div class="hint">Keine Meldungen in dieser Ansicht.</div>'}`;
@@ -1532,11 +1532,11 @@ function sorteLabel(k){
 const DEF_ORTE='Dieter: Vorgewände, Gang 1, Gang 2, Gang 3, Gang 4';
 const DEF_SCH={Dieter:{img:'schonungen/dieter.jpg',pins:{'Gang 1':[36,53],'Gang 2':[46.8,43.5],'Gang 3':[56.2,33.5],'Gang 4':[61.3,20.7],'Vorgewände':[25.4,61.2]}}};
 const schon=n=>({...(DEF_SCH[n]||{}),...(((S.hofInfo&&S.hofInfo.schonungen)||{})[n]||{})});
-const IMG={};
+const IMG={},IMGERR={};
 function imgUrl(path){
   if(!path||!window.cloud||!window.cloud.imageUrl)return '';
   if(IMG[path]!==undefined)return IMG[path];
-  IMG[path]='';window.cloud.imageUrl(path).then(u=>{IMG[path]=u;softRender()}).catch(()=>{});return '';
+  IMG[path]='';window.cloud.imageUrl(path).then(u=>{IMG[path]=u;softRender()}).catch(e=>{IMGERR[path]=(e&&(e.code||e.message))||'Fehler';softRender()});return '';
 }
 function shrinkImage(file,maxW){
   return new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(file);
@@ -1574,7 +1574,7 @@ function vFeld(){
     const pins=url?Object.entries(sch.pins||{}).filter(([k])=>o.gaenge.includes(k)).map(([k,p])=>`<button class="pin ${k===cur.fg?'on':''}" data-pl="fpin" data-v="${esc(k)}" style="left:${p[0]}%;top:${p[1]}%" aria-label="${esc(k)}"></button>`).join(''):'';
     $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
       ${sch.address?`<div class="card pad"><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:''}
-      ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">${pins}</div><div class="hint">Tippe auf eine Nummer, um zu diesem Gang zu springen. Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?'Bild wird geladen …':'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}
+      ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">${pins}</div><div class="hint">Tippe auf eine Nummer, um zu diesem Gang zu springen. Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}
       ${o.gaenge.length?`<h3>Gänge</h3><div class="card">${o.gaenge.map(g=>`<div class="row" data-pl="fpin" data-v="${esc(g)}"><div class="n">${esc(g)}</div><b>${num(sum(g))}</b></div>`).join('')}</div>`:''}`;
     return;
   }

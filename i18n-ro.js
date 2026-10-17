@@ -715,6 +715,8 @@ window.RO_PATTERNS=[
  [/^Erledigt \((\d+)\)$/,(m,n)=>`Rezolvate (${n})`],
  [/^Gemeldet von (.+?) · (.+)$/,(m,a,b)=>`Raportat de ${a} · ${b}`],
  [/^(\d+) offene Meldungen?(, davon dringend)? →$/,(m,n,d)=>`${n} ${+n===1?'raportare deschisă':'raportări deschise'}${d?', dintre care urgente':''} →`],
+ [/^Das Bild konnte nicht geladen werden \(Fehler: (.+)\)\.$/,(m,x)=>`Imaginea nu a putut fi încărcată (eroare: ${x}).`],
+ [/^Foto konnte nicht geladen werden \(Fehler: (.+)\)\.$/,(m,x)=>`Fotografia nu a putut fi încărcată (eroare: ${x}).`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
