@@ -102,6 +102,15 @@ exports.tourAssigned = onDocumentWritten('tours/{id}', async event => {
   }
 });
 
+/* Rollen und Freigabe als Anmelde-Claims, damit die Storage-Regeln ohne Firestore-Zugriff prüfen können */
+exports.syncClaims = onDocumentWritten('users/{uid}', async event => {
+  const uid = event.params.uid;
+  const after = event.data.after.exists ? event.data.after.data() : null;
+  try {
+    await admin.auth().setCustomUserClaims(uid, after ? { approved: after.approved === true, role: after.role || 'team' } : null);
+  } catch (e) { console.error('Claims fehlgeschlagen', uid, e.code || e.message); }
+});
+
 /* 1c. Meldungen: neue Meldung an Admin und Chef, Statuswechsel an den Melder */
 const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'] };
 async function repObjName(r) {

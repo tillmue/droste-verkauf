@@ -1,18 +1,20 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    function userDoc() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)); }
-    function member() { return request.auth != null && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) && userDoc().data.approved == true; }
-    function editor() { return member() && userDoc().data.role in ['admin', 'chef']; }
-    // Bilder (Schonungen, Standpläne): alle freigegebenen Mitglieder lesen, nur Admin und Chef laden hoch
+    // Freigabe und Rolle kommen als Claims im Anmelde-Token (gesetzt von der Funktion syncClaims)
+    function member() { return request.auth != null && request.auth.token.approved == true; }
+    function editor() { return member() && request.auth.token.role in ['admin', 'chef']; }
+    function okFile() { return request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*'); }
+
     // Fotos zu Meldungen: jedes freigegebene Mitglied darf hochladen
     match /meldungen/{file} {
       allow read: if member();
-      allow write: if member() && request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+      allow write: if member() && okFile();
     }
+    // Bilder (Schonungen, Standpläne): alle freigegebenen Mitglieder lesen, nur Admin und Chef laden hoch
     match /{allPaths=**} {
       allow read: if member();
-      allow write: if editor() && request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+      allow write: if editor() && okFile();
     }
   }
 }

@@ -207,7 +207,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 k';
+const APP_VERSION='2026-10-18 l';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1532,11 +1532,12 @@ function sorteLabel(k){
 const DEF_ORTE='Dieter: Vorgewände, Gang 1, Gang 2, Gang 3, Gang 4';
 const DEF_SCH={Dieter:{img:'schonungen/dieter.jpg',pins:{'Gang 1':[36,53],'Gang 2':[46.8,43.5],'Gang 3':[56.2,33.5],'Gang 4':[61.3,20.7],'Vorgewände':[25.4,61.2]}}};
 const schon=n=>({...(DEF_SCH[n]||{}),...(((S.hofInfo&&S.hofInfo.schonungen)||{})[n]||{})});
-const IMG={},IMGERR={};
+const IMG={},IMGERR={},IMGT={};
 function imgUrl(path){
   if(!path||!window.cloud||!window.cloud.imageUrl)return '';
+  if(IMGERR[path]&&Date.now()-(IMGT[path]||0)>5000){delete IMGERR[path];delete IMG[path]}
   if(IMG[path]!==undefined)return IMG[path];
-  IMG[path]='';window.cloud.imageUrl(path).then(u=>{IMG[path]=u;softRender()}).catch(e=>{IMGERR[path]=(e&&(e.code||e.message))||'Fehler';softRender()});return '';
+  IMG[path]='';window.cloud.imageUrl(path).then(u=>{IMG[path]=u;softRender()}).catch(e=>{IMGERR[path]=(e&&(e.code||e.message))||'Fehler';IMGT[path]=Date.now();softRender()});return '';
 }
 function shrinkImage(file,maxW){
   return new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(file);

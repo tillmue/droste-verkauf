@@ -196,6 +196,20 @@ function initCloud(FB) {
     return token;
   }
 
+  /* Frisches Anmelde-Token holen, bis Freigabe und Rolle als Claims drin sind (für Storage) */
+  let claimsOk = false;
+  async function ensureClaims(user) {
+    if (claimsOk || !FB.getIdTokenResult) return;
+    for (let i = 0; i < 4 && !claimsOk; i++) {
+      try {
+        await user.getIdToken(true);
+        const r = await user.getIdTokenResult();
+        if (r.claims && r.claims.approved === true) { claimsOk = true; T.softRender(); return; }
+      } catch (e) { return; }
+      await new Promise(res => setTimeout(res, 4000));
+    }
+  }
+
   function watchProfile(user) {
     uid = user.uid;
     const ref = FB.doc(db, 'users', user.uid);
@@ -216,6 +230,7 @@ function initCloud(FB) {
       if (user.emailVerified && profile.emailVerified !== true) FB.updateDoc(ref, { emailVerified: true }).catch(() => {});
       T.setCloud({ status: 'in', profile: { ...profile, uid: user.uid, email: user.email, verified: !!user.emailVerified } });
       if (profile.approved === true) activate(profile, user.uid); else { deactivate(); T.softRender(); }
+      if (profile.approved === true) ensureClaims(user);
       if (profile.approved === true && !pushChecked && window.Notification && Notification.permission === 'granted') { pushChecked = true; saveToken().catch(() => {}); }
       T.render();
     }, err => { console.error(err); T.setCloud({ status: 'error', msg: 'Profil konnte nicht geladen werden (' + (err.code || err.message) + ')' }); T.render(); });
