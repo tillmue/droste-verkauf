@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Dieser Kalender wird vom Chef und vom Admin gepflegt.": "Acest calendar este întreținut de șef și de admin.",
 "Vergangene Einträge": "Intrări trecute",
 "Monat": "Lună",
 "Woche": "Săptămână",

@@ -54,8 +54,10 @@ service cloud.firestore {
     }
 
     // Kalendereintraege (Saison, Lieferungen, Instagram)
+    // Schreiben nur Chef und Admin (Saison und Instagram), alle Mitglieder lesen
     match /events/{id} {
-      allow read, create, update: if isMember();
+      allow read: if isMember();
+      allow create, update: if isMember() && (role() == 'admin' || role() == 'chef');
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
