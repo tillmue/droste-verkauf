@@ -49,7 +49,7 @@ header img{flex:none}
 .cal u{text-decoration:none;text-align:center;font-size:11px;color:var(--mut);padding-bottom:2px}
 .cd{height:46px;border:1px solid transparent;border-radius:10px;background:var(--fill);color:var(--text);padding:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit}
 .cd b{font-size:14px;font-weight:600}.cd span{height:7px;display:flex;gap:3px}
-.cd.sel{background:var(--blue);color:#fff}.cd.today{border-color:var(--blue)}
+.cd.sel{background:var(--blue);color:#fff}.cd.today{border-color:#ffd60a;background:rgba(255,214,10,.26)}
 em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:normal}
 .d.b{background:var(--link)}.d.r{background:var(--red)}.d.g{background:var(--green)}.d.x{background:var(--line)}
 .cd.sel .d.b{background:#fff}
@@ -60,7 +60,7 @@ em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:norm
 .mcal .kw span{writing-mode:vertical-rl;transform:rotate(180deg)}
 .md{min-height:84px;padding:2px 1px;display:flex;flex-direction:column;gap:2px;align-items:stretch;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:none;color:var(--text);font:inherit;text-align:left;min-width:0}
 .md>b{font-size:11px;text-align:right;padding-right:3px;font-weight:600}
-.md.out{opacity:.4}.md.today>b{color:var(--link)}.md.sel{background:var(--panel);box-shadow:inset 0 0 0 2px var(--blue)}
+.md.out{opacity:.4}.md.today{background:rgba(255,214,10,.26)}.md.today>b{color:#ffd60a}.md.sel{background:var(--panel);box-shadow:inset 0 0 0 2px var(--blue)}.md.today.sel{background:rgba(255,214,10,.26)}
 .md i{display:block;font-style:normal;font-size:9px;line-height:1.25;padding:1px 2px;border:1px solid var(--link);border-radius:3px;overflow:hidden;white-space:nowrap;text-overflow:clip;color:var(--text)}
 .md i.c-x{border-color:#8e99a0}.md i.c-g{border-color:var(--green)}.md i.c-o{border-color:var(--orange)}.md i.c-t{border-color:#3fc7b0}.md i.c-v{border-color:#c06be8}
 .md em.more{font-style:normal;font-size:9px;color:var(--mut);padding-left:2px}
@@ -94,7 +94,7 @@ details[open] summary::after{transform:rotate(90deg)}
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
 .dy{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid transparent;border-radius:12px;background:var(--fill);color:var(--text);padding:6px 0;font:inherit}
 .dy small{color:var(--mut);font-size:11px}.dy b{font-size:16px}.dy span{height:7px;display:flex;gap:2px}
-.dy.sel{background:var(--blue)}.dy.sel small{color:#fff}.dy.today{border-color:var(--link)}
+.dy.sel{background:var(--blue)}.dy.sel small{color:#fff}.dy.today{border-color:#ffd60a;background:rgba(255,214,10,.26)}.dy.today.sel{background:var(--blue)}
 .tour{background:var(--fill);border-radius:16px;padding:12px;margin-bottom:14px}.tour .card{margin:6px 0}
 a{color:var(--link)}
 .chk.big{width:38px;height:38px;font-size:22px}
@@ -193,7 +193,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 f';
+const APP_VERSION='2026-10-17 g';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -785,6 +785,12 @@ function archivHtml(){
   if(!del.length)return '';
   return `<details data-det="archiv" ${cur.det.archiv?'open':''}><summary>Archiv (${del.length})</summary><div class="card">${del.map(d=>`<div class="row"><div style="min-width:0"><div class="n">${esc(d.title)}</div><div class="p">${d.tag} · gelöscht von ${esc(d.by||'?')}${d.at?' am '+new Date(d.at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'}):''}</div></div><button class="claim" data-pl="restore" data-v="${d.k}:${d.id}">Wiederherstellen</button></div>`).join('')}</div></details>`;
 }
+function rollTasks(){
+  const td=todayStr();let n=0;
+  S.tasks.forEach(t=>{if(!t.deleted&&!t.done&&t.type!=='termin'&&t.date&&t.date<td){t.movedFrom=t.movedFrom||t.date;t.date=td;n++}});
+  if(n){save();if(window.APP&&window.APP.softRender)softRender()}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'))){rollTasks()}});
 function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
 function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
 function askConfirm(msg,ok,cb){
@@ -816,7 +822,7 @@ function taskRow(t,showDate){
   return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
     <div style="min-width:0;flex:1" data-pl="tedit" data-v="${t.id}"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
-    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
+    <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
     ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}</div>`;
 }
 function taskForm(){
@@ -930,9 +936,9 @@ function planKal(){
     head=`<div class="card pad"><div class="calhead"><button data-pl="cwk" data-v="-1">‹</button><b>${wdD(mon)} – ${wdD(sun)}</b><button data-pl="cwk" data-v="1">›</button></div>
       <div class="week" style="margin:8px 0">${days.map((ds,i)=>`<button class="dy ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><small>${WDS[i]}</small><b>${ds.slice(8)}</b><span>${dotsOf(ds)}</span></button>`).join('')}</div>
       <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
-    body=days.map(ds=>{const r=calDay(ct,ds);return `<h3 data-pl="cday" data-v="${ds}" style="${ds===td?'color:var(--link)':''}">${wdD(ds)}</h3><div class="card">${r||empty('–')}</div>`}).join('')+form;
+    body=days.map(ds=>{const r=calDay(ct,ds);return `<h3 data-pl="cday" data-v="${ds}" style="${ds===td?'color:#ffd60a':''}">${wdD(ds)}</h3><div class="card">${r||empty('–')}</div>`}).join('')+form;
   }else if(cv==='tag'){
-    head=`<div class="card pad"><div class="calhead"><button data-pl="cdd" data-v="-1">‹</button><b>${new Date(cur.cday+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</b><button data-pl="cdd" data-v="1">›</button></div>
+    head=`<div class="card pad"><div class="calhead"><button data-pl="cdd" data-v="-1">‹</button><b style="${cur.cday===td?'color:#ffd60a':''}">${new Date(cur.cday+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</b><button data-pl="cdd" data-v="1">›</button></div>
       <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
     body=`<div class="card">${calDay(ct,cur.cday)||empty(ct==='meine'?'Nichts für dich an diesem Tag.':ct==='hof'?'Keine Touren oder Abholungen an diesem Tag.':'Für diesen Tag ist nichts eingetragen.')}</div>${form}`;
   }else{
@@ -1118,7 +1124,7 @@ document.addEventListener('click',ev=>{
   if(a==='tsave'){
     const f=cur.tf;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');
     const base={title:f.title.trim(),date:f.date,time:f.time,person:f.person,stand:f.stand,type:f.type,note:(f.note||'').trim()};
-    if(f.id)Object.assign(S.tasks.find(x=>x.id===f.id),base);
+    if(f.id){const x0=S.tasks.find(x=>x.id===f.id);if(x0.date!==f.date)delete x0.movedFrom;Object.assign(x0,base)}
     else{const task={id:uid(),...base,done:false,created:Date.now(),createdBy:S.me};S.tasks.push(task);
       if(f.noteId){const n=S.notes.find(n=>n.id===f.noteId);if(n){n.status='zugeordnet';n.taskId=task.id;delete n.suggest}}}
     reset();save();return render();
@@ -1689,7 +1695,7 @@ function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
 function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
-const APP={get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>pr.role==='admin'||!!((pr.perms||presetFor(pr.role))[k]),ready:false,status:'',setCloud(c){cur.cloud=c}};
+const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>pr.role==='admin'||!!((pr.perms||presetFor(pr.role))[k]),ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
 
 document.addEventListener('click',async ev=>{

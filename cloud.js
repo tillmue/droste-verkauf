@@ -136,6 +136,7 @@ function initCloud(FB) {
       pending[name] = !!(snap.metadata && snap.metadata.hasPendingWrites);
       d.put(name === 'sales' ? map : map);
       hydrated[name] = true;
+      if (name === 'tasks' && T.rollTasks) T.rollTasks();
       seedIfEmpty(name, snap);
       T.ready = hydrated.stands && hydrated.products;
       setStatus();
