@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Vergangene Einträge": "Intrări trecute",
 "Monat": "Lună",
 "Woche": "Săptămână",
 "Liste": "Listă",
@@ -587,6 +588,7 @@ window.RO_PATTERNS=[
  [/^(\d+) Pack\.$/,(m,n)=>`${n} pach.`],
   [/^(\d+) (?:Abholung|Abholungen) · (\d+) abgeholt$/,(m,a,b)=>`${a} ${+a===1?'ridicare':'ridicări'} · ${b} ${+b===1?'ridicată':'ridicate'}`],
   [/^„(.*)“ als abgeholt markieren\?$/,(m,x)=>`Marchezi „${x}” ca ridicat?`],
+ [/^Vergangene Einträge \((\d+) Tage\)$/,(m,n)=>`Intrări trecute (${n} ${+n===1?"zi":"zile"})`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],

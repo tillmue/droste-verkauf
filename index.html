@@ -182,7 +182,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 c';
+const APP_VERSION='2026-10-17 d';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -879,7 +879,7 @@ function planKal(){
   for(let d=1;d<=dim;d++){const ds=`${y}-${p2(m)}-${p2(d)}`;
     cells+=`<button class="cd ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><b>${d}</b><span>${dotsOf(ds)}</span></button>`}
   const chips=`<div class="chips">${[['saison','Saison'],has('instagram')?['insta','Instagram']:null,['meine','Meine'],canHof()?['hof','Hof']:null].filter(Boolean).map(([k,l])=>`<button class="chip ${ct===k?'on':''}" data-pl="ctab" data-v="${k}">${l}</button>`).join('')}</div>
-    <div class="chips">${[['monat','Monat'],['woche','Woche'],['liste','Liste']].map(([k,l])=>`<button class="chip ${cv===k?'on':''}" data-pl="cview" data-v="${k}">${l}</button>`).join('')}</div>`;
+    <div class="chips">${[['monat','Monat'],['woche','Woche'],['tag','Tag'],['liste','Liste']].map(([k,l])=>`<button class="chip ${cv===k?'on':''}" data-pl="cview" data-v="${k}">${l}</button>`).join('')}</div>`;
   const mname=new Date(y,m-1,1).toLocaleDateString(LOC,{month:'long',year:'numeric'});
   const hint=ct==='meine'?'<em class="d b"></em> offen &nbsp;<em class="d r"></em> überfällig':ct==='insta'?'<em class="d x"></em> Idee &nbsp;<em class="d b"></em> bereit &nbsp;<em class="d g"></em> gepostet':ct==='hof'?'<em class="d b"></em> Tour oder Abholung':'<em class="d b"></em> Termin'+(canSales()?' &nbsp;<em class="d g"></em> Verkauf erfasst':'');
   const form=ct==='meine'?taskForm():ct==='hof'?'':eventForm();
@@ -905,17 +905,22 @@ function planKal(){
       <div class="week" style="margin:8px 0">${days.map((ds,i)=>`<button class="dy ${ds===cur.cday?'sel':''} ${ds===td?'today':''}" data-pl="cday" data-v="${ds}"><small>${WDS[i]}</small><b>${ds.slice(8)}</b><span>${dotsOf(ds)}</span></button>`).join('')}</div>
       <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
     body=days.map(ds=>{const r=calDay(ct,ds);return `<h3 data-pl="cday" data-v="${ds}" style="${ds===td?'color:var(--link)':''}">${wdD(ds)}</h3><div class="card">${r||empty('–')}</div>`}).join('')+form;
+  }else if(cv==='tag'){
+    head=`<div class="card pad"><div class="calhead"><button data-pl="cdd" data-v="-1">‹</button><b>${new Date(cur.cday+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</b><button data-pl="cdd" data-v="1">›</button></div>
+      <div class="hint">${hint}</div><button class="btn sec" data-pl="ctoday" style="margin:0">Heute</button></div>`;
+    body=`<div class="card">${calDay(ct,cur.cday)||empty(ct==='meine'?'Nichts für dich an diesem Tag.':ct==='hof'?'Keine Touren oder Abholungen an diesem Tag.':'Für diesen Tag ist nichts eingetragen.')}</div>${form}`;
   }else{
-    const lim=shiftDate(td,90),by={};
-    const put=(k,html)=>{if(k>lim)return;(by[k]=by[k]||[]).push(html)};
+    const by={},past={};
+    const put=(k,html)=>{const m=k<td?past:by;(m[k]=m[k]||[]).push(html)};
     if(ct==='meine'){
-      S.tasks.filter(t=>!t.deleted&&t.person===S.me&&t.date&&t.date>=td&&!t.done).forEach(t=>put(t.date,taskRow(t,false)));
-      S.events.filter(e=>!e.deleted&&e.cal==='saison'&&e.person===S.me&&(e.end||e.date)>=td).forEach(e=>put(e.date<td?td:e.date,evRow(e,true)));
+      S.tasks.filter(t=>!t.deleted&&t.person===S.me&&t.date).forEach(t=>put(t.date,taskRow(t,false)));
+      S.events.filter(e=>!e.deleted&&e.cal==='saison'&&e.person===S.me).forEach(e=>put(e.date,evRow(e,true)));
     }else if(ct==='hof'){
-      S.tours.filter(t=>!t.deleted&&t.date>=td).forEach(t=>put(t.date,calRow({k:t.type==='abholung'?'pick':'tour',o:t})));
-    }else S.events.filter(e=>!e.deleted&&e.cal===ct&&(e.end||e.date)>=td).forEach(e=>put(e.date<td?td:e.date,evRow(e,true)));
-    const ks=Object.keys(by).sort();
-    body=(ks.map(k=>`<h3>${wdD(k)}</h3><div class="card">${by[k].join('')}</div>`).join('')||`<div class="card">${empty('Nichts geplant in den nächsten Tagen.')}</div>`)+form;
+      S.tours.filter(t=>!t.deleted).forEach(t=>put(t.date,calRow({k:t.type==='abholung'?'pick':'tour',o:t})));
+    }else S.events.filter(e=>!e.deleted&&e.cal===ct).forEach(e=>put(e.date,evRow(e,true)));
+    const blk=m=>Object.keys(m).sort().map(k=>`<h3>${wdD(k)}</h3><div class="card">${m[k].join('')}</div>`).join('');
+    const nPast=Object.keys(past).length;
+    body=(blk(by)||`<div class="card">${empty('Nichts geplant in den nächsten Tagen.')}</div>`)+(nPast?`<details data-det="lpast"><summary>Vergangene Einträge (${nPast} Tage)</summary>${blk(past)}</details>`:'')+form;
   }
   return chips+head+body;
 }
@@ -992,6 +997,7 @@ document.addEventListener('click',ev=>{
   if(a==='ptab'){cur.ptab=v;return render()}
   if(a==='ctab'){cur.ctab=v;cur.ef=newEf(calOf(v),cur.cday);return render()}
   if(a==='cview'){cur.cview=v;return render()}
+  if(a==='cdd'){cur.cday=shiftDate(cur.cday,+v);cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='cwk'){cur.cday=shiftDate(cur.cday,7*(+v));cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='goliefer'){tab='lieferungen';cur.lday=v;window.scrollTo(0,0);return render()}
   if(a==='cday'){cur.cday=v;if(!cur.tf.id)cur.tf.date=v;if(!cur.ef.id)cur.ef.date=v;return render()}
