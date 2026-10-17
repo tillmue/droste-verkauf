@@ -193,7 +193,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-17 h';
+const APP_VERSION='2026-10-18 a';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -621,10 +621,20 @@ function loginScreen(){
     <button class="btn sec" data-authmode="${reg?'login':'reg'}">${reg?'Ich habe schon ein Konto':'Neu hier? Konto anlegen'}</button>
     ${reg?'<div class="hint">Nach dem Anlegen muss der Admin dich freigeben.</div>':'<button class="btn sec" id="authReset">Passwort vergessen</button>'}`;
 }
+let pushOk=null;
+function pushBlock(){
+  if(!window.cloud||!window.cloud.pushSupported)return '';
+  if(pushOk===null){window.cloud.pushSupported().then(v=>{pushOk=!!v;if(tab==='profil'||document.querySelector('#signOutBtn'))softRender()}).catch(()=>{pushOk=false});return ''}
+  const on=(()=>{try{return !!localStorage.getItem('droste-fcm')&&window.Notification&&Notification.permission==='granted'}catch(e){return false}})();
+  if(!pushOk)return `<div class="hint">Benachrichtigungen gehen auf dem iPhone nur, wenn die App zum Home-Bildschirm hinzugefügt ist (Teilen, Zum Home-Bildschirm).</div>`;
+  if(window.Notification&&Notification.permission==='denied')return `<div class="hint">Benachrichtigungen sind blockiert. Bitte in den Geräteeinstellungen für diese App erlauben.</div>`;
+  return on?`<div class="kv"><span>Benachrichtigungen</span><span>an</span></div><button class="btn sec" id="pushOff">Benachrichtigungen ausschalten</button>`
+    :`<button class="btn" id="pushOn">Benachrichtigungen einschalten</button>`;
+}
 function accountBlock(){
   const ver=`<div class="hint">App-Version ${APP_VERSION}</div>`;
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
-    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div><button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
+    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
   return `<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
 }
 function hofbarUpdate(hide){
@@ -804,7 +814,7 @@ function handOver(id){
   const d=document.createElement('div');d.className='cheers';
   d.innerHTML=`<div><p>${esc(t.title)}</p><label class="f">Aufgabe abgeben an</label><select class="t" id="hand-to"><option value="">Offen (jeder kann übernehmen)</option>${S.people.filter(p=>p!==t.person).map(p=>`<option>${esc(p)}</option>`).join('')}</select><div style="height:18px"></div><button class="btn green" data-ok="1" style="padding:18px">Abgeben</button><div style="height:18px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
   d.addEventListener('click',e=>{const x=e.target;
-    if(x.dataset.ok){const to=d.querySelector('#hand-to').value;d.remove();t.handedFrom=t.person||S.me;t.person=to;save();render()}
+    if(x.dataset.ok){const to=d.querySelector('#hand-to').value;d.remove();t.handedFrom=t.person||S.me;t.person=to;t.assignedBy=S.me;save();render()}
     else if(x.dataset.no||x===d)d.remove()});
   document.body.appendChild(d);
 }
@@ -1122,7 +1132,7 @@ document.addEventListener('click',ev=>{
   if(a==='shopadd'){const x=($('#sh-text').value||'').trim();if(!x)return;S.shopping.push({id:uid(),text:x,by:S.me,at:Date.now(),done:false});cur.shtext='';save();return render()}
   if(a==='shopdone'){const x=S.shopping.find(y=>y.id===v);if(x){x.done=!x.done;if(x.done){x.doneBy=S.me;x.doneAt=Date.now()}else{delete x.doneBy;delete x.doneAt}save();render()}return}
   if(a==='shopclear'){if(confirm('Gekaufte Einträge aus der Liste entfernen?')){S.shopping.filter(x=>x.done).forEach(softDel);save();render()}return}
-  if(a==='tclaim'){const x=S.tasks.find(x=>x.id===v);x.person=S.me;save();return render()}
+  if(a==='tclaim'){const x=S.tasks.find(x=>x.id===v);x.person=S.me;x.assignedBy=S.me;save();return render()}
   if(a==='tdone'){
     const x=S.tasks.find(x=>x.id===v);if(!x)return;
     return x.done?askConfirm('Wieder auf offen setzen?','Ja, wieder öffnen',()=>completeTask(v)):askConfirm(`„${x.title}“ wirklich als erledigt markieren?`,'Ja, erledigt',()=>completeTask(v));
@@ -1134,8 +1144,8 @@ document.addEventListener('click',ev=>{
   if(a==='tsave'){
     const f=cur.tf;if(!f.title.trim())return alert('Bitte einen Titel eingeben.');
     const base={title:f.title.trim(),date:f.date,time:f.time,person:f.person,stand:f.stand,type:f.type,note:(f.note||'').trim()};
-    if(f.id){const x0=S.tasks.find(x=>x.id===f.id);if(x0.date!==f.date)delete x0.movedFrom;Object.assign(x0,base)}
-    else{const task={id:uid(),...base,done:false,created:Date.now(),createdBy:S.me};S.tasks.push(task);
+    if(f.id){const x0=S.tasks.find(x=>x.id===f.id);if(x0.date!==f.date)delete x0.movedFrom;if(f.person&&x0.person!==f.person)base.assignedBy=S.me;Object.assign(x0,base)}
+    else{const task={id:uid(),...base,assignedBy:S.me,done:false,created:Date.now(),createdBy:S.me};S.tasks.push(task);
       if(f.noteId){const n=S.notes.find(n=>n.id===f.noteId);if(n){n.status='zugeordnet';n.taskId=task.id;delete n.suggest}}}
     reset();save();return render();
   }
@@ -1165,7 +1175,7 @@ document.addEventListener('click',ev=>{
   if(a==='sugok'){
     const n=S.notes.find(n=>n.id===v),sg=n.suggest;
     const st=S.stands.find(x=>x.id===sg.stand||x.name.toLowerCase()===String(sg.stand||'').toLowerCase());
-    const task={id:uid(),title:sg.title||n.text,date:sg.date||'',time:sg.time||'',person:sg.person||'',stand:st?st.id:'',type:sg.type==='termin'?'termin':'todo',done:false,created:Date.now(),createdBy:S.me};
+    const task={id:uid(),assignedBy:S.me,title:sg.title||n.text,date:sg.date||'',time:sg.time||'',person:sg.person||'',stand:st?st.id:'',type:sg.type==='termin'?'termin':'todo',done:false,created:Date.now(),createdBy:S.me};
     S.tasks.push(task);n.status='zugeordnet';n.taskId=task.id;delete n.suggest;save();return render();
   }
 });
@@ -1716,6 +1726,8 @@ document.addEventListener('click',async ev=>{
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
   if(ev.target.closest('#refresh')){const b=$('#refresh');b.classList.add('spin');try{if(window.cloud&&window.cloud.resume)await Promise.race([window.cloud.resume(),new Promise(r=>setTimeout(r,2500))])}catch(e){}location.reload();return}
+  if(id==='pushOn'){try{await window.cloud.enablePush();toast('Benachrichtigungen sind an')}catch(e){toast(e&&e.message==='denied'?'Benachrichtigungen wurden nicht erlaubt':'Benachrichtigungen konnten nicht eingeschaltet werden')}return render()}
+  if(id==='pushOff'){try{await window.cloud.disablePush();toast('Benachrichtigungen sind aus')}catch(e){}return render()}
   if(id==='signOutBtn'){if(window.cloud)await window.cloud.signOut();return}
   if(id==='verResend'){try{await window.cloud.resendVerification();toast('Mail gesendet')}catch(e){toast(authErr(e))}return}
   if(id==='verCheck'){try{await window.cloud.refreshVerified()}catch(e){toast(authErr(e))}return}

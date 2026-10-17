@@ -5,9 +5,10 @@
 const V = '10.14.1', BASE = 'https://www.gstatic.com/firebasejs/' + V + '/';
 
 async function loadFB() {
-  const [a, au, fs] = await Promise.all([
-    import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js'), import(BASE + 'firebase-firestore.js')]);
-  return { ...a, ...au, ...fs };
+  const [a, au, fs, ms] = await Promise.all([
+    import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js'), import(BASE + 'firebase-firestore.js'),
+    import(BASE + 'firebase-messaging.js').catch(() => ({}))]);
+  return { ...a, ...au, ...fs, ...ms };
 }
 
 const clean = o => JSON.parse(JSON.stringify(o));
@@ -172,6 +173,19 @@ function initCloud(FB) {
     if (T.permFor(p, 'feld')) listen('feld');
   }
 
+  /* Push: Token holen und am Profil speichern (iPhone nur, wenn die App auf dem Home-Bildschirm liegt) */
+  let pushChecked = false;
+  const curLang = () => { try { return localStorage.getItem('droste-lang') === 'ro' ? 'ro' : 'de'; } catch (e) { return 'de'; } };
+  async function saveToken() {
+    if (!(FB.isSupported && FB.getMessaging && await FB.isSupported())) throw new Error('unsupported');
+    const reg = await navigator.serviceWorker.ready;
+    const token = await FB.getToken(FB.getMessaging(app), { vapidKey: window.FIREBASE_CONFIG.vapidKey, serviceWorkerRegistration: reg });
+    if (!token) throw new Error('no-token');
+    await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayUnion(token), lang: curLang() });
+    try { localStorage.setItem('droste-fcm', token); } catch (e) {}
+    return token;
+  }
+
   function watchProfile(user) {
     uid = user.uid;
     const ref = FB.doc(db, 'users', user.uid);
@@ -192,6 +206,7 @@ function initCloud(FB) {
       if (user.emailVerified && profile.emailVerified !== true) FB.updateDoc(ref, { emailVerified: true }).catch(() => {});
       T.setCloud({ status: 'in', profile: { ...profile, uid: user.uid, email: user.email, verified: !!user.emailVerified } });
       if (profile.approved === true) activate(profile, user.uid); else { deactivate(); T.softRender(); }
+      if (profile.approved === true && !pushChecked && window.Notification && Notification.permission === 'granted') { pushChecked = true; saveToken().catch(() => {}); }
       T.render();
     }, err => { console.error(err); T.setCloud({ status: 'error', msg: 'Profil konnte nicht geladen werden (' + (err.code || err.message) + ')' }); T.render(); });
   }
@@ -216,6 +231,17 @@ function initCloud(FB) {
         await FB.setDoc(FB.doc(db, 'users', cr.user.uid), { name: name.trim(), email: email.trim().toLowerCase(), role: 'team', approved: false, created: Date.now() });
         try { await FB.sendEmailVerification(cr.user); } catch (e) { console.warn('Bestätigungsmail nicht gesendet', e); }
       } finally { registering = false; }
+    },
+    pushSupported: async () => !!(window.Notification && 'serviceWorker' in navigator && 'PushManager' in window && FB.isSupported && await FB.isSupported()),
+    async enablePush() {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') throw new Error('denied');
+      return saveToken();
+    },
+    async disablePush() {
+      let tok = ''; try { tok = localStorage.getItem('droste-fcm') || ''; localStorage.removeItem('droste-fcm'); } catch (e) {}
+      if (tok) await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayRemove(tok) }).catch(() => {});
+      try { await FB.deleteToken(FB.getMessaging(app)); } catch (e) {}
     },
     resendVerification: () => FB.sendEmailVerification(auth.currentUser),
     async refreshVerified() {
