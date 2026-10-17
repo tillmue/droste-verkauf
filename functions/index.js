@@ -15,6 +15,10 @@ const TZ = 'Europe/Berlin';
 
 const T = {
   newTask: { de: (t, d) => `Neue Aufgabe für dich: ${t}${d}`, ro: (t, d) => `Sarcină nouă pentru tine: ${t}${d}` },
+  newTour: {
+    de: (n, d, role) => `Neue Tour für dich: ${n} am ${d} (${role === 'driver' ? 'Fahrer' : 'Beifahrer'})`,
+    ro: (n, d, role) => `Tur nou pentru tine: ${n} pe ${d} (${role === 'driver' ? 'șofer' : 'însoțitor'})`
+  },
   title: { de: 'Hof Droste', ro: 'Hof Droste' },
   morning: {
     de: (n, a, e) => `Guten Morgen ${n}: ${a} offene ${a === 1 ? 'Aufgabe' : 'Aufgaben'}${e ? `, ${e} ${e === 1 ? 'Termin' : 'Termine'} heute` : ''}.`,
@@ -73,6 +77,23 @@ exports.taskAssigned = onDocumentWritten('tasks/{id}', async event => {
   if (!u) return;
   const d = after.date ? ` (${after.date.slice(8)}.${after.date.slice(5, 7)}.)` : '';
   await pushTo(u, lang => T.newTask[lang](after.title || '', d));
+});
+
+/* 1b. Neue Tour: Nachricht an Fahrer und Beifahrer */
+const TCOLOR = { rot: 'Rot', blau: 'Blau', gruen: 'Grün', gelb: 'Gelb', orange: 'Orange', lila: 'Lila', tuerkis: 'Türkis' };
+exports.tourAssigned = onDocumentWritten('tours/{id}', async event => {
+  const after = event.data.after.exists ? event.data.after.data() : null;
+  const before = event.data.before.exists ? event.data.before.data() : null;
+  if (!after || after.deleted || after.type === 'abholung' || after.status === 'beendet') return;
+  const users = await approvedUsers();
+  const name = 'Tour' + (TCOLOR[after.color] ? ' ' + TCOLOR[after.color] : '');
+  const date = after.date ? `${after.date.slice(8)}.${after.date.slice(5, 7)}.` : '';
+  for (const role of ['driver', 'codriver']) {
+    const who = role === 'driver' ? after.driver : after.codriver;
+    if (!who || (before && (role === 'driver' ? before.driver : before.codriver) === who)) continue;
+    const u = users.find(x => x.name === who);
+    if (u) await pushTo(u, lang => T.newTour[lang](name, date, role));
+  }
 });
 
 /* 2. Morgennachricht */
