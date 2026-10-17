@@ -131,9 +131,9 @@ function initCloud(FB) {
     const base = FB.collection(db, name);
     let qs = [base];
     if (name === 'notes' && profile.role !== 'admin') qs = [FB.query(base, FB.where('ownerUid', '==', uid))];
-    if (name === 'reports' && profile.role !== 'admin' && profile.role !== 'chef') qs = [FB.query(base, FB.where('byUid', '==', uid))];
+    if (name === 'reports' && !['admin', 'chef', 'demo'].includes(profile.role)) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
-    if (name === 'tasks' && profile.role !== 'admin' && profile.role !== 'chef')
+    if (name === 'tasks' && !['admin', 'chef', 'demo'].includes(profile.role))
       qs = [FB.query(base, FB.where('person', '==', profile.name)), FB.query(base, FB.where('person', '==', ''))];
     const parts = qs.map(() => null);
     qs.forEach((q, qi) => unsubs.push(FB.onSnapshot(q, snap => {

@@ -49,6 +49,7 @@ body.authed #lang{display:none}
 .seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:2px;margin:4px 0 10px}
 .seg button{flex:1;min-width:0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:9px;white-space:nowrap}
 .seg button.on{background:var(--blue);color:#fff}
+#asrole{flex:none;max-width:104px;height:34px;margin-right:8px;border:0;border-radius:12px;background:rgba(0,0,0,.25);color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:0 8px}
 #refresh{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:20px;line-height:1;padding:0;margin-right:8px}
 #refresh.spin{animation:rspin .8s linear infinite}@keyframes rspin{to{transform:rotate(360deg)}}
 #lang{flex:none;display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
@@ -194,7 +195,7 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
+<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -207,7 +208,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 l';
+const APP_VERSION='2026-10-18 m';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -395,6 +396,7 @@ function render(){
     if(S.approved[S.me]===false)return waitScreen();
   }
   document.body.classList.add('authed');
+  {const ar=$('#asrole');if(ar){if(realRole(S.me)==='demo'){ar.style.display='';ar.innerHTML=ASROLES.map(r=>`<option value="${r}" ${roleOf(S.me)===r?'selected':''}>${ROLE[r]}</option>`).join('')}else ar.style.display='none'}}
   if(tab==='erfassen'&&!has('verkauf'))tab='staende';
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
@@ -579,15 +581,18 @@ document.addEventListener('input',ev=>{
 });
 
 /* ---------- Benutzer und Rollen (Testversion, später Login) ---------- */
-const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team',schonung:'Schonung',fahrer:'Fahrer'};
-const roleOf=n=>(S.roles&&S.roles[n])||'team';
+const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team',schonung:'Schonung',fahrer:'Fahrer',demo:'Demo'};
+const ASROLES=['admin','chef','verkauf','team','schonung','fahrer'];
+const realRole=n=>(S.roles&&S.roles[n])||'team';
+let asRole='admin';try{asRole=localStorage.getItem('droste-asrole')||'admin'}catch(e){}
+const roleOf=n=>{const r=realRole(n);return(r==='demo'&&n===S.me)?(ASROLES.includes(asRole)?asRole:'admin'):r};
 const isAdmin=()=>roleOf(S.me)==='admin';
 const canCal=()=>isAdmin()||roleOf(S.me)==='chef';
 const seeAllTasks=()=>isAdmin()||roleOf(S.me)==='chef';
 const PERMS=[['verkauf','Verkauf eintragen'],['zahlen','Zahlen ansehen'],['lieferungen','Lieferungen ansehen'],['lieferplanung','Touren planen'],['einkauf','Einkaufsliste'],['archiv','Archiv'],['instagram','Instagram-Kalender'],['feld','Feld: Netzen und Abfahren']];
-const PRESET={admin:'*',chef:'*',verkauf:['verkauf','zahlen','instagram'],team:['instagram'],schonung:['feld'],fahrer:['lieferungen','instagram']};
+const PRESET={demo:'*',admin:'*',chef:'*',verkauf:['verkauf','zahlen','instagram'],team:['instagram'],schonung:['feld'],fahrer:['lieferungen','instagram']};
 function presetFor(role){const q=PRESET[role]||[],o={};PERMS.forEach(([k])=>{o[k]=q==='*'||q.includes(k)});return o}
-const permsOf=n=>(S.perms&&S.perms[n])||presetFor(roleOf(n));
+const permsOf=n=>(realRole(n)==='demo'&&n===S.me)?presetFor(roleOf(n)):((S.perms&&S.perms[n])||presetFor(roleOf(n)));
 const has=k=>isAdmin()||!!permsOf(S.me)[k];
 const canSales=()=>has('verkauf')||has('zahlen');
 const meSelect=()=>`<select class="t" data-meselect="1">${S.people.map(n=>`<option ${n===S.me?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
@@ -1261,6 +1266,7 @@ document.addEventListener('change',ev=>{
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='ef-repeat'||t.id==='ef-remind')render();
+  if(t.id==='asrole'){asRole=t.value;try{localStorage.setItem('droste-asrole',asRole)}catch(e){}tab='ich';cur.ptab='aufg';window.scrollTo(0,0);return render()}
   if(t.id==='rp-obj')cur.rf.obj=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='rp-urgent')cur.rf.urgent=t.checked;
@@ -1537,7 +1543,7 @@ function imgUrl(path){
   if(!path||!window.cloud||!window.cloud.imageUrl)return '';
   if(IMGERR[path]&&Date.now()-(IMGT[path]||0)>5000){delete IMGERR[path];delete IMG[path]}
   if(IMG[path]!==undefined)return IMG[path];
-  IMG[path]='';window.cloud.imageUrl(path).then(u=>{IMG[path]=u;softRender()}).catch(e=>{IMGERR[path]=(e&&(e.code||e.message))||'Fehler';IMGT[path]=Date.now();softRender()});return '';
+  IMG[path]='';Promise.resolve().then(()=>window.cloud.imageUrl(path)).then(u=>{IMG[path]=u;softRender()}).catch(e=>{IMGERR[path]=(e&&(e.code||e.message))||'Fehler';IMGT[path]=Date.now();softRender()});return '';
 }
 function shrinkImage(file,maxW){
   return new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(file);
@@ -1568,12 +1574,12 @@ function feldChange(ort,sid,delta,typ,quiet){
 function vFeld(){
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]};
   const chips=`<div class="chips">${os.map(x=>`<button class="chip ${x.name===cur.fs?'on':''}" data-pl="fs" data-v="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
-    ${o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:''}`;
+`,gchips=o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'';
   const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
   if(mode==='karte'){
     const sch=schon(cur.fs),url=imgUrl(sch.img),sum=g=>Object.values((feldDoc(g?`${cur.fs} · ${g}`:cur.fs)||{bal:{}}).bal||{}).reduce((a,b)=>a+(b.q||0),0);
     const pins=url?Object.entries(sch.pins||{}).filter(([k])=>o.gaenge.includes(k)).map(([k,p])=>`<button class="pin ${k===cur.fg?'on':''}" data-pl="fpin" data-v="${esc(k)}" style="left:${p[0]}%;top:${p[1]}%" aria-label="${esc(k)}"></button>`).join(''):'';
-    $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
+    $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
       ${sch.address?`<div class="card pad"><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:''}
       ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">${pins}</div><div class="hint">Tippe auf eine Nummer, um zu diesem Gang zu springen. Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}
       ${o.gaenge.length?`<h3>Gänge</h3><div class="card">${o.gaenge.map(g=>`<div class="row" data-pl="fpin" data-v="${esc(g)}"><div class="n">${esc(g)}</div><b>${num(sum(g))}</b></div>`).join('')}</div>`:''}`;
@@ -1584,7 +1590,7 @@ function vFeld(){
     const perOrt=S.feld.map(d=>({d,q:Object.values(d.bal||{}).reduce((a,b)=>a+b.q,0)})).filter(x=>x.q>0).sort((a,b)=>b.q-a.q);
     const perSort={};S.feld.forEach(d=>Object.entries(d.bal||{}).forEach(([sid,b])=>{if(b.q>0)perSort[sid]=(perSort[sid]||0)+b.q}));
     const rows=Object.entries(perSort).map(([sid,q])=>({k:sortById(sid),q})).filter(x=>x.k).sort((a,b)=>b.q-a.q);
-    $('#app').innerHTML=`${chips}${seg}<div class="tiles"><div class="tile b"><small>Liegen noch auf dem Feld</small><b>${num(tot.q)}</b></div><div class="tile"><small>Genetzt (gesamt)</small><b>${num(tot.in)}</b></div>
+    $('#app').innerHTML=`${chips}${seg}${gchips}<div class="tiles"><div class="tile b"><small>Liegen noch auf dem Feld</small><b>${num(tot.q)}</b></div><div class="tile"><small>Genetzt (gesamt)</small><b>${num(tot.in)}</b></div>
       <div class="tile g"><small>Abgefahren (gesamt)</small><b>${num(tot.out)}</b></div></div>
       <h3>Nach Weg</h3><div class="card">${perOrt.map(x=>`<div class="row" data-pl="fgo" data-v="${esc(x.d.ort)}"><div class="n">${esc(x.d.ort)}</div><b>${num(x.q)}</b></div>`).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>
       <h3>Nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${num(x.q)}</b></div>`).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>`;
@@ -1593,7 +1599,7 @@ function vFeld(){
   const qOf=k=>feldQ(ort,k.id);
   if(mode==='abfahrt'&&cur.frest){
     const ids=[...new Set([...SORT.filter(k=>qOf(k)>0).map(k=>k.id),...cur.fextra])];
-    $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(ort)}</h2><div class="hint">Was liegt hier noch? Schätze die Anzahl.</div>
+    $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(ort)}</h2><div class="hint">Was liegt hier noch? Schätze die Anzahl.</div>
       <div class="card">${ids.map(id=>{const k=sortById(id);return `<div class="row"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0">${esc(sorteLabel(k))}</div><input class="t" style="width:90px;text-align:center;font-size:20px" type="number" inputmode="numeric" min="0" data-fr="${k.id}" value="${qOf(k)}"></div>`}).join('')||'<div class="row"><span class="p">Nichts mehr hier.</span></div>'}</div>
       <select class="t" id="frest-add"><option value="">Sorte hinzufügen …</option>${SORT.filter(k=>!ids.includes(k.id)).map(k=>`<option value="${k.id}">${esc(sorteLabel(k))}</option>`).join('')}</select>
       <div class="mini" style="margin-top:12px"><button class="btn green" data-pl="frestsave" style="margin:0">Rest speichern</button><button class="btn sec" data-pl="frestno" style="margin:0">Abbrechen</button></div>`;
@@ -1608,7 +1614,7 @@ function vFeld(){
         :`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fch" data-v="${k.id}|1">+1</button><button class="plus fb" data-pl="fch" data-v="${k.id}|10">+10</button>`}</div></div>`};
   const sec=g=>{const key='fl-'+mode+'-'+g.g,sum=g.its.reduce((a,k)=>a+qOf(k),0),open=cur.det[key]===true||(cur.det[key]===undefined&&(mode==='abfahrt'||sum>0));
     return `<details data-det="${key}" ${open?'open':''}><summary><span>${esc(SGN[g.g])}</span><span class="p" style="margin-left:auto;margin-right:10px">${sum}</span></summary><div class="card">${g.its.map(rowN).join('')}</div></details>`};
-  $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(ort)}</h2>
+  $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(ort)}</h2>
     <div class="hint">${mode==='netz'?'Netzfahrer: trage ein, wie viele Bäume hier am Weg liegen.':'Palettenfahrer: tippe, was abgefahren wurde. Ist die Palette voll, melde den Rest.'}</div>
     ${mode==='abfahrt'&&!items.length?'<div class="hint">Nichts mehr hier.</div>':''}
     ${groups.map(sec).join('')}
