@@ -5,10 +5,10 @@
 const V = '10.14.1', BASE = 'https://www.gstatic.com/firebasejs/' + V + '/';
 
 async function loadFB() {
-  const [a, au, fs, ms] = await Promise.all([
+  const [a, au, fs, ms, st] = await Promise.all([
     import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js'), import(BASE + 'firebase-firestore.js'),
-    import(BASE + 'firebase-messaging.js').catch(() => ({}))]);
-  return { ...a, ...au, ...fs, ...ms };
+    import(BASE + 'firebase-messaging.js').catch(() => ({})), import(BASE + 'firebase-storage.js').catch(() => ({}))]);
+  return { ...a, ...au, ...fs, ...ms, ...st };
 }
 
 const clean = o => JSON.parse(JSON.stringify(o));
@@ -36,8 +36,8 @@ function initCloud(FB) {
     tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: true },
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
-    settings: { get: () => { const h = T.S.hofInfo || {}; return (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length)) ? [['hof', h]] : []; },
-                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '' }; }, del: true },
+    settings: { get: () => { const h = T.S.hofInfo || {}; return (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || (h.schonungen && Object.keys(h.schonungen).length)) ? [['hof', h]] : []; },
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', schonungen: h.schonungen || {} }; }, del: true },
     packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
     feld:     { get: () => T.S.feld.map(x => [x.id, x]), put: m => { T.S.feld = Object.values(m); }, del: false, maps: ['bal'] },
     tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops', 'loaded'] },
@@ -251,6 +251,8 @@ function initCloud(FB) {
       if (tok) await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayRemove(tok) }).catch(() => {});
       try { await FB.deleteToken(FB.getMessaging(app)); } catch (e) {}
     },
+    imageUrl: path => FB.getDownloadURL(FB.ref(FB.getStorage(app), path)),
+    async uploadImage(path, blob) { await FB.uploadBytes(FB.ref(FB.getStorage(app), path), blob, { contentType: 'image/jpeg' }); return path; },
     resendVerification: () => FB.sendEmailVerification(auth.currentUser),
     async refreshVerified() {
       const u = auth.currentUser; if (!u) return;

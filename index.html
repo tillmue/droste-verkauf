@@ -36,6 +36,10 @@ header img{flex:none}
 #prof>span:last-child{min-width:0}
 #prof b,#prof small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
 body.authed #lang{display:none}
+.fmap{position:relative;border-radius:14px;overflow:hidden;margin:6px 0}.fmap img{display:block;width:100%;height:auto}
+.pin{position:absolute;width:46px;height:46px;margin:-34px 0 0 -23px;border-radius:50%;border:2px solid transparent;background:transparent;padding:0}.pin.on{border-color:#ffd60a}
+.zoomv{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92)}.zoomv .zs{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch}.zoomv img{width:220%;max-width:none;display:block}
+.zx{position:fixed;top:calc(10px + env(safe-area-inset-top));right:14px;z-index:61;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:26px}
 .tdot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
 .seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:2px;margin:4px 0 10px}
 .seg button{flex:1;min-width:0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:9px;white-space:nowrap}
@@ -198,7 +202,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 h';
+const APP_VERSION='2026-10-18 i';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1059,6 +1063,8 @@ document.addEventListener('click',ev=>{
   if(a==='fs'){cur.fs=v;cur.fg='';cur.frest=false;return render()}
   if(a==='fg'){cur.fg=v;return render()}
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
+  if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
+  if(a==='fzoom'){const d=document.createElement('div');d.className='zoomv';d.innerHTML=`<button class="zx">×</button><div class="zs"><img src="${esc(v)}" alt=""></div>`;d.addEventListener('click',e=>{if(e.target.className==='zx'||e.target===d)d.remove()});document.body.appendChild(d);return}
   if(a==='fch'){const [sid,dl]=v.split('|');feldChange(curOrt(),sid,+dl,cur.fmode==='abfahrt'?'abfahrt':'netz');return}
   if(a==='fall'){const o=curOrt();feldChange(o,v,-feldQ(o,v),'abfahrt');return}
   if(a==='fset'){const o=curOrt(),q0=feldQ(o,v),r=prompt('Exakte Anzahl hier:',String(q0));if(r===null)return;const n=parseInt(r);if(isNaN(n)||n<0)return alert('Bitte eine Zahl eingeben.');feldChange(o,v,n-q0,'rest');return}
@@ -1450,11 +1456,24 @@ function sorteLabel(k){
   if(LANG==='ro')f=f.replace(/[A-Za-zäöüÄÖÜß]+/g,w=>{const r=SORT_RO[w.toLowerCase()];return r?(w[0]===w[0].toUpperCase()?r[0].toUpperCase()+r.slice(1):r):w});
   return f+(k.q?' · '+k.q:'')+' · '+k.h;
 }
-const DEF_ORTE='Vorgewände\n'+[1,2,3,4].map(n=>`Schonung ${n}: `+Array.from({length:8},(_,i)=>'Gang '+(i+1)).join(', ')).join('\n');
+const DEF_ORTE='Dieter: Vorgewände, Gang 1, Gang 2, Gang 3, Gang 4';
+const DEF_SCH={Dieter:{img:'schonungen/dieter.jpg',pins:{'Gang 1':[36,53],'Gang 2':[46.8,43.5],'Gang 3':[56.2,33.5],'Gang 4':[61.3,20.7],'Vorgewände':[25.4,61.2]}}};
+const schon=n=>({...(DEF_SCH[n]||{}),...(((S.hofInfo&&S.hofInfo.schonungen)||{})[n]||{})});
+const IMG={};
+function imgUrl(path){
+  if(!path||!window.cloud||!window.cloud.imageUrl)return '';
+  if(IMG[path]!==undefined)return IMG[path];
+  IMG[path]='';window.cloud.imageUrl(path).then(u=>{IMG[path]=u;softRender()}).catch(()=>{});return '';
+}
+function shrinkImage(file,maxW){
+  return new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(file);
+    im.onload=()=>{const k=Math.min(1,maxW/im.width),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(new Error('blob')),'image/jpeg',0.85)};
+    im.onerror=()=>rej(new Error('img'));im.src=u})
+}
 const parseOrte=t=>t.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf(':');return i<0?{name:l,gaenge:[]}:{name:l.slice(0,i).trim(),gaenge:l.slice(i+1).split(',').map(x=>x.trim()).filter(Boolean)}});
 const orteText=()=>(S.hofInfo&&S.hofInfo.orte)||DEF_ORTE;
 const orteList=()=>parseOrte(orteText());
-cur.fmode='netz';cur.fs='';cur.fg='';cur.frest=false;cur.fextra=[];
+cur.fmode='karte';cur.fs='';cur.fg='';cur.frest=false;cur.fextra=[];
 function curOrt(){
   const os=orteList();let s=(cur.fs&&os.some(x=>x.name===cur.fs))?cur.fs:(os[0]||{name:'Vorgewände'}).name;cur.fs=s;
   const o=os.find(x=>x.name===s)||{gaenge:[]};
@@ -1476,7 +1495,16 @@ function vFeld(){
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]};
   const chips=`<div class="chips">${os.map(x=>`<button class="chip ${x.name===cur.fs?'on':''}" data-pl="fs" data-v="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
     ${o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:''}`;
-  const seg=`<div class="chips">${[['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].map(([k,l])=>`<button class="chip ${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if(mode==='karte'){
+    const sch=schon(cur.fs),url=imgUrl(sch.img),sum=g=>Object.values((feldDoc(g?`${cur.fs} · ${g}`:cur.fs)||{bal:{}}).bal||{}).reduce((a,b)=>a+(b.q||0),0);
+    const pins=url?Object.entries(sch.pins||{}).filter(([k])=>o.gaenge.includes(k)).map(([k,p])=>`<button class="pin ${k===cur.fg?'on':''}" data-pl="fpin" data-v="${esc(k)}" style="left:${p[0]}%;top:${p[1]}%" aria-label="${esc(k)}"></button>`).join(''):'';
+    $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
+      ${sch.address?`<div class="card pad"><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:''}
+      ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">${pins}</div><div class="hint">Tippe auf eine Nummer, um zu diesem Gang zu springen. Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?'Bild wird geladen …':'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}
+      ${o.gaenge.length?`<h3>Gänge</h3><div class="card">${o.gaenge.map(g=>`<div class="row" data-pl="fpin" data-v="${esc(g)}"><div class="n">${esc(g)}</div><b>${num(sum(g))}</b></div>`).join('')}</div>`:''}`;
+    return;
+  }
   if(mode==='uebersicht'){
     const tot=S.feld.reduce((a,d)=>{Object.values(d.bal||{}).forEach(b=>{a.q+=b.q;a.in+=b.in||0;a.out+=b.out||0});return a},{q:0,in:0,out:0});
     const perOrt=S.feld.map(d=>({d,q:Object.values(d.bal||{}).reduce((a,b)=>a+b.q,0)})).filter(x=>x.q>0).sort((a,b)=>b.q-a.q);
@@ -1610,8 +1638,13 @@ function vDaten(){
   <input class="t" id="hof-paypal" value="${esc((S.hofInfo&&S.hofInfo.paypal)||'')}" placeholder="https://www.paypal.com/paypalme/…" autocapitalize="none">
   <label class="f">Fahrzeuge für Touren (eins pro Zeile)</label>
   <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea>
-  <label class="f">Orte im Feld (eine Zeile pro Schonung: Name: Gang 1, Gang 2 …)</label>
+  <label class="f">Schonungen und Gänge (eine Zeile pro Schonung: Name: Vorgewände, Gang 1, Gang 2 …)</label>
   <textarea class="t" id="hof-orte" rows="6">${esc(orteText())}</textarea></div>
+  <h2>Schonungen</h2>
+  ${orteList().map(o=>{const s=schon(o.name);return `<div class="card pad"><div class="n">${esc(o.name)}</div>
+    <label class="f">Adresse der Schonung (für die Route)</label><input class="t" data-sch-addr="${esc(o.name)}" value="${esc(s.address||'')}" placeholder="Straße Nr., PLZ Ort">
+    <label class="f">Bild der Schonung (Luftbild mit beschrifteten Gängen)</label>
+    <label class="btn sec" style="display:block;text-align:center;margin:0">${s.img&&imgUrl(s.img)?'Bild ersetzen':'Bild hochladen'}<input type="file" accept="image/*" data-sch-up="${esc(o.name)}" hidden></label></div>`}).join('')}
   <h2>Backup</h2>
   <div class="card pad"><div class="hint">Die Datenbank wird jede Nacht automatisch gesichert. Hier kannst du zusätzlich von Hand eine Datei sichern.</div>
   <button class="btn" id="bJson">Backup sichern (JSON)</button>
@@ -1696,6 +1729,10 @@ document.addEventListener('change',ev=>{
   if(t.dataset.pp){prod(t.dataset.pp).price=pf(t.value);save()}
   if(t.dataset.pc){prod(t.dataset.pc).cost=pf(t.value);save()}
   if(t.dataset.sn){S.stands.find(s=>s.id===t.dataset.sn).name=t.value||'?';save()}
+  if(t.dataset.schAddr!==undefined){const n=t.dataset.schAddr;S.hofInfo={...S.hofInfo,schonungen:{...((S.hofInfo||{}).schonungen||{}),[n]:{...schon(n),address:t.value.trim()}}};save()}
+  if(t.dataset.schUp&&t.files[0]){const n=t.dataset.schUp,f0=t.files[0];t.value='';
+    (async()=>{try{toast('Bild wird hochgeladen …');const blob=await shrinkImage(f0,2400),path='schonungen/'+feldSlug(n)+'.jpg';await window.cloud.uploadImage(path,blob);
+      S.hofInfo={...S.hofInfo,schonungen:{...((S.hofInfo||{}).schonungen||{}),[n]:{...schon(n),img:path}}};delete IMG[path];save();toast('Bild gespeichert');render()}catch(e){alert('Das Bild konnte nicht hochgeladen werden. '+((e&&(e.code||e.message))||''))}})()}
   if(t.dataset.sa){S.stands.find(s=>s.id===t.dataset.sa).address=t.value.trim();save()}
   if(t.dataset.sc){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sc]=pf(t.value);save()}
 });
