@@ -197,7 +197,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 c';
+const APP_VERSION='2026-10-18 d';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -390,7 +390,7 @@ function render(){
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
   const sch=roleOf(S.me)==='schonung';
-  const items=sch?[['ich','◉','Ich'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Lieferungen']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
+  const items=sch?[['ich','◉','Ich'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Logistik']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
   if(sch&&(tab==='staende'||tab==='lieferungen'||tab==='preise'||tab==='erfassen'||tab==='zahlen'))tab='plan';
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
@@ -904,10 +904,10 @@ function calRow(it,noDate){
   if(it.k==='task')return taskRow(o,false);
   if(it.k==='ev')return evRow(o,noDate);
   if(it.k==='tour'){const st=tourStops(o),done=st.filter(x=>x.done).length;
-    return `<div class="row" data-pl="goliefer" data-v="${o.date}"><div style="min-width:0"><div class="n">${esc(o.vehicle||'Fahrzeug offen')}</div>
+    return `<div class="row" data-pl="goliefer" data-v="${o.date}|lief"><div style="min-width:0"><div class="n">${esc(o.vehicle||'Fahrzeug offen')}</div>
     <div class="p">${o.driver?'Fahrer: <span class="who">'+esc(o.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div></div></div>`}
-  return tourStops(o).map(x=>`<div class="row" data-pl="goliefer" data-v="${o.date}"><div style="min-width:0"><div class="n">${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
-    <div class="p"><span>Abholung</span> · <span>${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</span>${x.items?' · '+esc(x.items):''}</div></div></div>`).join('')||`<div class="row" data-pl="goliefer" data-v="${o.date}"><span class="p">Abholungen auf dem Hof</span></div>`;
+  return tourStops(o).map(x=>`<div class="row" data-pl="goliefer" data-v="${o.date}|abh"><div style="min-width:0"><div class="n">${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
+    <div class="p"><span>Abholung</span> · <span>${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</span>${x.items?' · '+esc(x.items):''}</div></div></div>`).join('')||`<div class="row" data-pl="goliefer" data-v="${o.date}|abh"><span class="p">Abholungen auf dem Hof</span></div>`;
 }
 function calDay(ct,ds){return calItems(ct,ds).sort((a,b)=>calTime(a)<calTime(b)?-1:calTime(a)>calTime(b)?1:0).map(it=>calRow(it,true)).join('')}
 function planKal(){
@@ -1041,7 +1041,10 @@ document.addEventListener('click',ev=>{
   if(a==='cview'){cur.cview=v;return render()}
   if(a==='cdd'){cur.cday=shiftDate(cur.cday,+v);cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='cwk'){cur.cday=shiftDate(cur.cday,7*(+v));cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
-  if(a==='goliefer'){tab='lieferungen';cur.lday=v;window.scrollTo(0,0);return render()}
+  if(a==='goliefer'){const [d0,k0]=v.split('|');tab='lieferungen';cur.lday=d0;cur.lcal=d0.slice(0,7);cur.lkind=k0==='abh'?'abh':'lief';cur.lview='monat';window.scrollTo(0,0);return render()}
+  if(a==='lkind'){cur.lkind=v;return render()}
+  if(a==='lview'){cur.lview=v;return render()}
+  if(a==='lmon'){const [y,m]=(cur.lcal||todayStr().slice(0,7)).split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.lcal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
   if(a==='cday'){cur.cday=v;if(!cur.tf.id)cur.tf.date=v;if(!cur.ef.id)cur.ef.date=v;return render()}
   if(a==='cmon'){const [y,m]=cur.cal.split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.cal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
   if(a==='ctoday'){cur.cday=td;cur.cal=td.slice(0,7);if(!cur.tf.id)cur.tf.date=td;if(!cur.ef.id)cur.ef.date=td;return render()}
@@ -1060,7 +1063,7 @@ document.addEventListener('click',ev=>{
   if(a==='frestno'){cur.frest=false;return render()}
   if(a==='frestsave'){const o=curOrt();document.querySelectorAll('[data-fr]').forEach(inp=>{const sid=inp.dataset.fr,q0=feldQ(o,sid),n=parseInt(inp.value);if(!isNaN(n)&&n>=0&&n!==q0)feldChange(o,sid,n-q0,'rest',true)});cur.frest=false;save();return render()}
   if(a==='fgo'){const ort=v,os=orteList();let s=ort,g='';const hit=os.find(x=>x.name===ort);if(!hit){const i=ort.indexOf(' · ');if(i>0){s=ort.slice(0,i);g=ort.slice(i+3)}}cur.fs=s;cur.fg=g;cur.fmode='abfahrt';cur.frest=false;window.scrollTo(0,0);return render()}
-  if(a==='lday'){cur.lday=v;return render()}
+  if(a==='lday'){cur.lday=v;cur.lview='monat';return render()}
   if(a==='ldelta'){cur.lday=shiftDate(cur.lday||td,+v);return render()}
   if(a==='tournew'){cur.tour=newTour(cur.lday||td);cur.tourOpen=true;cur.stopOpen=false;return render()}
   if(a==='touredit'){const t=S.tours.find(x=>x.id===v);if(!t)return;cur.tour={id:t.id,date:t.date,driver:t.driver||'',vehicle:t.vehicle||'',note:t.note||''};cur.tourOpen=true;cur.stopOpen=false;window.scrollTo(0,document.body.scrollHeight);return render()}
@@ -1349,17 +1352,38 @@ function stopForm(){
     ${f.id?`<button class="btn red" data-pl="stopdel">${pk?'Abholung entfernen':'Stopp entfernen'}</button>`:''}</div>`;
 }
 function vLieferungen(){
-  const day=cur.lday||todayStr(),plan=has('lieferplanung'),td=todayStr();
-  const mon=shiftDate(day,-((new Date(day+'T12:00:00').getDay()+6)%7)),live=S.tours.filter(t=>!t.deleted);
-  const strip=WDS.map((wd,i)=>{const d=shiftDate(mon,i),n=live.filter(t=>t.date===d).length;
-    return `<button class="dy ${d===day?'sel':''} ${d===td?'today':''}" data-pl="lday" data-v="${d}"><small>${wd}</small><b>${d.slice(8)}</b><span>${n?'<em class="d b"></em>'.repeat(Math.min(n,3)):''}</span></button>`}).join('');
-  const tours=live.filter(t=>t.date===day&&t.type!=='abholung').sort((a,b)=>(a.driver||'~').localeCompare(b.driver||'~')),picks=live.filter(t=>t.date===day&&t.type==='abholung');
-  $('#app').innerHTML=`${backupWarn()}<div class="datebar"><button data-pl="ldelta" data-v="-1">‹</button><input type="date" id="lday-in" value="${day}"><button data-pl="ldelta" data-v="1">›</button></div>
-    <div class="week">${strip}</div>
-    <h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>
-    ${tours.map(t=>tourCard(t,plan)).join('')||(picks.length?'':'<div class="hint">Für diesen Tag sind keine Touren geplant.</div>')}
-    ${picks.map(t=>tourCard(t,plan)).join('')}
-    ${plan?'<button class="btn" data-pl="tournew">+ Neue Tour für diesen Tag</button><button class="btn sec" data-pl="picknew">+ Abholung auf dem Hof</button>':''}${cur.tourOpen?tourForm():''}${cur.stopOpen?stopForm():''}`;
+  const td=todayStr(),plan=has('lieferplanung'),kind=cur.lkind==='abh'?'abh':'lief',view=cur.lview==='gesamt'?'gesamt':'monat';
+  if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
+  const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number);
+  const live=S.tours.filter(t=>!t.deleted&&(kind==='abh'?t.type==='abholung':t.type!=='abholung'));
+  const cnt=ds=>live.filter(t=>t.date===ds).reduce((s,t)=>s+(kind==='abh'?tourStops(t).length:Math.max(tourStops(t).length,1)),0);
+  const seg=`<div class="seg">${[['lief','Lieferung'],['abh','Abholung']].map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>
+    <div class="seg">${[['monat','Monat'],['gesamt','Gesamt']].map(([k,l])=>`<button class="${view===k?'on':''}" data-pl="lview" data-v="${k}">${l}</button>`).join('')}</div>`;
+  let body='';
+  if(view==='monat'){
+    const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate(),rows=Math.ceil((off+dim)/7),first=`${y}-${p2(m)}-01`,start=shiftDate(first,-off);
+    const kwOf=ds=>{const d=new Date(ds+'T12:00:00');d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7)};
+    let g='<u></u>'+WDS.map(x=>`<u>${x}</u>`).join('');
+    for(let r=0;r<rows;r++){
+      g+=`<div class="kw"><span>KW ${kwOf(shiftDate(start,r*7))}</span></div>`;
+      for(let c=0;c<7;c++){const ds=shiftDate(start,r*7+c),n=cnt(ds),inM=ds.slice(0,7)===cur.lcal;
+        g+=`<button class="md ${inM?'':'out'} ${ds===day?'sel':''} ${ds===td?'today':''}" data-pl="lday" data-v="${ds}"><b>${+ds.slice(8)}</b>${n?`<i class="${kind==='abh'?'c-o':'c-t'}" style="text-align:center;font-size:13px;font-weight:700">${n}</i>`:''}</button>`}
+    }
+    const mname=new Date(y,m-1,1).toLocaleDateString(LOC,{month:'long',year:'numeric'});
+    const tours=live.filter(t=>t.date===day).sort((a,b)=>(a.driver||'~').localeCompare(b.driver||'~'));
+    body=`<div class="calhead" style="margin-top:4px"><button data-pl="lmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="lmon" data-v="1">›</button></div><div class="mcal">${g}</div>
+      <div class="hint" style="margin-top:-4px">${kind==='abh'?'Zahl = Abholungen pro Tag':'Zahl = Stopps pro Tag'}</div>
+      <h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>
+      ${tours.map(t=>tourCard(t,plan)).join('')||`<div class="hint">${kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':'Für diesen Tag sind keine Touren geplant.'}</div>`}
+      ${plan?(kind==='abh'?'<button class="btn" data-pl="picknew">+ Abholung auf dem Hof</button>':'<button class="btn" data-pl="tournew">+ Neue Tour für diesen Tag</button>'):''}${cur.tourOpen?tourForm():''}${cur.stopOpen?stopForm():''}`;
+  }else{
+    const up={},past={};
+    live.forEach(t=>{const mp=t.date<td?past:up;(mp[t.date]=mp[t.date]||[]).push(t)});
+    const blk=mp=>Object.keys(mp).sort().map(k=>`<h3>${wdD(k)}</h3><div class="card">${mp[k].map(t=>calRow({k:t.type==='abholung'?'pick':'tour',o:t})).join('')}</div>`).join('');
+    const nPast=Object.keys(past).length;
+    body=(blk(up)||`<div class="card"><div class="row"><span class="p">${kind==='abh'?'Keine Abholungen geplant.':'Keine Touren geplant.'}</span></div></div>`)+(nPast?`<details data-det="lpast2"><summary>Vergangene Einträge (${nPast} Tage)</summary>${blk(past)}</details>`:'');
+  }
+  $('#app').innerHTML=`${backupWarn()}${seg}${body}`;
 }
 /* ---------- Feld: Netzen und Abfahren der Bäume ---------- */
 const SORT=[['Rot','1.','120/150'],['Lila','1.','170/210'],['Gelb','1.','210/260'],['Rot/weiß','1.','260/320'],['Lila/weiß','1.','320/360'],['Gelb/Band','1.','400/600'],
@@ -1734,7 +1758,6 @@ document.addEventListener('change',ev=>{
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
-  if(t.id==='lday-in'&&t.value){cur.lday=t.value;render()}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
 });

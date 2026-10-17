@@ -1,4 +1,11 @@
 window.RO_DICT={
+"Keine Touren geplant.": "Nu sunt ture planificate.",
+"Keine Abholungen geplant.": "Nu sunt ridicări planificate.",
+"Für diesen Tag sind keine Abholungen eingetragen.": "Pentru această zi nu sunt ridicări înregistrate.",
+"Zahl = Stopps pro Tag": "Număr = opriri pe zi",
+"Zahl = Abholungen pro Tag": "Număr = ridicări pe zi",
+"Gesamt": "Total",
+"Logistik": "Logistică",
 "Karten": "Hărți",
 "Google Maps": "Google Maps",
 "Adresse des Stands (für die Route in Google Maps und Karten)": "Adresa standului (pentru traseu în Google Maps și Hărți)",
