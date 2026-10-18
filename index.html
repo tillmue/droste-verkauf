@@ -45,6 +45,8 @@ body.authed #lang{display:none}
 .bdg{display:inline-block;background:var(--red);color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin-right:6px}
 .urg{border:1px solid var(--red)}.chkrow{display:flex;gap:10px;align-items:center;margin:10px 0;font-size:16px}.chkrow input{width:22px;height:22px}
 .rimg{width:100%;border-radius:10px;margin-top:8px;display:block}
+.row.pk{padding:5px 0}.row.pk .n{font-size:15px}.row.pk .chk{width:26px;height:26px;font-size:14px}
+.note{border:1px solid var(--orange)!important;background:rgba(255,174,66,.08)!important}.bul{margin:4px 0 0;padding-left:18px}.bul li{font-size:14px;margin:3px 0}
 .btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
 .btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
@@ -216,7 +218,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 a';
+const APP_VERSION='2026-10-19 b';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1199,7 +1201,7 @@ document.addEventListener('click',ev=>{
     return askConfirm(`„${x.name||x.address}“ nicht angetroffen?`,'Ja, nicht angetroffen',()=>{x.done=true;x.outcome='nicht';x.doneBy=S.me;x.doneAt=Date.now();save();render()})}
   if(a==='stopnew'){cur.stop=newStop(v);cur.stopOpen=true;cur.tourOpen=false;return render()}
   if(a==='stopedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
-    cur.stop={id:sid,tourId:tid,name:x.name||'',address:x.address||'',time:x.time||'',phone:x.phone||'',items:x.items||'',note:x.note||'',callBefore:x.callBefore||''};cur.stopOpen=true;cur.tourOpen=false;return render()}
+    cur.stop={id:sid,tourId:tid,name:x.name||'',address:x.address||'',time:x.time||'',phone:x.phone||'',items:x.items||'',note:x.note||'',callBefore:x.callBefore||'',standId:x.standId||''};cur.stopOpen=true;cur.tourOpen=false;return render()}
   if(a==='stopcancel'){cur.stopOpen=false;return render()}
   if(a==='stopsave'){
     const f=cur.stop,pk0=String(f.tourId).startsWith('pick:');
@@ -1208,7 +1210,7 @@ document.addEventListener('click',ev=>{
     if(pk0){const day=f.tourId.slice(5);let p=S.tours.find(x=>!x.deleted&&x.type==='abholung'&&x.date===day);
       if(!p){p={id:uid(),type:'abholung',date:day,driver:'',vehicle:'',note:'',stops:{},createdBy:S.me,created:Date.now()};S.tours.push(p)}f.tourId=p.id}
     const t=S.tours.find(x=>x.id===f.tourId);if(!t)return;t.stops=t.stops||{};
-    const base={name:f.name.trim(),address:f.address.trim(),time:f.time,phone:f.phone.trim(),items:f.items.trim(),note:f.note.trim(),callBefore:f.callBefore||''};
+    const base={name:f.name.trim(),address:f.address.trim(),time:f.time,phone:f.phone.trim(),items:f.items.trim(),note:f.note.trim(),callBefore:f.callBefore||'',standId:f.standId||''};
     if(f.id)Object.assign(t.stops[f.id],base);
     else{const mx=Object.values(t.stops).reduce((m,x)=>Math.max(m,x.order||0),0),id=uid();t.stops[id]={id,order:mx+1,done:false,...base}}
     cur.stopOpen=false;save();return render();
@@ -1229,12 +1231,16 @@ document.addEventListener('click',ev=>{
   if(a==='pmode'){cur.pmode=v;return render()}
   if(a==='packck'){
     const pk=S.packs.find(x=>x.id===cur.pstand);if(!pk)return;
-    const m=cur.pmode||'a';pk.checks=pk.checks||{};const c=pk.checks[v]||(pk.checks[v]={a:false,z:false});
+    const m=cur.pmode||'p';pk.checks=pk.checks||{};const c=pk.checks[v]||(pk.checks[v]={p:false,a:false,z:false});
     c[m]=!c[m];c.by=S.me;save();return render();
   }
+  if(a==='packall'){const pk=S.packs.find(x=>x.id===cur.pstand);if(!pk)return;const g=pk.groups.find(x=>x.key===v);if(!g)return;const m=cur.pmode||'p';pk.checks=pk.checks||{};
+    const allOn=g.items.every(i=>pk.checks[i.id]&&pk.checks[i.id][m]);g.items.forEach(i=>{const c=pk.checks[i.id]||(pk.checks[i.id]={p:false,a:false,z:false});c[m]=!allOn;c.by=S.me});save();return render()}
+  if(a==='packnote'){const txt=(cur.pknote||'').trim();if(!txt)return alert('Bitte eine Änderung eintragen.');
+    S.reports.push({id:uid(),cat:'stand',obj:cur.pstand,text:'Abbau: '+txt,urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});cur.pknote='';save();toast('Gesendet');return render()}
   if(a==='packreset'){
     const pk=S.packs.find(x=>x.id===cur.pstand);if(!pk)return;
-    if(confirm(`Alle Häkchen der Packliste ${pk.name} zurücksetzen?`)){pk.groups.forEach(g=>g.items.forEach(i=>{pk.checks[i.id]={a:false,z:false}}));save();render()}
+    if(confirm(`Alle Häkchen der Packliste ${pk.name} zurücksetzen?`)){pk.groups.forEach(g=>g.items.forEach(i=>{pk.checks[i.id]={p:false,a:false,z:false}}));save();render()}
     return;
   }
   if(a==='shopadd'){const x=($('#sh-text').value||'').trim();if(!x)return;S.shopping.push({id:uid(),text:x,by:S.me,at:Date.now(),done:false});cur.shtext='';save();return render()}
@@ -1282,6 +1288,7 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
+  if(t.id==='pk-note')cur.pknote=t.value;
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
@@ -1289,6 +1296,8 @@ document.addEventListener('change',ev=>{
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='ef-repeat'||t.id==='ef-remind')render();
   if(t.id==='asrole'){asRole=t.value;try{localStorage.setItem('droste-asrole',asRole)}catch(e){}tab='ich';cur.ptab='aufg';window.scrollTo(0,0);return render()}
+  if(t.id&&t.id.startsWith('pk-counter-')){const k=t.id.slice(11),pk=S.packs.find(x=>x.id===cur.pstand);if(pk){const v=t.value.trim();pk.counter={...(pk.counter||{}),[k]:{v:v===''?'':v,by:S.me,at:Date.now()}};save();render()}}
+  if(t.id==='sp-standId'){const s0=S.stands.find(x=>x.id===t.value);cur.stop.standId=t.value;if(s0){cur.stop.name=s0.name;if(s0.address)cur.stop.address=s0.address}render()}
   if(t.id==='rp-obj')cur.rf.obj=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='rp-urgent')cur.rf.urgent=t.checked;
@@ -1382,8 +1391,8 @@ function vGesamt(){
 
 /* ---------- Daten / Einstellungen ---------- */
 /* ---------- Stände: Packlisten zum Abhaken ---------- */
-const PMODE={a:'Aufbau',z:'Abbau'};
-const packModes=g=>g.single?(g.key==='besonderheiten'?['a']:['z']):['a','z'];
+const PMODE={p:'Packen',a:'Aufbau',z:'Abbau'};
+const PORDER=['stand','wichtig','avobox','huette','werkzeug'];
 const standSeg=()=>{
   const c=[['staende','Packliste'],has('verkauf')?['erfassen','Verkauf']:null,has('zahlen')?['zahlen','Zahlen']:null].filter(Boolean);
   if(c.length<2)return '';
@@ -1391,21 +1400,37 @@ const standSeg=()=>{
 };
 function vStaende(){
   const sid=(cur.pstand&&S.stands.some(x=>x.id===cur.pstand))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
-  const mode=cur.pmode||'a',pk=S.packs.find(x=>x.id===sid);
+  const mode=['p','a','z'].includes(cur.pmode)?cur.pmode:'p',pk=S.packs.find(x=>x.id===sid);
   const chips=`<div class="chips">${S.stands.map(x=>`<button class="chip ${x.id===sid?'on':''}" data-pl="ps" data-v="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
-  const stN=S.stands.find(x=>x.id===sid)||{},addrBox=stN.address?`<div class="card pad"><div class="n">${esc(stN.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div></div>`:'';
+  const stN=S.stands.find(x=>x.id===sid)||{};
+  const kv=(l,v)=>v?`<div class="kv"><span>${l}</span><span>${esc(v)}</span></div>`:'';
+  const addrBox=(stN.address||stN.contact||stN.hours||stN.power||stN.buildDate||stN.teardownDate)?`<div class="card pad">${stN.address?`<div class="n">${esc(stN.address)}</div><div class="mini" style="margin:8px 0">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div>`:''}${kv('Ansprechpartner',stN.contact)}${kv('Öffnungszeiten',stN.hours)}${kv('Starkstrom',stN.power)}${kv('Aufbau am',stN.buildDate?wdD(stN.buildDate):'')}${kv('Abbau am',stN.teardownDate?wdD(stN.teardownDate):'')}</div>`:'';
+  const seg=`<div class="seg">${['p','a','z'].map(m=>`<button class="${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
   if(!pk){$('#app').innerHTML=chips+addrBox+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
   const chk=pk.checks||{},on=i=>!!(chk[i.id]&&chk[i.id][mode]);
-  const groups=pk.groups.filter(g=>packModes(g).includes(mode)),all=groups.flatMap(g=>g.items),done=all.filter(on).length;
-  const seg=`<div class="chips">${['a','z'].map(m=>`<button class="chip ${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
-  const info=Object.entries(pk.info||{}).map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
-  const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key;
-    return `<details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="p" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${g.items.map(i=>`<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0;flex:1"><button class="chk big ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`).join('')}</div></details>`};
-  $('#app').innerHTML=`${chips}${addrBox}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${seg}
-    <div class="card pad"><div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin:6px 0 0">${done} von ${all.length} ${mode==='a'?'aufgebaut und eingepackt':'abgebaut und zurück'}</div></div>
-    ${info?`<div class="card pad">${info}</div>`:''}
-    ${groups.map(sec).join('')}
-    ${isAdmin()?`<button class="btn sec" data-pl="packreset" style="margin-top:14px;color:var(--red)">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
+  const gOf=k=>pk.groups.find(g=>g.key===k);
+  const rest=pk.groups.filter(g=>!PORDER.includes(g.key)&&!['besonderheiten','schluss'].includes(g.key));
+  const ordered=[...PORDER.map(gOf).filter(Boolean),...rest];
+  const bes=gOf('besonderheiten');
+  const notes=bes&&bes.items.length?`<div class="card pad note"><label class="f">Besonderheiten</label><ul class="bul">${bes.items.map(i=>`<li>${esc(i.text)}</li>`).join('')}</ul></div>`:'';
+  const row=i=>`<div class="row pk"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`;
+  const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key,all=g.items.length&&dn===g.items.length;
+    const master=g.key==='avobox'?`<div class="row pk" style="background:var(--panel);border-radius:10px;padding:8px"><div style="display:flex;gap:10px;align-items:center;flex:1"><button class="chk ${all?'on':''}" data-pl="packall" data-v="${g.key}">${all?'✓':''}</button><div class="n"><b>Avobox komplett (alles drin)</b></div></div></div>`:'';
+    return `<details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="p" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${master}${g.items.map(row).join('')}</div></details>`};
+  const counterBox=(k,label)=>{const c=(pk.counter||{})[k]||{};return `<div class="card pad formc"><label class="f">${label}</label><input class="t" id="pk-counter-${k}" inputmode="numeric" value="${esc(c.v==null?'':c.v)}" placeholder="Zahl eintragen">${c.at?`<div class="hint" style="margin:6px 0 0">Eingetragen von ${esc(c.by||'?')} · ${new Date(c.at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div>`:''}</div>`};
+  let body='';
+  if(mode==='z'){
+    const sch=gOf('schluss');
+    body=`${counterBox('ab','Zählerstand beim Abbau')}
+      ${sch&&sch.items.length?`<h3>Zum Schluss</h3><div class="card">${sch.items.map(row).join('')}</div>`:''}
+      <div class="card pad formc"><label class="f">Änderungen melden (z. B. 2 Netze fehlen)</label><textarea class="t" id="pk-note" rows="3" placeholder="Was hat sich bei den Mengen geändert?">${esc(cur.pknote||'')}</textarea><button class="btn" data-pl="packnote" style="margin-bottom:0">Absenden</button></div>`;
+  }else{
+    const all=ordered.flatMap(g=>g.items),done=all.filter(on).length;
+    body=`<div class="card pad"><div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin:6px 0 0">${done} von ${all.length} ${mode==='p'?'gepackt':'aufgebaut'}</div></div>
+      ${mode==='a'?counterBox('auf','Zählerstand beim Aufbau'):''}${ordered.map(sec).join('')}`;
+  }
+  $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${addrBox}${seg}${notes}${body}
+    ${isAdmin()&&mode!=='z'?`<button class="btn sec" data-pl="packreset" style="margin-top:14px;color:var(--red)">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */
 const DEF_VEH=['Ford Transit mit Stangenanhänger','Ford Galaxy mit blauem Anhänger'];
@@ -1418,7 +1443,7 @@ const mTxt=s=>String(s||'').replace(/(\d{2,3})\s*cm/gi,(m,n)=>(n/100).toFixed(2)
 const canRun=t=>t.driver===S.me||t.codriver===S.me||has('lieferplanung');
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):'';
 const newTour=d=>({id:null,date:d,driver:'',codriver:'',vehicle:'',color:'',note:''});
-const newStop=tid=>({id:null,tourId:tid,name:'',address:'',time:'',phone:'',items:'',note:'',callBefore:''});
+const newStop=tid=>({id:null,tourId:tid,name:'',address:'',time:'',phone:'',items:'',note:'',callBefore:'',standId:''});
 cur.tour=newTour(todayStr());cur.stop=newStop('');cur.lday=todayStr();
 const mapUrl=a=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a);
 function routeUrl(stops){
@@ -1479,7 +1504,8 @@ function tourForm(){
 function stopForm(){
   const f=cur.stop,pk=String(f.tourId).startsWith('pick:')||((S.tours.find(x=>x.id===f.tourId)||{}).type==='abholung');
   return `<div class="card pad formc"><label class="f">${pk?(f.id?'Abholung bearbeiten':'Neue Abholung'):(f.id?'Stopp bearbeiten':'Neuer Stopp')}</label>
-    <input class="t" id="sp-name" placeholder="${pk?'Kunde / Firma':'Kunde'}" value="${esc(f.name)}">
+    ${pk?'':`<select class="t" id="sp-standId" style="margin-bottom:8px"><option value="">Kunde oder Stand?</option>${S.stands.map(s=>`<option value="${s.id}" ${f.standId===s.id?'selected':''}>Stand: ${esc(s.name)}</option>`).join('')}</select>`}
+    <input class="t" id="sp-name" placeholder="${pk?'Kunde / Firma':'Name'}" value="${esc(f.name)}">
     ${pk?'':`<input class="t" id="sp-address" placeholder="Adresse (Straße, PLZ Ort)" value="${esc(f.address)}" style="margin-top:8px">`}
     <div class="mini" style="margin-top:8px"><input class="t" type="time" id="sp-time" value="${f.time}" style="min-width:0"><input class="t" id="sp-phone" inputmode="tel" placeholder="Telefon" value="${esc(f.phone)}" style="min-width:0"></div>
     <input class="t" id="sp-items" placeholder="${pk?'Was wird abgeholt? (z. B. 20 × Nordmann 1,50 m)':'Was wird geliefert? (z. B. 2 × Nordmann 2,00 m)'}" value="${esc(f.items)}" style="margin-top:8px">
@@ -1758,6 +1784,10 @@ function vDaten(){
   <h2>Stände & Kosten</h2>
   ${S.stands.map(s=>`<div class="card pad"><div class="edit"><input class="t" data-sn="${s.id}" value="${esc(s.name)}"><button class="x" data-del-s="${s.id}">×</button></div>
     <label class="f">Adresse des Stands (für die Route in Google Maps und Karten)</label><input class="t" data-sa="${s.id}" value="${esc(s.address||'')}" placeholder="Straße Nr., PLZ Ort" autocomplete="street-address">
+    <label class="f">Ansprechpartner / Telefon</label><input class="t" data-sx="contact" data-sid="${s.id}" value="${esc(s.contact||'')}">
+    <label class="f">Öffnungszeiten</label><input class="t" data-sx="hours" data-sid="${s.id}" value="${esc(s.hours||'')}">
+    <label class="f">Starkstrom (Ort)</label><input class="t" data-sx="power" data-sid="${s.id}" value="${esc(s.power||'')}">
+    <div class="mini"><div><label class="f">Aufbau am</label><input class="t" type="date" data-sx="buildDate" data-sid="${s.id}" value="${esc(s.buildDate||'')}"></div><div><label class="f">Abbau am</label><input class="t" type="date" data-sx="teardownDate" data-sid="${s.id}" value="${esc(s.teardownDate||'')}"></div></div>
     <div class="mini">
     <div><label class="f">Standgebühr €</label><input class="t" inputmode="decimal" data-sc="fee" data-sid="${s.id}" value="${String(s.fee||0).replace('.',',')}"></div>
     <div><label class="f">Personal €</label><input class="t" inputmode="decimal" data-sc="staff" data-sid="${s.id}" value="${String(s.staff||0).replace('.',',')}"></div></div>
@@ -1837,6 +1867,7 @@ document.addEventListener('change',ev=>{
   if(t.dataset.schUp&&t.files[0]){const n=t.dataset.schUp,f0=t.files[0];t.value='';
     (async()=>{try{toast('Bild wird hochgeladen …');const blob=await shrinkImage(f0,2400),path='schonungen/'+feldSlug(n)+'.jpg';await window.cloud.uploadImage(path,blob);
       S.hofInfo={...S.hofInfo,schonungen:{...((S.hofInfo||{}).schonungen||{}),[n]:{...schon(n),img:path}}};delete IMG[path];save();toast('Bild gespeichert');render()}catch(e){alert('Das Bild konnte nicht hochgeladen werden. '+((e&&(e.code||e.message))||''))}})()}
+  if(t.dataset.sx){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sx]=t.value.trim();save()}
   if(t.dataset.sa){S.stands.find(s=>s.id===t.dataset.sa).address=t.value.trim();save()}
   if(t.dataset.sc){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sc]=pf(t.value);save()}
 });
