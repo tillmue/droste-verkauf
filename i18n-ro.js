@@ -751,6 +751,8 @@ window.RO_PATTERNS=[
  [/^Eingetragen von (.+?) · (.+)$/,(m,a,b)=>`Introdus de ${a} · ${b}`],
  [/^(\d+) von (\d+) gepackt$/,(m,a,b)=>`${a} din ${b} ambalate`],
  [/^Stand: (.+)$/,(m,x)=>`Stand: ${x}`],
+ [/^(\d+) von (\d+) Stopps erledigt$/,(m,a,b)=>`${a} din ${b} opriri finalizate`],
+ [/^Es sind noch (\d+) Stopps offen\. Tour trotzdem beenden\?$/,(m,n)=>`Mai sunt ${n} opriri deschise. Încheiezi turul oricum?`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],

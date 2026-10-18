@@ -47,6 +47,9 @@ body.authed #lang{display:none}
 .rimg{width:100%;border-radius:10px;margin-top:8px;display:block}
 .row.pk{padding:5px 0}.row.pk .n{font-size:15px}.row.pk .chk{width:26px;height:26px;font-size:14px}
 .note{border:1px solid var(--orange)!important;background:rgba(255,174,66,.08)!important}.bul{margin:4px 0 0;padding-left:18px}.bul li{font-size:14px;margin:3px 0}
+body.run header,body.run #nav{display:none}
+.trun{padding-top:calc(14px + env(safe-area-inset-top))}
+.timer{font-size:54px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-1px;margin:6px 0}
 .btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
 .btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
@@ -218,7 +221,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 b';
+const APP_VERSION='2026-10-19 c';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -393,7 +396,7 @@ function backupWarn(){
 }
 const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
-  document.body.classList.remove('authed');
+  document.body.classList.remove('authed');document.body.classList.remove('run');
   if(CLOUD){
     const c=cur.cloud||{status:'loading'};
     if(c.status==='loading')return infoScreen('Lade …');
@@ -406,6 +409,7 @@ function render(){
     if(S.approved[S.me]===false)return waitScreen();
   }
   document.body.classList.add('authed');
+  {const rt=runningTour();if(rt&&tab!=='einstellungen'){document.body.classList.add('run');$('#nav').style.display='none';vTourRun(rt);return}}
   {const ar=$('#asrole');if(ar){if(realRole(S.me)==='demo'){ar.style.display='';ar.innerHTML=ASROLES.map(r=>`<option value="${r}" ${roleOf(S.me)===r?'selected':''}>${ROLE[r]}</option>`).join('')}else ar.style.display='none'}}
   if(tab==='erfassen'&&!has('verkauf'))tab='staende';
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
@@ -1142,7 +1146,6 @@ document.addEventListener('click',ev=>{
   if(a==='cdd'){cur.cday=shiftDate(cur.cday,+v);cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='cwk'){cur.cday=shiftDate(cur.cday,7*(+v));cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='goliefer'){const [d0,k0]=v.split('|');tab='lieferungen';cur.lday=d0;cur.lcal=d0.slice(0,7);cur.lkind=k0==='abh'?'abh':'lief';cur.lview='tag';window.scrollTo(0,0);return render()}
-  if(a==='lall'){cur.lall=v==='1';return render()}
   if(a==='lkind'){cur.lkind=v;return render()}
   if(a==='lview'){cur.lview=v;return render()}
   if(a==='lmon'){const [y,m]=(cur.lcal||todayStr().slice(0,7)).split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.lcal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
@@ -1193,7 +1196,8 @@ document.addEventListener('click',ev=>{
   if(a==='tload'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid);if(!t)return;t.loaded=t.loaded||{};t.loaded[sid]=!t.loaded[sid];save();return render()}
   if(a==='tstart'){const t=S.tours.find(x=>x.id===v);if(!t)return;const st=tourStops(t),all=st.every(x=>t.loaded&&t.loaded[x.id]);
     return askConfirm(all?'Tour starten?':'Es ist noch nicht alles als beladen markiert. Trotzdem starten?','Ja, Tour starten',()=>{t.status='gestartet';t.startedAt=Date.now();t.startedBy=S.me;save();render()})}
-  if(a==='tfinish'){const t=S.tours.find(x=>x.id===v);if(!t)return;return askConfirm('Tour beenden?','Ja, Tour beenden',()=>{t.status='beendet';t.finishedAt=Date.now();save();render()})}
+  if(a==='tfinish'){const t=S.tours.find(x=>x.id===v);if(!t)return;const open=tourStops(t).filter(x=>!x.done).length;
+    return askConfirm(open?`Es sind noch ${open} Stopps offen. Tour trotzdem beenden?`:'Tour beenden?','Ja, Tour beenden',()=>{t.status='beendet';t.finishedAt=Date.now();save();render()})}
   if(a==='sarrive'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;x.arrivedAt=Date.now();save();return render()}
   if(a==='sdeliv'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     return askConfirm(`„${x.name||x.address}“ als geliefert markieren?`,'Ja, geliefert',()=>{x.done=true;x.outcome='geliefert';x.doneBy=S.me;x.doneAt=Date.now();save();render()})}
@@ -1442,6 +1446,20 @@ const tourName=t=>{const c=TCOL.find(x=>x[0]===t.color);return c?'Tour '+c[1]:'T
 const mTxt=s=>String(s||'').replace(/(\d{2,3})\s*cm/gi,(m,n)=>(n/100).toFixed(2).replace('.',',')+' m');
 const canRun=t=>t.driver===S.me||t.codriver===S.me||has('lieferplanung');
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):'';
+const runningTour=()=>S.tours.find(t=>!t.deleted&&t.type!=='abholung'&&t.status==='gestartet'&&(t.driver===S.me||t.codriver===S.me));
+const fmtDur=ms=>{const s=Math.max(0,Math.floor(ms/1000)),p=n=>String(n).padStart(2,'0');return p(Math.floor(s/3600))+':'+p(Math.floor(s/60)%60)+':'+p(s%60)};
+function vTourRun(t){
+  const st=tourStops(t),done=st.filter(x=>x.done).length;
+  $('#app').innerHTML=`<div class="trun"><div class="n" style="font-size:20px;text-align:center"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
+    <div class="p" style="text-align:center">${esc(t.vehicle||'')}</div>
+    <div class="timer" id="tmr">${fmtDur(Date.now()-(t.startedAt||Date.now()))}</div>
+    <div class="p" style="text-align:center">Gestartet um ${hm(t.startedAt)}</div>
+    <div class="barw" style="margin:12px 0 4px"><i style="width:${st.length?Math.round(done/st.length*100):0}%"></i></div>
+    <div class="p" style="text-align:center;margin-bottom:10px">${done} von ${st.length} Stopps erledigt</div>
+    ${t.note?`<div class="card pad note"><div>${esc(t.note)}</div></div>`:''}
+    ${tourCard(t,false)}</div>`;
+}
+setInterval(()=>{const e=document.getElementById('tmr'),t=runningTour();if(e&&t)e.textContent=fmtDur(Date.now()-(t.startedAt||Date.now()))},1000);
 const newTour=d=>({id:null,date:d,driver:'',codriver:'',vehicle:'',color:'',note:''});
 const newStop=tid=>({id:null,tourId:tid,name:'',address:'',time:'',phone:'',items:'',note:'',callBefore:'',standId:''});
 cur.tour=newTour(todayStr());cur.stop=newStop('');cur.lday=todayStr();
@@ -1481,7 +1499,7 @@ function tourCard(t,plan){
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const stat=stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div></div></div></div>`).join('')}</div></details>`:'';
-  const ctrl=run&&!stt&&st.length?`<button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'&&st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}">Tour beenden</button>`:'');
+  const ctrl=run&&!stt&&st.length?`<button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`<button class="btn ${st.length&&done===st.length?'green go':'sec'}" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:'');
   return `<div class="tour"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n" style="font-size:17px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
     <div class="p">${esc(t.vehicle||'Fahrzeug offen')}</div>
     <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div>${t.codriver?`<div class="p">Beifahrer: <span class="who">${esc(t.codriver)}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>
@@ -1519,9 +1537,6 @@ function vLieferungen(){
   const fahrer=roleOf(S.me)==='fahrer';
   const kind=fahrer?'lief':['lief','abh','ges'].includes(cur.lkind)?cur.lkind:'lief',view=['monat','woche','tag','liste'].includes(cur.lview)?cur.lview:'monat';
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
-  const running=S.tours.find(t=>!t.deleted&&t.type!=='abholung'&&t.status==='gestartet'&&(t.driver===S.me||t.codriver===S.me));
-  if(running&&(fahrer||!cur.lall)){
-    $('#app').innerHTML=`${backupWarn()}<div class="hint" style="margin-top:4px">Deine Tour läuft. Du siehst nur diese Tour.</div>${tourCard(running,plan)}${fahrer?'':'<button class="btn sec" data-pl="lall" data-v="1">Alle Touren anzeigen</button>'}`;return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));
   const nOf=t=>isP(t)?tourStops(t).length:Math.max(tourStops(t).length,1);
@@ -1563,7 +1578,7 @@ function vLieferungen(){
     const nPast=Object.keys(past).length;
     body=(blk(up)||`<div class="card"><div class="row"><span class="p">Nichts geplant.</span></div></div>`)+(nPast?`<details data-det="lpast2"><summary>Vergangene Einträge (${nPast} Tage)</summary>${blk(past)}</details>`:'')+forms;
   }
-  $('#app').innerHTML=`${backupWarn()}${running?'<button class="btn green" data-pl="lall" data-v="0">Zurück zu meiner laufenden Tour</button>':''}${seg}${body}`;
+  $('#app').innerHTML=`${backupWarn()}${seg}${body}`;
 }
 /* ---------- Feld: Netzen und Abfahren der Bäume ---------- */
 const SORT=[['Rot','1.','120/150'],['Lila','1.','170/210'],['Gelb','1.','210/260'],['Rot/weiß','1.','260/320'],['Lila/weiß','1.','320/360'],['Gelb/Band','1.','400/600'],
