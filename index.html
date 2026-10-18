@@ -221,7 +221,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 c';
+const APP_VERSION='2026-10-19 e';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -802,11 +802,32 @@ function vIch(){
     <button class="btn" data-pl="penadd" style="margin-bottom:0">Strafbierkiste vergeben</button></div>`;
   loadWx().then(()=>{const e=$('#wx');if(e)e.innerHTML=wxHtml()});
 }
+const vatRate=()=>{const v=S.hofInfo&&S.hofInfo.vat;const x=parseFloat(String(v==null||v===''?'7.8':v).replace(',','.'));return isNaN(x)?7.8:x};
+cur.prtab='privat';cur.vatMode='n2b';cur.vatAmt='';cur.vatRate=null;
+const pct=r=>String(r).replace('.',',')+' %';
+function vatCalc(){
+  const r=cur.vatRate==null?vatRate():cur.vatRate,x=pf(cur.vatAmt),n2b=cur.vatMode==='n2b';
+  const net=n2b?x:x/(1+r/100),gross=n2b?x*(1+r/100):x;
+  return `<div class="kv"><span>Netto</span><b>${eur(net)}</b></div><div class="kv"><span>MwSt (${pct(r)})</span><b>${eur(gross-net)}</b></div><div class="kv"><span>Brutto</span><b>${eur(gross)}</b></div>`;
+}
 function vPreise(){
-  const ps=S.products.filter(p=>!p.free),row=p=>`<div class="row"><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b>${p.price?eur(p.price):'auf Anfrage'}</b></div>`;
-  $('#app').innerHTML=`<h2 style="margin-top:4px">Preise</h2><div class="hint">Für alle einsehbar. Weitere Preise bei Till erfragen.</div>
-    <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
-    <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>
+  const tabN=cur.prtab==='haendler'?'haendler':cur.prtab==='rechner'?'rechner':'privat',r=vatRate();
+  const ps=S.products.filter(p=>!p.free),hp=p=>p.priceH?p.priceH:(p.price?Math.round(p.price/(1+r/100)*100)/100:0);
+  const row=p=>{const v=tabN==='privat'?p.price:hp(p);return `<div class="row"><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b>${v?eur(v):'auf Anfrage'}</b></div>`};
+  const seg=`<div class="seg">${[['privat','Privat'],['haendler','Händler'],['rechner','MwSt-Rechner']].map(([k,l])=>`<button class="${tabN===k?'on':''}" data-pl="prtab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  let body='';
+  if(tabN==='rechner'){
+    const rates=[...new Set([r,7,19])];const cr=cur.vatRate==null?r:cur.vatRate;
+    body=`<div class="card pad formc"><label class="f">Betrag in Euro</label><input class="t" id="vat-amt" inputmode="decimal" placeholder="0,00" value="${esc(cur.vatAmt)}">
+      <div class="seg" style="margin-top:10px">${[['n2b','Netto → Brutto'],['b2n','Brutto → Netto']].map(([k,l])=>`<button class="${cur.vatMode===k?'on':''}" data-pl="vatmode" data-v="${k}">${l}</button>`).join('')}</div>
+      <label class="f">MwSt-Satz</label><div class="seg">${rates.map(x=>`<button class="${cr===x?'on':''}" data-pl="vatrate" data-v="${x}">${pct(x)}</button>`).join('')}</div></div>
+      <div class="card pad" id="vat-res">${vatCalc()}</div>`;
+  }else{
+    body=`<div class="hint">${tabN==='privat'?'Preise für Privatkunden, inklusive MwSt.':`Preise für Händler, netto zuzüglich ${pct(r)} MwSt. Wo noch kein Händlerpreis hinterlegt ist, steht der berechnete Nettopreis.`}</div>
+      <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
+      <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>`;
+  }
+  $('#app').innerHTML=`<h2 style="margin-top:4px">Preise</h2>${seg}${body}
     <h3>Bezahlen per PayPal</h3>
     <div class="card pad" style="text-align:center"><div id="qr" style="display:inline-block;background:#fff;padding:14px;border-radius:14px;min-width:120px;min-height:120px"></div>
     <div class="hint">${(S.hofInfo&&S.hofInfo.paypal)?'QR-Code scannen und direkt per PayPal bezahlen.':'Beispiel-Code. Später ersetzt der PayPal-Code des Hofs diesen Platzhalter.'}</div></div>`;
@@ -864,7 +885,7 @@ function handOver(id){
     else if(x.dataset.no||x===d)d.remove()});
   document.body.appendChild(d);
 }
-const RCAT=[['fahrzeug','Fahrzeug'],['maschine','Maschine'],['hof','Hof'],['stand','Stand']];
+const RCAT=[['fahrzeug','Fahrzeug'],['maschine','Maschine'],['hof','Hof'],['stand','Stand'],['feld','Feld']];
 const DEF_MACH='Traktor NewHolland\nNetzmaschine\nHubwagen';
 const machinesList=()=>((S.hofInfo&&S.hofInfo.machines)||DEF_MACH).split('\n').map(x=>x.trim()).filter(Boolean);
 const RST={neu:'Neu',arbeit:'In Arbeit',erledigt:'Erledigt'};
@@ -877,7 +898,7 @@ cur.rOpen=false;cur.rf=newRf();cur.rfile=null;cur.rst='offen';cur.rcat='';
 const openReports=()=>S.reports.filter(r=>!r.deleted&&r.status!=='erledigt'&&(seeAllReports()||r.byUid===S.myUid||r.by===S.me));
 function reportForm(){
   const f=cur.rf,sel=(a,b)=>a===b?'selected':'';
-  const tiles=RCAT.map(([k,l])=>`<button class="rtile ${f.cat===k?'on':''}" data-pl="rcat" data-v="${k}">${l}</button>`).join('');
+  const tiles=RCAT.filter(c=>c[0]!=='feld').map(([k,l])=>`<button class="rtile ${f.cat===k?'on':''}" data-pl="rcat" data-v="${k}">${l}</button>`).join('');
   const opts=f.cat==='fahrzeug'?vehiclesList().map(v=>[v,v]):f.cat==='maschine'?machinesList().map(v=>[v,v]):f.cat==='stand'?S.stands.map(s=>[s.id,s.name]):null;
   const objSel=opts?`<select class="t" id="rp-obj" style="margin-bottom:8px"><option value="">${f.cat==='stand'?'Welcher Stand?':f.cat==='fahrzeug'?'Welches Fahrzeug?':'Welche Maschine?'}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${sel(v,f.obj)}>${esc(l)}</option>`).join('')}</select>`:'';
   return `<div class="card pad formc"><label class="f">Was möchtest du melden?</label><div class="rgrid">${tiles}</div>
@@ -1156,12 +1177,17 @@ document.addEventListener('click',ev=>{
   if(a==='dtask'){tab='plan';cur.ptab='aufg';cur.tf=newTf(todayStr());cur.tf.person=S.me;cur.tfOpen=true;cur.rOpen=false;window.scrollTo(0,0);return render()}
   if(a==='drep'){tab='plan';cur.ptab='aufg';cur.rOpen=true;cur.rf=newRf();cur.rfile=null;cur.tfOpen=false;window.scrollTo(0,0);return render()}
   if(a==='rankv'){cur.rankv=v;return render()}
+  if(a==='prtab'){cur.prtab=v;return render()}
+  if(a==='vatmode'){cur.vatMode=v;return render()}
+  if(a==='vatrate'){cur.vatRate=parseFloat(v);return render()}
   if(a==='gopen'){tab='plan';cur.ptab='aufg';cur.pf='@open';window.scrollTo(0,0);return render()}
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
   if(a==='penadd'){const per=cur.pen.person||S.people[0];if(!(cur.pen.reason||'').trim())return alert('Bitte einen Grund eintragen.');S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
   if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
   if(a==='fs'){cur.fs=v;cur.fg='';cur.frest=false;return render()}
   if(a==='fg'){cur.fg=v;return render()}
+  if(a==='fnote'){const txt=(cur.fnote||'').trim();if(!txt)return alert('Bitte eine Notiz eintragen.');
+    S.reports.push({id:uid(),cat:'feld',obj:curOrt(),text:txt,urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});cur.fnote='';save();toast('Notiz gesendet');return render()}
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
   if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
   if(a==='fzoom'){const d=document.createElement('div');d.className='zoomv';d.innerHTML=`<button class="zx">×</button><div class="zs"><img src="${esc(v)}" alt=""></div>`;d.addEventListener('click',e=>{if(e.target.className==='zx'||e.target===d)d.remove()});document.body.appendChild(d);return}
@@ -1293,6 +1319,8 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='pk-note')cur.pknote=t.value;
+  if(t.id==='vat-amt'){cur.vatAmt=t.value;const e=document.getElementById('vat-res');if(e)e.innerHTML=vatCalc()}
+  if(t.id==='fn-note')cur.fnote=t.value;
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
@@ -1640,23 +1668,26 @@ function vFeld(){
 `,gchips=o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'';
   const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
   if(mode==='karte'){
-    const sch=schon(cur.fs),url=imgUrl(sch.img),sum=g=>Object.values((feldDoc(g?`${cur.fs} · ${g}`:cur.fs)||{bal:{}}).bal||{}).reduce((a,b)=>a+(b.q||0),0);
-    const pins=url?Object.entries(sch.pins||{}).filter(([k])=>o.gaenge.includes(k)).map(([k,p])=>`<button class="pin ${k===cur.fg?'on':''}" data-pl="fpin" data-v="${esc(k)}" style="left:${p[0]}%;top:${p[1]}%" aria-label="${esc(k)}"></button>`).join(''):'';
-    $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
-      ${sch.address?`<div class="card pad"><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:''}
-      ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">${pins}</div><div class="hint">Tippe auf eine Nummer, um zu diesem Gang zu springen. Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}
-      ${o.gaenge.length?`<h3>Gänge</h3><div class="card">${o.gaenge.map(g=>`<div class="row" data-pl="fpin" data-v="${esc(g)}"><div class="n">${esc(g)}</div><b>${num(sum(g))}</b></div>`).join('')}</div>`:''}`;
+    const sch=schon(cur.fs),url=imgUrl(sch.img);
+    $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
+      ${sch.address?`<div class="card pad"><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
+      ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}`;
     return;
   }
   if(mode==='uebersicht'){
-    const tot=S.feld.reduce((a,d)=>{Object.values(d.bal||{}).forEach(b=>{a.q+=b.q;a.in+=b.in||0;a.out+=b.out||0});return a},{q:0,in:0,out:0});
-    const perOrt=S.feld.map(d=>({d,q:Object.values(d.bal||{}).reduce((a,b)=>a+b.q,0)})).filter(x=>x.q>0).sort((a,b)=>b.q-a.q);
-    const perSort={};S.feld.forEach(d=>Object.entries(d.bal||{}).forEach(([sid,b])=>{if(b.q>0)perSort[sid]=(perSort[sid]||0)+b.q}));
+    const bySch={},perSort={};let tot=0;
+    S.feld.forEach(d=>{const bal=Object.entries(d.bal||{}).filter(([,b])=>b.q>0);if(!bal.length)return;
+      const i=d.ort.indexOf(' · '),s=i<0?d.ort:d.ort.slice(0,i),g=i<0?'':d.ort.slice(i+3),q=bal.reduce((a,[,b])=>a+b.q,0);tot+=q;
+      (bySch[s]=bySch[s]||[]).push({g,bal,q});bal.forEach(([sid,b])=>{perSort[sid]=(perSort[sid]||0)+b.q})});
+    const order=[...os.map(x=>x.name),...Object.keys(bySch).filter(n=>!os.some(x=>x.name===n))].filter(n=>bySch[n]);
+    const gIdx=(s,g)=>{const o2=os.find(x=>x.name===s);const i=o2?o2.gaenge.indexOf(g):-1;return i<0?99:i};
+    const sortLine=([sid,b])=>{const k=sortById(sid);return k?`<div class="p" style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${swatchCss(k.f)};width:12px;height:12px"></span><span>${esc(sorteLabel(k))}</span><b style="margin-left:auto">${num(b.q)}</b></div>`:''};
+    const blocks=order.map(s=>{const gs=bySch[s].sort((a,b)=>gIdx(s,a.g)-gIdx(s,b.g)),sum=gs.reduce((a,x)=>a+x.q,0);
+      return `<h3>${esc(s)} (${num(sum)})</h3><div class="card">${gs.map(x=>`<div class="row" style="display:block"><div style="display:flex;justify-content:space-between"><div class="n">${esc(x.g||s)}</div><b>${num(x.q)}</b></div>${x.bal.sort((a,b)=>b[1].q-a[1].q).map(sortLine).join('')}</div>`).join('')}</div>`}).join('');
     const rows=Object.entries(perSort).map(([sid,q])=>({k:sortById(sid),q})).filter(x=>x.k).sort((a,b)=>b.q-a.q);
-    $('#app').innerHTML=`${chips}${seg}${gchips}<div class="tiles"><div class="tile b"><small>Liegen noch auf dem Feld</small><b>${num(tot.q)}</b></div><div class="tile"><small>Genetzt (gesamt)</small><b>${num(tot.in)}</b></div>
-      <div class="tile g"><small>Abgefahren (gesamt)</small><b>${num(tot.out)}</b></div></div>
-      <h3>Nach Weg</h3><div class="card">${perOrt.map(x=>`<div class="row" data-pl="fgo" data-v="${esc(x.d.ort)}"><div class="n">${esc(x.d.ort)}</div><b>${num(x.q)}</b></div>`).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>
-      <h3>Nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${num(x.q)}</b></div>`).join('')||'<div class="row"><span class="p">Noch nichts eingetragen.</span></div>'}</div>`;
+    $('#app').innerHTML=`${chips}${seg}<div class="tiles"><div class="tile b"><small>Liegen noch auf dem Feld</small><b>${num(tot)}</b></div></div>
+      ${blocks||'<div class="hint">Noch nichts eingetragen.</div>'}
+      ${rows.length?`<h3>Gesamt nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${num(x.q)}</b></div>`).join('')}</div>`:''}`;
     return;
   }
   const qOf=k=>feldQ(ort,k.id);
@@ -1675,13 +1706,14 @@ function vFeld(){
       <div class="ctr">${mode==='abfahrt'
         ?`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−1</button><button class="fb" data-pl="fch" data-v="${k.id}|-10">−10</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fall" data-v="${k.id}">Alles</button>`
         :`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fch" data-v="${k.id}|1">+1</button><button class="plus fb" data-pl="fch" data-v="${k.id}|10">+10</button>`}</div></div>`};
-  const sec=g=>{const key='fl-'+mode+'-'+g.g,sum=g.its.reduce((a,k)=>a+qOf(k),0),open=cur.det[key]===true||(cur.det[key]===undefined&&(mode==='abfahrt'||sum>0));
-    return `<details data-det="${key}" ${open?'open':''}><summary><span>${esc(SGN[g.g])}</span><span class="p" style="margin-left:auto;margin-right:10px">${sum}</span></summary><div class="card">${g.its.map(rowN).join('')}</div></details>`};
+  const sec=g=>{const sum=g.its.reduce((a,k)=>a+qOf(k),0);
+    return `<h3>${esc(SGN[g.g])} (${sum})</h3><div class="card">${g.its.map(rowN).join('')}</div>`};
   $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(ort)}</h2>
-    <div class="hint">${mode==='netz'?'Netzfahrer: trage ein, wie viele Bäume hier am Weg liegen.':'Palettenfahrer: tippe, was abgefahren wurde. Ist die Palette voll, melde den Rest.'}</div>
+    <div class="hint">${mode==='netz'?'Netzfahrer: trage ein, was hier am Weg liegt.':'Tippe, was abgefahren wurde. Hier steht nur, was noch liegt. Ist die Palette voll, melde den Rest.'}</div>
     ${mode==='abfahrt'&&!items.length?'<div class="hint">Nichts mehr hier.</div>':''}
     ${groups.map(sec).join('')}
-    ${mode==='abfahrt'?'<button class="btn" data-pl="frest" style="margin-top:14px">Palette voll: Rest melden</button>':''}`;
+    ${mode==='abfahrt'?'<button class="btn sec" data-pl="frest" style="margin-top:14px">Palette voll: Rest melden</button>':''}
+    <div class="card pad formc" style="margin-top:14px"><label class="f">Notiz für Chef und Admin (z. B. Gang blockiert, Sorte fehlt)</label><textarea class="t" id="fn-note" rows="2" placeholder="Notiz zu ${esc(ort)}">${esc(cur.fnote||'')}</textarea><button class="btn" data-pl="fnote" style="margin-bottom:0">Notiz senden</button></div>`;
 }
 /* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
 const DEMO_TASKS=['Zaun am Verkaufsstand prüfen','Lichterkette kontrollieren','Kasse und Wechselgeld zählen','Bäume nachsortieren','Netzmaschine reinigen','Plane am Stand festzurren',
@@ -1777,7 +1809,9 @@ function vDaten(){
   <textarea class="t" id="impText" rows="3" placeholder="… oder den Inhalt der Importdatei hier einfügen" style="margin-top:8px"></textarea>
   <button class="btn sec" id="bImpTxt">Eingefügten Text importieren</button></div>
   <h2>Einstellungen</h2>
-  <div class="card pad"><label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
+  <div class="card pad"><label class="f">MwSt-Satz in Prozent (Standard 7,8)</label>
+  <input class="t" id="hof-vat" inputmode="decimal" value="${esc(String((S.hofInfo&&S.hofInfo.vat)||''))}" placeholder="7,8">
+  <label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
   <input class="t" id="hof-paypal" value="${esc((S.hofInfo&&S.hofInfo.paypal)||'')}" placeholder="https://www.paypal.com/paypalme/…" autocapitalize="none">
   <label class="f">Maschinen für Meldungen (eine pro Zeile)</label>
   <textarea class="t" id="hof-mach" rows="3">${esc(machinesList().join('\n'))}</textarea>
@@ -1811,9 +1845,10 @@ function vDaten(){
     <div><label class="f">Lieferkosten €</label><input class="t" inputmode="decimal" data-sc="freight" data-sid="${s.id}" value="${String(s.freight||0).replace('.',',')}"></div></div></div>`).join('')}
   <button class="btn sec" id="addS">+ Stand</button>
   <h2>Produkte & Preise</h2>
-  <div class="card pad"><div class="hint">Name · Verkaufspreis · Produktionskosten pro Stück. Neuer Preis gilt für neu angelegte Tage, alte Tage behalten ihren.</div>
+  <div class="card pad"><div class="hint">Name · Privatpreis (brutto) · Händlerpreis (netto) · Produktionskosten pro Stück. Neuer Preis gilt für neu angelegte Tage, alte Tage behalten ihren.</div>
   ${S.products.map(p=>`<div class="edit"><input class="t" data-pn="${p.id}" value="${esc(p.name)}">
-    <input class="t" style="width:64px" inputmode="decimal" data-pp="${p.id}" value="${String(p.price).replace('.',',')}">
+    <input class="t" style="width:60px" inputmode="decimal" data-pp="${p.id}" value="${String(p.price).replace('.',',')}">
+    <input class="t" style="width:60px" inputmode="decimal" data-ph="${p.id}" placeholder="netto" value="${p.priceH?String(p.priceH).replace('.',','):''}">
     <input class="t" style="width:58px" inputmode="decimal" data-pc="${p.id}" value="${String(p.cost||0).replace('.',',')}">
     <button class="x" data-del-p="${p.id}">×</button></div>`).join('')}
   <button class="btn sec" id="addP">+ Produkt</button></div>
@@ -1876,6 +1911,7 @@ document.addEventListener('change',ev=>{
   }
   if(t.dataset.pn){prod(t.dataset.pn).name=t.value||'?';save()}
   if(t.dataset.pp){prod(t.dataset.pp).price=pf(t.value);save()}
+  if(t.dataset.ph){prod(t.dataset.ph).priceH=pf(t.value);save()}
   if(t.dataset.pc){prod(t.dataset.pc).cost=pf(t.value);save()}
   if(t.dataset.sn){S.stands.find(s=>s.id===t.dataset.sn).name=t.value||'?';save()}
   if(t.dataset.schAddr!==undefined){const n=t.dataset.schAddr;S.hofInfo={...S.hofInfo,schonungen:{...((S.hofInfo||{}).schonungen||{}),[n]:{...schon(n),address:t.value.trim()}}};save()}
@@ -1986,6 +2022,7 @@ document.addEventListener('input',ev=>{
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
+  if(t.id==='hof-vat'){S.hofInfo={...S.hofInfo,vat:t.value.trim()};save()}
   if(t.id==='hof-paypal'){S.hofInfo={...S.hofInfo,paypal:t.value.trim()};save()}
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}

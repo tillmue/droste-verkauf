@@ -112,7 +112,7 @@ exports.syncClaims = onDocumentWritten('users/{uid}', async event => {
 });
 
 /* 1c. Meldungen: neue Meldung an Admin und Chef, Statuswechsel an den Melder */
-const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'] };
+const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'], feld: ['Feld', 'Câmp'] };
 async function repObjName(r) {
   if (r.cat !== 'stand' || !r.obj) return r.obj || '';
   const d = await db.collection('stands').doc(r.obj).get();
