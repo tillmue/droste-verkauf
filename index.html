@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Droste">
@@ -64,7 +64,7 @@ body.run header,body.run #nav{display:none}
 .seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:2px;margin:4px 0 10px}
 .seg button{flex:1;min-width:0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:9px;white-space:nowrap}
 .seg button.on{background:var(--blue);color:#fff}
-#asrole{flex:none;max-width:104px;height:34px;margin-right:8px;border:0;border-radius:12px;background:rgba(0,0,0,.25);color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:0 8px}
+#asrole{flex:none;max-width:104px;height:34px;margin-right:8px;border:0;border-radius:12px;background:rgba(0,0,0,.25);color:var(--text);font:inherit;font-size:16px;font-weight:700;padding:0 8px}
 #help{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:18px;font-weight:700;line-height:1;padding:0;margin-right:6px}
 #refresh{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:20px;line-height:1;padding:0;margin-right:8px}
 #refresh.spin{animation:rspin .8s linear infinite}@keyframes rspin{to{transform:rotate(360deg)}}
@@ -161,6 +161,10 @@ main{max-width:600px;margin:0 auto;padding:12px 16px}
 .sum span:last-child{color:var(--link)}
 label.f{display:block;color:var(--mut);font-size:13px;margin:12px 0 4px}
 label.f:first-child{margin-top:0}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+a,button,input,select,textarea,label,summary,.row,.chip,.cd,.md,.dy,[data-pl],[data-t]{touch-action:manipulation}
+button,.chip,.htile,.qtile,.rtile,.chk,.fb,.seg button,#nav button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.zoomv,.zoomv *{touch-action:pan-x pan-y pinch-zoom}
 input.t,textarea.t,select.t{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;font-size:16px;background:var(--fill);color:var(--text);font-family:inherit}
 textarea.t{min-height:76px}
 .btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;margin:8px 0}
@@ -224,7 +228,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 g';
+const APP_VERSION='2026-10-19 h';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
