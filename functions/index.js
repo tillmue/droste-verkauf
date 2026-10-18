@@ -147,6 +147,17 @@ exports.reportTaskDone = onDocumentWritten('tasks/{id}', async event => {
   else if (d.data().status === 'erledigt') await ref.update({ status: 'arbeit' });
 });
 
+/* Rangliste erledigter Aufgaben: gesamt und 7 Tage, für alle sichtbar (Aufgaben selbst sieht nicht jeder) */
+exports.taskStats = onDocumentWritten('tasks/{id}', async event => {
+  const a = event.data.after.exists ? event.data.after.data() : null;
+  const b = event.data.before.exists ? event.data.before.data() : null;
+  if (!!(a && a.done) === !!(b && b.done) && (a && a.doneBy) === (b && b.doneBy)) return;
+  const snap = await db.collection('tasks').where('done', '==', true).get();
+  const all = {}, week = {}, since = Date.now() - 7 * 864e5;
+  snap.forEach(d => { const t = d.data(); if (t.deleted || !t.doneBy) return; all[t.doneBy] = (all[t.doneBy] || 0) + 1; if ((t.doneAt || 0) > since) week[t.doneBy] = (week[t.doneBy] || 0) + 1; });
+  await db.collection('stats').doc('ranking').set({ all, week, at: Date.now() });
+});
+
 /* 2. Morgennachricht */
 exports.morning = onSchedule({ schedule: '0 7 * * *', timeZone: TZ }, async () => {
   const today = berlinDate();

@@ -101,10 +101,18 @@ service cloud.firestore {
     match /settings/{id} { allow read: if isMember(); allow write: if isAdmin(); }
 
     // Strafbierkisten: alle sehen, nur Admin vergibt und hakt ab
+    // Strafbierkisten: alle sehen, jeder darf vergeben, bezahlt setzt nur der Admin
     match /penalties/{id} {
       allow read: if isMember();
-      allow create, update: if isAdmin();
+      allow create: if isMember();
+      allow update: if isAdmin() || (isMember() && role() == 'demo');
       allow delete: if false;
+    }
+
+    // Ranglisten (von Cloud Functions geschrieben)
+    match /stats/{id} {
+      allow read: if isMember();
+      allow write: if false;
     }
 
     // Brain-Dump-Notizen: nur eigene, Admin sieht alle

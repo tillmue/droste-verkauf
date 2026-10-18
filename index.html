@@ -45,6 +45,14 @@ body.authed #lang{display:none}
 .bdg{display:inline-block;background:var(--red);color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin-right:6px}
 .urg{border:1px solid var(--red)}.chkrow{display:flex;gap:10px;align-items:center;margin:10px 0;font-size:16px}.chkrow input{width:22px;height:22px}
 .rimg{width:100%;border-radius:10px;margin-top:8px;display:block}
+.btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
+.btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
+.btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
+.btn.green.go,.cheers .btn.green{background:var(--green);border:0;color:#fff}
+.formc{border:1px solid rgba(0,113,227,.6)!important;background:rgba(0,113,227,.08)!important}
+.qtile{display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:16px;padding:16px 8px;font:inherit;font-size:15px;font-weight:700}
+.qtile b{font-size:26px;line-height:1}
+.steps{display:flex;align-items:center;gap:6px;margin:8px 0 2px;font-size:12px}.steps .s{color:var(--mut);font-weight:600}.steps .s.on{color:var(--link)}.steps .s.cur{color:var(--orange)}.steps .s.fin{color:#7fe0a0}.steps i{flex:1;height:2px;background:var(--line);min-width:10px}
 .tdot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
 .seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:2px;margin:4px 0 10px}
 .seg button{flex:1;min-width:0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:9px;white-space:nowrap}
@@ -208,7 +216,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-18 m';
+const APP_VERSION='2026-10-19 a';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -248,7 +256,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -402,7 +410,7 @@ function render(){
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
   const sch=roleOf(S.me)==='schonung';
-  const items=sch?[['ich','◉','Ich'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','◉','Ich'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Logistik']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
+  const items=sch?[['ich','👤','Übersicht'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','👤','Übersicht'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Logistik']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
   if(sch&&(tab==='staende'||tab==='lieferungen'||tab==='preise'||tab==='erfassen'||tab==='zahlen'))tab='plan';
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
@@ -747,19 +755,25 @@ function vIch(){
   const CAL={saison:'Saison',lieferung:'Lieferung',insta:'Instagram'};
   const evs=S.events.filter(e=>!e.deleted&&e.date<=td&&td<=(e.end||e.date));
   const sb=has('zahlen')?salesByDate()[td]:null;
-  const cnt=live.filter(t=>t.done&&t.doneBy).reduce((m,t)=>(m[t.doneBy]=(m[t.doneBy]||0)+1,m),{});
-  const rank=Object.entries(cnt).map(([l,v])=>({l,v})).sort((a,b)=>b.v-a.v).slice(0,5);
-  const openPen=S.penalties.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0));
+  const rv=cur.rankv==='week'?'week':'all',stt=S.stats||{};
+  let src=stt[rv];
+  if(!src||!Object.keys(src).length){const since=rv==='week'?Date.now()-7*864e5:0;src=live.filter(t=>t.done&&t.doneBy&&(!since||t.doneAt>since)).reduce((m,t)=>(m[t.doneBy]=(m[t.doneBy]||0)+1,m),{})}
+  const rank=Object.entries(src).map(([l,v])=>({l,v})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,5);
+  const pens=S.penalties.filter(p=>!p.deleted),openPen=pens.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0)),paidPen=pens.filter(p=>p.paid).sort((a,b)=>(b.paidAt||b.at||0)-(a.paidAt||a.at||0));
+  const penSum={};pens.forEach(p=>{const x=penSum[p.person]||(penSum[p.person]={o:0,b:0});x[p.paid?'b':'o']+=(p.qty||1)});
+  const penRow=(p,paid)=>`<div class="row"><div style="min-width:0"><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')}</div><div class="p">Vergeben von ${esc(p.by||'?')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div>${!paid&&isAdmin()?`<button class="btn sec" data-pl="penpaid" data-v="${p.id}" style="margin:0;width:auto;padding:8px 14px">bezahlt</button>`:''}</div>`;
+  const nRep=openReports().length;
   const hello=now.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});
   const pn=cur.pen;
   $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>
   <div id="wx" style="margin:8px 0">${wxHtml()}</div>
+  <div class="mini"><button class="qtile" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile" data-pl="drep"><b>!</b>Meldung machen</button></div>
+  <div class="card pad" data-pl="gomeld" style="cursor:pointer;margin-top:10px"><div class="kv"><span>Aktive Meldungen</span><b>${nRep}</b></div></div>
   <div class="card pad"><div class="barw"><i style="width:${Math.min(100,doneToday/3*100)}%"></i></div>
     <div class="hint" style="margin:6px 0 0">${doneToday>=3?'Feierabendbier verdient 🍺':doneToday+' von 3 Aufgaben bis zum Feierabendbier'}</div></div>
   ${(()=>{const mt=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.status!=='beendet'&&t.date>=td&&t.date<=shiftDate(td,7)&&(t.driver===me||t.codriver===me)).sort((a,b)=>a.date<b.date?-1:1).slice(0,3);return mt.length?`<h3>Meine Tour</h3>${mt.map(t=>{const st=tourStops(t);return `<div class="card pad" data-pl="goliefer" data-v="${t.date}|lief" style="cursor:pointer"><div class="n"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div><div class="p">${wdD(t.date)} · ${esc(t.vehicle||'')}</div><div class="p"><b>${t.driver===me?'Fahrer':'Beifahrer'}</b> · ${st.length} Stopps${t.status==='gestartet'?' · ':''}${t.status==='gestartet'?'<b style="color:var(--orange)">läuft</b>':''}</div></div>`}).join('')}`:''})()}
-  <h3>Heute für dich</h3>
+  <h3>Heute für dich (${today.length})</h3>
   <div class="card">${today.map(t=>taskRow(t,true)).join('')||'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>'}</div>
-  ${seeAllReports()&&openReports().length?`<div class="tbanner" data-pl="gomeld">${openReports().length} offene Meldung${openReports().length>1?'en':''}${openReports().some(r=>r.urgent)?', davon dringend':''} →</div>`:''}
   ${free?`<div class="tbanner" data-pl="gopen">${free} offene Aufgabe${free>1?'n':''} ohne Zuständigen, such dir eine aus →</div>`:''}
   ${evs.length?`<h3>Heute im Kalender</h3><div class="card">${evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')}</div>`:''}
   ${sb?`<h3>Verkauf heute</h3><div class="card pad"><div class="kv"><span>Alle Stände</span><span>${sb.q} Stk. · ${eur0(sb.r)}</span></div></div>`:''}
@@ -769,13 +783,17 @@ function vIch(){
     <div class="tile"><small>Aufgaben eingetragen</small><b>${created}</b></div>
     <div class="tile g"><small>Aufgaben erledigt</small><b>${doneAll}</b><small>${week} in den letzten 7 Tagen</small></div>
     <div class="tile b"><small>Serie</small><b>${streak} ${streak===1?'Tag':'Tage'}</b></div></div>
-  ${rank.length?`<h3>Team: erledigte Aufgaben</h3><div class="card pad">${hbars(rank,v=>v+' erledigt')}</div>`:''}
+  <h3>Spitzenreiter: erledigte Aufgaben</h3>
+  <div class="seg">${[['all','Gesamt'],['week','7 Tage']].map(([k,l])=>`<button class="${rv===k?'on':''}" data-pl="rankv" data-v="${k}">${l}</button>`).join('')}</div>
+  <div class="card pad">${rank.length?hbars(rank,v=>v+' erledigt'):'<div class="hint" style="margin:0">Noch nichts erledigt.</div>'}</div>
   <h2>Strafbierkisten</h2>
-  <div class="card">${openPen.map(p=>`<div class="row"><div><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div>${isAdmin()?`<button class="claim" data-pl="penpaid" data-v="${p.id}">bezahlt</button>`:''}</div>`).join('')||'<div class="row"><span class="p">Keine offenen Kisten. Weiter so.</span></div>'}</div>
-  ${isAdmin()?`<div class="card pad"><label class="f">Kiste vergeben</label>
+  ${Object.keys(penSum).length?`<div class="card">${Object.entries(penSum).sort((a,b)=>b[1].o-a[1].o).map(([n,x])=>`<div class="row"><div class="n">${esc(n)}</div><div class="p"><b style="color:${x.o?'var(--red)':'var(--mut)'}">${x.o} offen</b> · ${x.b} bezahlt</div></div>`).join('')}</div>`:'<div class="hint">Noch keine Strafbierkisten vergeben.</div>'}
+  ${openPen.length?`<h3>Offen (${openPen.length})</h3><div class="card">${openPen.map(p=>penRow(p,false)).join('')}</div>`:''}
+  ${paidPen.length?`<details data-det="penpaid"><summary>Bezahlt (${paidPen.length})</summary><div class="card">${paidPen.map(p=>penRow(p,true)).join('')}</div></details>`:''}
+  <div class="card pad formc"><label class="f">Kiste vergeben</label>
     <select class="t" id="pn-person">${S.people.map(n=>`<option ${n===(pn.person||S.people[0])?'selected':''}>${esc(n)}</option>`).join('')}</select>
     <input class="t" id="pn-reason" placeholder="Grund" value="${esc(pn.reason||'')}" style="margin-top:8px">
-    <button class="btn" data-pl="penadd" style="margin-bottom:0">Strafbierkiste vergeben</button></div>`:''}`;
+    <button class="btn" data-pl="penadd" style="margin-bottom:0">Strafbierkiste vergeben</button></div>`;
   loadWx().then(()=>{const e=$('#wx');if(e)e.innerHTML=wxHtml()});
 }
 function vPreise(){
@@ -856,7 +874,7 @@ function reportForm(){
   const tiles=RCAT.map(([k,l])=>`<button class="rtile ${f.cat===k?'on':''}" data-pl="rcat" data-v="${k}">${l}</button>`).join('');
   const opts=f.cat==='fahrzeug'?vehiclesList().map(v=>[v,v]):f.cat==='maschine'?machinesList().map(v=>[v,v]):f.cat==='stand'?S.stands.map(s=>[s.id,s.name]):null;
   const objSel=opts?`<select class="t" id="rp-obj" style="margin-bottom:8px"><option value="">${f.cat==='stand'?'Welcher Stand?':f.cat==='fahrzeug'?'Welches Fahrzeug?':'Welche Maschine?'}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${sel(v,f.obj)}>${esc(l)}</option>`).join('')}</select>`:'';
-  return `<div class="card pad"><label class="f">Was möchtest du melden?</label><div class="rgrid">${tiles}</div>
+  return `<div class="card pad formc"><label class="f">Was möchtest du melden?</label><div class="rgrid">${tiles}</div>
     ${f.cat?`${objSel}<textarea class="t" id="rp-text" rows="3" placeholder="Was ist los? (z. B. Schlauch undicht)">${esc(f.text)}</textarea>
     <label class="chkrow"><input type="checkbox" id="rp-urgent" ${f.urgent?'checked':''}> Dringend</label>
     <label class="btn sec" style="display:block;text-align:center;margin:0 0 8px">${cur.rfile?'Foto ausgewählt ✓':'Foto hinzufügen'}<input type="file" accept="image/*" id="rp-photo" hidden></label>
@@ -870,11 +888,12 @@ function planMeld(){
     <div class="chips">${[['','Alle']].concat(RCAT).map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-pl="rcatf" data-v="${k}">${l}</button>`).join('')}</div>`;
   const card=r=>{const url=r.photo?imgUrl(r.photo):'';
     return `<div class="card pad ${r.urgent&&r.status!=='erledigt'?'urg':''}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div class="n">${r.urgent?'<span class="bdg">Dringend</span>':''}${catName(r.cat)}${repObj(r)?' · '+esc(repObj(r)):''}</div><span class="p"><b style="color:${r.status==='erledigt'?'var(--green)':r.status==='arbeit'?'var(--orange)':'var(--link)'}">${RST[r.status]||RST.neu}</b></span></div>
-      <div style="margin-top:4px">${esc(r.text)}</div>
+      <div class="steps"><span class="s on">Gemeldet</span><i></i><span class="s ${r.status==='arbeit'?'cur':r.status==='erledigt'?'on':''}">In Arbeit</span><i></i><span class="s ${r.status==='erledigt'?'fin':''}">Erledigt</span></div>
+      <div style="margin-top:6px">${esc(r.text)}</div>
       ${r.photo?(url?`<img class="rimg" src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}">`:`<div class="hint">${IMGERR[r.photo]?'Foto konnte nicht geladen werden (Fehler: '+esc(IMGERR[r.photo])+').':'Foto wird geladen …'}</div>`):''}
       <div class="p" style="margin-top:6px">Gemeldet von ${esc(r.by||'?')} · ${new Date(r.created||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}${r.assignedTo?' · zugewiesen an '+esc(r.assignedTo):''}</div>
       ${all&&r.status!=='erledigt'?`<div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="rassign" data-v="${r.id}" style="margin:0">Zuweisen</button>${r.status==='neu'?`<button class="btn sec" data-pl="rwork" data-v="${r.id}" style="margin:0">In Arbeit</button>`:''}<button class="btn green" data-pl="rdone" data-v="${r.id}" style="margin:0">Erledigt</button></div>`:''}</div>`};
-  return `<button class="btn" data-pl="rnew" style="margin-top:0">+ Melden</button>${cur.rOpen?reportForm():''}${seg}${list.map(card).join('')||'<div class="hint">Keine Meldungen in dieser Ansicht.</div>'}`;
+  return `${cur.rOpen?reportForm():'<button class="btn add" data-pl="rnew" style="margin-top:0">+ Melden</button>'}${seg}${list.map(card).join('')||'<div class="hint">Keine Meldungen in dieser Ansicht.</div>'}`;
 }
 function completeTask(id){
   const td=todayStr(),x=S.tasks.find(x=>x.id===id);if(!x)return;
@@ -906,7 +925,7 @@ function taskRow(t,showDate){
 function taskForm(){
   const f=cur.tf,sel=(a,b)=>a===b?'selected':'';
   const canDel=f.id&&(isAdmin()||f.createdBy===S.me);
-  return `<div class="card pad">
+  return `<div class="card pad formc">
     <label class="f">${f.id?'Eintrag bearbeiten':f.noteId?'Notiz zu Aufgabe machen':'Neue Aufgabe'}</label>
     <input class="t" id="tf-title" placeholder="Was ist zu tun?" value="${esc(f.title)}">
     <div class="mini" style="margin-top:8px"><input class="t" type="date" id="tf-date" value="${f.date}" style="min-width:0"><input class="t" type="time" id="tf-time" value="${f.time}" style="min-width:0"></div>
@@ -924,7 +943,7 @@ function evRow(e,noDate){
 }
 function eventForm(){
   const f=cur.ef,sel=(a,b)=>a===b?'selected':'',insta=f.cal==='insta',lief=f.cal==='lieferung',sais=!insta&&!lief;
-  return `<div class="card pad"><label class="f">${f.id?'Eintrag bearbeiten':insta?'Neuer Beitrag':lief?'Neue Lieferung':'Neuer Termin'}</label>
+  return `<div class="card pad formc"><label class="f">${f.id?'Eintrag bearbeiten':insta?'Neuer Beitrag':lief?'Neue Lieferung':'Neuer Termin'}</label>
     <input class="t" id="ef-title" placeholder="${insta?'Thema des Beitrags':lief?'Kunde oder Ort':'z. B. Stände aufbauen'}" value="${esc(f.title)}">
     <div class="mini" style="margin-top:8px"><input class="t" type="date" id="ef-date" value="${f.date}" style="min-width:0">
     ${insta?`<select class="t" id="ef-status">${Object.keys(ST).map(k=>`<option value="${k}" ${sel(k,f.status)}>${ST[k]}</option>`).join('')}</select>`:lief?`<input class="t" type="time" id="ef-time" value="${f.time||''}" style="min-width:0">`:`<input class="t" type="date" id="ef-end" value="${f.end||''}" style="min-width:0" title="Ende (optional)">`}</div>
@@ -1044,7 +1063,7 @@ function planAufg(){
   const done=list.filter(t=>t.done);
   const fl=[['','Alle'],['@me','Meine'],['@open','Offen']].concat(seeAllTasks()?S.people.map(p=>[p,p]):[]);
   return `  <div class="chips">${fl.map(([v,l])=>`<button class="chip ${pfl===v?'on':''}" data-pl="pf" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>
-  <div class="mini" style="margin-top:0"><button class="btn" data-pl="tnew" style="margin:0">+ Neue Aufgabe</button><button class="btn sec" data-pl="rnew" style="margin:0">Melden</button></div>
+  <div class="mini" style="margin-top:0">${cur.tfOpen?'':'<button class="btn add" data-pl="tnew" style="margin:0">+ Neue Aufgabe</button>'}${cur.rOpen?'':'<button class="btn add" data-pl="rnew" style="margin:0">+ Melden</button>'}</div>
   ${cur.rOpen?reportForm():''}
   ${cur.tfOpen?taskForm():''}
   ${groups.map(([n,a])=>a.length?`<h3>${n} (${a.length})</h3><div class="card">${srt(a).map(t=>taskRow(t,true)).join('')}</div>`:'').join('')}
@@ -1129,9 +1148,12 @@ document.addEventListener('click',ev=>{
   if(a==='cmon'){const [y,m]=cur.cal.split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.cal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
   if(a==='ctoday'){cur.cday=td;cur.cal=td.slice(0,7);if(!cur.tf.id)cur.tf.date=td;if(!cur.ef.id)cur.ef.date=td;return render()}
   if(a==='pf'){cur.pf=v;return render()}
+  if(a==='dtask'){tab='plan';cur.ptab='aufg';cur.tf=newTf(todayStr());cur.tf.person=S.me;cur.tfOpen=true;cur.rOpen=false;window.scrollTo(0,0);return render()}
+  if(a==='drep'){tab='plan';cur.ptab='aufg';cur.rOpen=true;cur.rf=newRf();cur.rfile=null;cur.tfOpen=false;window.scrollTo(0,0);return render()}
+  if(a==='rankv'){cur.rankv=v;return render()}
   if(a==='gopen'){tab='plan';cur.ptab='aufg';cur.pf='@open';window.scrollTo(0,0);return render()}
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
-  if(a==='penadd'){const per=cur.pen.person||S.people[0];S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
+  if(a==='penadd'){const per=cur.pen.person||S.people[0];if(!(cur.pen.reason||'').trim())return alert('Bitte einen Grund eintragen.');S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
   if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
   if(a==='fs'){cur.fs=v;cur.fg='';cur.frest=false;return render()}
   if(a==='fg'){cur.fg=v;return render()}
@@ -1411,7 +1433,7 @@ function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank"
 function stopRow(t,x,i,n,plan){
   const pk=t.type==='abholung',run=!pk&&t.status==='gestartet'&&canRun(t),nxt=tourStops(t).find(s=>!s.done),isNext=run&&nxt&&nxt.id===x.id;
   const info=(x.arrivedAt?`<div class="p">Angekommen um ${hm(x.arrivedAt)}</div>`:'')+(x.outcome==='nicht'?'<div class="p" style="color:var(--orange)"><b>Nicht angetroffen</b></div>':'');
-  const act=isNext?`<div class="mini" style="margin-top:8px">${x.address?routeBtns(gmapsUrl(x.address),appleUrl(x.address)):''}${x.phone?`<a class="btn sec" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Anrufen</a>`:''}</div><div class="mini" style="margin-top:8px">${!x.arrivedAt?`<button class="btn" data-pl="sarrive" data-v="${t.id}|${x.id}" style="margin:0">Angekommen</button>`:`<button class="btn green" data-pl="sdeliv" data-v="${t.id}|${x.id}" style="margin:0">Geliefert</button><button class="btn sec" data-pl="snone" data-v="${t.id}|${x.id}" style="margin:0;color:var(--orange)">Nicht angetroffen</button>`}</div>`:'';
+  const act=isNext?`<div class="mini" style="margin-top:8px">${x.address?routeBtns(gmapsUrl(x.address),appleUrl(x.address)):''}${x.phone?`<a class="btn sec" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Anrufen</a>`:''}</div><div class="mini" style="margin-top:8px">${!x.arrivedAt?`<button class="btn" data-pl="sarrive" data-v="${t.id}|${x.id}" style="margin:0">Angekommen</button>`:`<button class="btn green go" data-pl="sdeliv" data-v="${t.id}|${x.id}" style="margin:0">Geliefert</button><button class="btn sec" data-pl="snone" data-v="${t.id}|${x.id}" style="margin:0;color:var(--orange)">Nicht angetroffen</button>`}</div>`:'';
   return `<div class="row ${x.done?'dim':''}" style="align-items:flex-start${isNext?';background:var(--panel);border-radius:10px':''}"><div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0">
     <button class="chk big ${x.done?'on':''}" data-pl="${pk?'pickst':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${x.done?'✓':(pk&&x.ready)?'•':''}</button>
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?'':(i+1)+'. '}${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
@@ -1434,18 +1456,18 @@ function tourCard(t,plan){
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const stat=stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div></div></div></div>`).join('')}</div></details>`:'';
-  const ctrl=run&&!stt&&st.length?`<button class="btn green" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'&&st.length&&done===st.length?`<button class="btn green" data-pl="tfinish" data-v="${t.id}">Tour beenden</button>`:'');
+  const ctrl=run&&!stt&&st.length?`<button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'&&st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}">Tour beenden</button>`:'');
   return `<div class="tour"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n" style="font-size:17px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
     <div class="p">${esc(t.vehicle||'Fahrzeug offen')}</div>
     <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div>${t.codriver?`<div class="p">Beifahrer: <span class="who">${esc(t.codriver)}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>
     ${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}">Tour ändern</button>`:''}</div>
     ${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}
     ${loadBox}<div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Stopps.</span></div>'}</div>
-    ${ctrl}<div class="mini">${routeBtns(url,appleRoute(st))}${plan?`<button class="btn sec" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div></div>`;
+    ${ctrl}<div class="mini">${routeBtns(url,appleRoute(st))}${plan?`<button class="btn add" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div></div>`;
 }
 function tourForm(){
   const f=cur.tour,sel=(a,b)=>a===b?'selected':'';
-  return `<div class="card pad"><label class="f">${f.id?'Tour bearbeiten':'Neue Tour'}</label>
+  return `<div class="card pad formc"><label class="f">${f.id?'Tour bearbeiten':'Neue Tour'}</label>
     <div class="mini"><input class="t" type="date" id="tr-date" value="${f.date}" style="min-width:0"><select class="t" id="tr-color"><option value="">Tourfarbe wählen</option>${TCOL.map(c=>`<option value="${c[0]}" ${sel(c[0],f.color)}>Tour ${c[1]}</option>`).join('')}</select></div>
     <div class="mini" style="margin-top:8px"><select class="t" id="tr-driver"><option value="">Fahrer offen</option>${S.people.map(x=>`<option ${sel(x,f.driver)}>${esc(x)}</option>`).join('')}</select>
     <select class="t" id="tr-codriver"><option value="">Beifahrer offen</option>${S.people.map(x=>`<option ${sel(x,f.codriver)}>${esc(x)}</option>`).join('')}</select></div>
@@ -1456,7 +1478,7 @@ function tourForm(){
 }
 function stopForm(){
   const f=cur.stop,pk=String(f.tourId).startsWith('pick:')||((S.tours.find(x=>x.id===f.tourId)||{}).type==='abholung');
-  return `<div class="card pad"><label class="f">${pk?(f.id?'Abholung bearbeiten':'Neue Abholung'):(f.id?'Stopp bearbeiten':'Neuer Stopp')}</label>
+  return `<div class="card pad formc"><label class="f">${pk?(f.id?'Abholung bearbeiten':'Neue Abholung'):(f.id?'Stopp bearbeiten':'Neuer Stopp')}</label>
     <input class="t" id="sp-name" placeholder="${pk?'Kunde / Firma':'Kunde'}" value="${esc(f.name)}">
     ${pk?'':`<input class="t" id="sp-address" placeholder="Adresse (Straße, PLZ Ort)" value="${esc(f.address)}" style="margin-top:8px">`}
     <div class="mini" style="margin-top:8px"><input class="t" type="time" id="sp-time" value="${f.time}" style="min-width:0"><input class="t" id="sp-phone" inputmode="tel" placeholder="Telefon" value="${esc(f.phone)}" style="min-width:0"></div>
@@ -1484,7 +1506,7 @@ function vLieferungen(){
     <div class="seg">${[['monat','Monat'],['woche','Woche'],['tag','Tag'],['liste','Liste']].map(([k,l])=>`<button class="${view===k?'on':''}" data-pl="lview" data-v="${k}">${l}</button>`).join('')}</div>`;
   const hint=kind==='abh'?'Zahl = Abholungen pro Tag':kind==='lief'?'Zahl = Stopps pro Tag':'Stopps und Abholungen pro Tag';
   const empty=kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':kind==='lief'?'Für diesen Tag sind keine Touren geplant.':'Für diesen Tag steht nichts an.';
-  const add=plan?((kind!=='abh'?'<button class="btn" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn ${kind==='ges'?'sec':''}" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
+  const add=plan?((kind!=='abh'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn add" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
   const forms=(cur.tourOpen?tourForm():'')+(cur.stopOpen?stopForm():'');
   const dayBlock=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>${on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`}${add}${forms}`;
   let body='';
@@ -1873,7 +1895,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],reports:[],perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],reports:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>pr.role==='admin'||!!((pr.perms||presetFor(pr.role))[k]),ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
