@@ -50,6 +50,8 @@ body.authed #lang{display:none}
 body.run header,body.run #nav{display:none}
 .trun{padding-top:calc(14px + env(safe-area-inset-top))}
 .timer{font-size:54px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-1px;margin:6px 0}
+.hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px;margin-top:14px}.htile{display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600}.hic{position:relative;width:72px;height:72px;border-radius:18px;background:var(--fill);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:36px}.hbd{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;border-radius:11px;background:var(--red);color:#fff;font-style:normal;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.vrow{display:flex;gap:8px;align-items:center;margin:8px 0}.vrow label,.vrow .vl{width:64px;text-align:right;color:var(--mut);flex:none}.vrow input{flex:1;min-width:0;text-align:right;font-size:20px}.vrow input.small{flex:none;width:70px}.vrow span{flex:none}
 .btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
 .btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
@@ -222,7 +224,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 f';
+const APP_VERSION='2026-10-19 g';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -420,7 +422,11 @@ function render(){
   const items=sch?[['ich','👤','Übersicht'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','👤','Übersicht'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Logistik']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
   if(sch&&(tab==='staende'||tab==='lieferungen'||tab==='preise'||tab==='erfassen'||tab==='zahlen'))tab='plan';
   const nav=$('#nav'),oc=openCount();nav.style.display='';
-  nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('');
+  if(homeMode()){
+    if(tab==='home'){nav.style.display='none';$('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();$('#hstat').textContent=headerStat();vHome(items,oc);return}
+    nav.innerHTML=`<button data-t="home" style="flex:1"><b>⊞</b>Startbildschirm</button>`;
+  }else{if(tab==='home')tab='ich';
+  nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('')}
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
   $('#hstat').textContent=headerStat();hofbarUpdate();
   ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,feld:vFeld,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten})[tab]();
@@ -672,10 +678,11 @@ function pushBlock(){
 }
 function accountBlock(){
   const ver=`<div class="hint">App-Version ${APP_VERSION}</div>`;
+  const view=`<label class="f">Darstellung</label><div class="seg"><button data-view="bar" class="${homeMode()?'':'on'}">Leiste</button><button data-view="home" class="${homeMode()?'on':''}">Startbildschirm</button></div>`;
   const lang=`<label class="f">Sprache</label><div class="seg"><button data-lang="de" class="${LANG==='de'?'on':''}">Deutsch</button><button data-lang="ro" class="${LANG==='ro'?'on':''}">Română</button></div>`;
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
-    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${lang}${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
-  return `${lang}<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
+    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${lang}${view}${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
+  return `${lang}${view}<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
 }
 function hofbarUpdate(){}
 function headerStat(){
@@ -805,27 +812,48 @@ function vIch(){
   loadWx().then(()=>{const e=$('#wx');if(e)e.innerHTML=wxHtml()});
 }
 const vatRate=()=>{const v=S.hofInfo&&S.hofInfo.vat;const x=parseFloat(String(v==null||v===''?'7.8':v).replace(',','.'));return isNaN(x)?7.8:x};
-cur.prtab='privat';cur.vatMode='n2b';cur.vatAmt='';cur.vatRate=null;
+cur.prtab='privat';cur.cartP={};cur.cartH={};cur.vN='';cur.vG='';cur.vR=null;cur.vLast='net';
 const pct=r=>String(r).replace('.',',')+' %';
-function vatCalc(){
-  const r=cur.vatRate==null?vatRate():cur.vatRate,x=pf(cur.vatAmt),n2b=cur.vatMode==='n2b';
-  const net=n2b?x:x/(1+r/100),gross=n2b?x*(1+r/100):x;
-  return `<div class="kv"><span>Netto</span><b>${eur(net)}</b></div><div class="kv"><span>MwSt (${pct(r)})</span><b>${eur(gross-net)}</b></div><div class="kv"><span>Brutto</span><b>${eur(gross)}</b></div>`;
+const f2=n=>(Math.round(n*100)/100).toFixed(2).replace('.',',');
+function vatSync(src){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e&&e!==document.activeElement)e.value=v};
+  const r=pf(cur.vR==null?String(vatRate()):cur.vR);
+  if(src==='rate')src=cur.vLast;
+  let net,gross;
+  if(src==='gross'){gross=pf(cur.vG);net=gross/(1+r/100);cur.vN=cur.vG===''?'':f2(net);set('vat-net',cur.vN)}
+  else{net=pf(cur.vN);gross=net*(1+r/100);cur.vG=cur.vN===''?'':f2(gross);set('vat-gross',cur.vG)}
+  cur.vLast=src==='gross'?'gross':'net';
+  set('vat-tax',(cur.vN===''&&cur.vG==='')?'':f2(gross-net));
 }
 function vPreise(){
   const tabN=cur.prtab==='haendler'?'haendler':cur.prtab==='rechner'?'rechner':'privat',r=vatRate();
   const ps=S.products.filter(p=>!p.free),hp=p=>p.priceH?p.priceH:(p.price?Math.round(p.price/(1+r/100)*100)/100:0);
-  const row=p=>{const v=tabN==='privat'?p.price:hp(p);return `<div class="row"><div class="n">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b>${v?eur(v):'auf Anfrage'}</b></div>`};
+  const cart=tabN==='haendler'?cur.cartH:cur.cartP,ck=tabN==='haendler'?'H':'P';
+  const unit=p=>tabN==='haendler'?hp(p):p.price;
+  const row=p=>{const v=unit(p),q=cart[p.id]||0;
+    return `<div class="row"><div class="n" style="flex:1;min-width:0">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b style="margin-right:8px">${v?eur(v):'auf Anfrage'}</b>${v?`<div class="ctr">${q?`<button class="fb" data-pl="cart" data-v="${ck}|${p.id}|-1">−</button><b class="fn">${q}</b>`:''}<button class="plus fb" data-pl="cart" data-v="${ck}|${p.id}|1">+</button></div>`:''}</div>`};
+  const sum=ps.reduce((a,p)=>a+(cart[p.id]||0)*(unit(p)||0),0),cnt=Object.values(cart).reduce((a,b)=>a+b,0);
   const seg=`<div class="seg">${[['privat','Privat'],['haendler','Händler'],['rechner','MwSt-Rechner']].map(([k,l])=>`<button class="${tabN===k?'on':''}" data-pl="prtab" data-v="${k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(tabN==='rechner'){
-    const rates=[...new Set([r,7,19])];const cr=cur.vatRate==null?r:cur.vatRate;
-    body=`<div class="card pad formc"><label class="f">Betrag in Euro</label><input class="t" id="vat-amt" inputmode="decimal" placeholder="0,00" value="${esc(cur.vatAmt)}">
-      <div class="seg" style="margin-top:10px">${[['n2b','Netto → Brutto'],['b2n','Brutto → Netto']].map(([k,l])=>`<button class="${cur.vatMode===k?'on':''}" data-pl="vatmode" data-v="${k}">${l}</button>`).join('')}</div>
-      <label class="f">MwSt-Satz</label><div class="seg">${rates.map(x=>`<button class="${cr===x?'on':''}" data-pl="vatrate" data-v="${x}">${pct(x)}</button>`).join('')}</div></div>
-      <div class="card pad" id="vat-res">${vatCalc()}</div>`;
+    const rr=cur.vR==null?String(vatRate()).replace('.',','):cur.vR;
+    body=`<div class="card pad formc"><div class="vrow"><label>Netto</label><input class="t" id="vat-net" inputmode="decimal" placeholder="0,00" value="${esc(cur.vN)}"><span>€</span></div>
+      <div class="vrow"><span class="vl" style="width:auto;font-size:20px">+</span><input class="t small" id="vat-rate" inputmode="decimal" value="${esc(rr)}"><span>% MwSt</span><input class="t" id="vat-tax" readonly placeholder="0,00" value=""><span>€</span></div>
+      <hr style="border:0;border-top:2px solid var(--line);margin:10px 0">
+      <div class="vrow"><label>Brutto</label><input class="t" id="vat-gross" inputmode="decimal" placeholder="0,00" value="${esc(cur.vG)}"><span>€</span></div>
+      <button class="btn sec" data-pl="vatclear" style="margin:6px 0 0">Löschen</button></div>`;
+  }else if(tabN==='privat'){
+    body=`<div class="card pad formc"><div class="kv"><span>Summe (inklusive MwSt)</span><b style="font-size:24px">${eur(sum)}</b></div><div class="hint" style="margin:4px 0 8px">${cnt} ${cnt===1?'Artikel':'Artikel'} ausgewählt</div><button class="btn sec" data-pl="cartclear" data-v="P" style="margin:0">Löschen</button></div>
+      <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
+      <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>`;
   }else{
-    body=`<div class="hint">${tabN==='privat'?'Preise für Privatkunden, inklusive MwSt.':`Preise für Händler, netto zuzüglich ${pct(r)} MwSt. Wo noch kein Händlerpreis hinterlegt ist, steht der berechnete Nettopreis.`}</div>
+    const tax=sum*r/100;
+    body=`<div class="card pad formc"><div class="vrow"><label>Netto</label><b style="flex:1;text-align:right;font-size:22px">${eur(sum)}</b></div>
+      <div class="vrow"><span class="vl" style="width:auto;font-size:18px">+</span><span style="font-size:16px">${pct(r)} MwSt</span><b style="flex:1;text-align:right;font-size:18px">${eur(tax)}</b></div>
+      <hr style="border:0;border-top:2px solid var(--line);margin:8px 0">
+      <div class="vrow"><label>Brutto</label><b style="flex:1;text-align:right;font-size:22px">${eur(sum+tax)}</b></div>
+      <div class="hint" style="margin:4px 0 8px">${cnt} Artikel ausgewählt. Händlerpreise netto, wo noch keiner hinterlegt ist, steht der berechnete Nettopreis.</div>
+      <button class="btn sec" data-pl="cartclear" data-v="H" style="margin:0">Löschen</button></div>
       <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
       <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>`;
   }
@@ -833,6 +861,7 @@ function vPreise(){
     <h3>Bezahlen per PayPal</h3>
     <div class="card pad" style="text-align:center"><div id="qr" style="display:inline-block;background:#fff;padding:14px;border-radius:14px;min-width:120px;min-height:120px"></div>
     <div class="hint">${(S.hofInfo&&S.hofInfo.paypal)?'QR-Code scannen und direkt per PayPal bezahlen.':'Beispiel-Code. Später ersetzt der PayPal-Code des Hofs diesen Platzhalter.'}</div></div>`;
+  if(tabN==='rechner')vatSync(cur.vLast);
   loadQr((S.hofInfo&&S.hofInfo.paypal)||'https://www.paypal.com/paypalme/BeispielHofDroste');
 }
 function loadQr(text){
@@ -923,6 +952,12 @@ function planMeld(){
       <div class="p" style="margin-top:6px">Gemeldet von ${esc(r.by||'?')} · ${new Date(r.created||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}${r.assignedTo?' · zugewiesen an '+esc(r.assignedTo):''}</div>
       ${all&&r.status!=='erledigt'?`<div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="rassign" data-v="${r.id}" style="margin:0">Zuweisen</button>${r.status==='neu'?`<button class="btn sec" data-pl="rwork" data-v="${r.id}" style="margin:0">In Arbeit</button>`:''}<button class="btn green" data-pl="rdone" data-v="${r.id}" style="margin:0">Erledigt</button></div>`:''}</div>`};
   return `${cur.rOpen?reportForm():'<button class="btn add" data-pl="rnew" style="margin-top:0">+ Melden</button>'}${seg}${list.map(card).join('')||'<div class="hint">Keine Meldungen in dieser Ansicht.</div>'}`;
+}
+const homeMode=()=>{try{return localStorage.getItem('droste-home')==='1'}catch(e){return false}};
+const HICON={ich:'👤',plan:'📋',staende:'🏪',lieferungen:'🚚',feld:'🌲',preise:'💶'};
+function vHome(items,oc){
+  const nRep=seeAllReports()?openReports().length:0;
+  $('#app').innerHTML=`<h2 style="margin-top:4px">Hallo ${esc(S.me)}</h2><div class="hgrid">${items.map(i=>{const b=i[0]==='plan'&&oc?oc:i[0]==='plan'&&nRep?nRep:0;return `<button class="htile" data-pl="gotab" data-v="${i[0]}"><span class="hic">${HICON[i[0]]||i[1]}${b?`<i class="hbd">${b}</i>`:''}</span><span>${i[2]}</span></button>`}).join('')}</div>`;
 }
 function askQuestion(){
   const d=document.createElement('div');d.className='cheers';
@@ -1197,9 +1232,11 @@ document.addEventListener('click',ev=>{
   if(a==='dtask'){tab='plan';cur.ptab='aufg';cur.tf=newTf(todayStr());cur.tf.person=S.me;cur.tfOpen=true;cur.rOpen=false;window.scrollTo(0,0);return render()}
   if(a==='drep'){tab='plan';cur.ptab='aufg';cur.rOpen=true;cur.rf=newRf();cur.rfile=null;cur.tfOpen=false;window.scrollTo(0,0);return render()}
   if(a==='rankv'){cur.rankv=v;return render()}
+  if(a==='gotab'){tab=v;cur.zst=false;window.scrollTo(0,0);return render()}
   if(a==='prtab'){cur.prtab=v;return render()}
-  if(a==='vatmode'){cur.vatMode=v;return render()}
-  if(a==='vatrate'){cur.vatRate=parseFloat(v);return render()}
+  if(a==='cart'){const [k,id,d]=v.split('|'),c=k==='H'?cur.cartH:cur.cartP;c[id]=Math.max(0,(c[id]||0)+(+d));if(!c[id])delete c[id];return render()}
+  if(a==='cartclear'){if(v==='H')cur.cartH={};else cur.cartP={};return render()}
+  if(a==='vatclear'){cur.vN='';cur.vG='';return render()}
   if(a==='qdone'){const q=S.questions.find(x=>x.id===v);if(q){q.done=true;q.doneAt=Date.now();save();render()}return}
   if(a==='gopen'){tab='plan';cur.ptab='aufg';cur.pf='@open';window.scrollTo(0,0);return render()}
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
@@ -1340,7 +1377,9 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='pk-note')cur.pknote=t.value;
-  if(t.id==='vat-amt'){cur.vatAmt=t.value;const e=document.getElementById('vat-res');if(e)e.innerHTML=vatCalc()}
+  if(t.id==='vat-net'){cur.vN=t.value;vatSync('net')}
+  if(t.id==='vat-gross'){cur.vG=t.value;vatSync('gross')}
+  if(t.id==='vat-rate'){cur.vR=t.value;vatSync('rate')}
   if(t.id==='fn-note')cur.fnote=t.value;
 });
 document.addEventListener('change',ev=>{
@@ -2005,6 +2044,8 @@ const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),sof
 window.APP=APP;
 
 document.addEventListener('click',async ev=>{
+  const vw=ev.target.closest('[data-view]');
+  if(vw){try{localStorage.setItem('droste-home',vw.dataset.view==='home'?'1':'0')}catch(e){}tab=vw.dataset.view==='home'?'home':'ich';window.scrollTo(0,0);return render()}
   const lg=ev.target.closest('[data-lang]');
   if(lg){try{localStorage.setItem('droste-lang',lg.dataset.lang)}catch(e){}location.reload();return}
   const m=ev.target.closest('[data-authmode]');

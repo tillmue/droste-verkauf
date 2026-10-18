@@ -1,4 +1,9 @@
 window.RO_DICT={
+"Artikel": "articole",
+"Summe (inklusive MwSt)": "Total (TVA inclus)",
+"Leiste": "Bară",
+"Darstellung": "Afișare",
+"Startbildschirm": "Ecran principal",
 "Keine offenen Fragen.": "Nicio întrebare deschisă.",
 "Beantwortet": "Răspuns dat",
 "Till, du bekommst so schnell wie möglich Rückmeldung.": "Till, vei primi un răspuns cât mai curând posibil.",
@@ -788,6 +793,8 @@ window.RO_PATTERNS=[
  [/^Fragen zur App \((\d+)\)$/,(m,n)=>`Întrebări despre aplicație (${n})`],
  [/^Beantwortet \((\d+)\)$/,(m,n)=>`Răspunse (${n})`],
  [/^(\d+) Fragen? zur App, tippen zum Lesen →$/,(m,n)=>`${n} ${+n===1?'întrebare':'întrebări'} despre aplicație, atinge pentru a citi →`],
+ [/^(\d+) Artikel ausgewählt$/,(m,n)=>`${n} articole selectate`],
+ [/^(\d+) Artikel ausgewählt\. Händlerpreise netto, wo noch keiner hinterlegt ist, steht der berechnete Nettopreis\.$/,(m,n)=>`${n} articole selectate. Prețuri net pentru comercianți; unde nu este setat unul, apare prețul net calculat.`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
