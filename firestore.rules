@@ -109,6 +109,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Fragen zur App: jeder stellt, nur Admin liest alle und markiert
+    match /questions/{id} {
+      allow read: if isMember() && (role() == 'admin' || role() == 'demo' || resource.data.byUid == request.auth.uid);
+      allow create: if isMember() && request.resource.data.byUid == request.auth.uid;
+      allow update: if isMember() && (role() == 'admin' || role() == 'demo');
+      allow delete: if false;
+    }
+
     // Ranglisten (von Cloud Functions geschrieben)
     match /stats/{id} {
       allow read: if isMember();

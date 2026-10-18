@@ -25,6 +25,7 @@ const T = {
   },
   repWork: { de: t => `Deine Meldung wird bearbeitet: ${t}`, ro: t => `Raportarea ta este în lucru: ${t}` },
   repDone: { de: t => `Deine Meldung ist erledigt: ${t}`, ro: t => `Raportarea ta este rezolvată: ${t}` },
+  question: { de: (b, t) => `Neue Frage zur App von ${b}: ${t}`, ro: (b, t) => `Întrebare nouă despre aplicație de la ${b}: ${t}` },
   title: { de: 'Hof Droste', ro: 'Hof Droste' },
   morning: {
     de: (n, a, e) => `Guten Morgen ${n}: ${a} offene ${a === 1 ? 'Aufgabe' : 'Aufgaben'}${e ? `, ${e} ${e === 1 ? 'Termin' : 'Termine'} heute` : ''}.`,
@@ -156,6 +157,13 @@ exports.taskStats = onDocumentWritten('tasks/{id}', async event => {
   const all = {}, week = {}, since = Date.now() - 7 * 864e5;
   snap.forEach(d => { const t = d.data(); if (t.deleted || !t.doneBy) return; all[t.doneBy] = (all[t.doneBy] || 0) + 1; if ((t.doneAt || 0) > since) week[t.doneBy] = (week[t.doneBy] || 0) + 1; });
   await db.collection('stats').doc('ranking').set({ all, week, at: Date.now() });
+});
+
+/* Fragen zur App: Nachricht an den Admin */
+exports.questionCreated = onDocumentCreated('questions/{id}', async event => {
+  const q = event.data.data();
+  const users = (await approvedUsers()).filter(u => u.role === 'admin' && u.id !== q.byUid);
+  for (const u of users) await pushTo(u, lang => T.question[lang](q.by || '?', q.text || ''));
 });
 
 /* 2. Morgennachricht */

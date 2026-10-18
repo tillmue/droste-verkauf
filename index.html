@@ -63,6 +63,7 @@ body.run header,body.run #nav{display:none}
 .seg button{flex:1;min-width:0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:9px;white-space:nowrap}
 .seg button.on{background:var(--blue);color:#fff}
 #asrole{flex:none;max-width:104px;height:34px;margin-right:8px;border:0;border-radius:12px;background:rgba(0,0,0,.25);color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:0 8px}
+#help{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:18px;font-weight:700;line-height:1;padding:0;margin-right:6px}
 #refresh{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.25);color:var(--text);font-size:20px;line-height:1;padding:0;margin-right:8px}
 #refresh.spin{animation:rspin .8s linear infinite}@keyframes rspin{to{transform:rotate(360deg)}}
 #lang{flex:none;display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:999px;padding:2px;margin-left:auto;margin-right:10px}
@@ -208,7 +209,7 @@ svg .val{fill:var(--text)}
 </style>
 </head>
 <body>
-<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
+<header><img src="logo.jpg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="prof" aria-label="Benutzerprofil"><span id="av"></span><span><b id="pname"></b><small id="hstat"></small></span></button></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -221,7 +222,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 e';
+const APP_VERSION='2026-10-19 f';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -261,7 +262,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -774,6 +775,7 @@ function vIch(){
   $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>
   <div id="wx" style="margin:8px 0">${wxHtml()}</div>
   <div class="mini"><button class="qtile" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile" data-pl="drep"><b>!</b>Meldung machen</button></div>
+  ${isAdmin()&&S.questions.filter(q=>!q.deleted&&!q.done).length?`<div class="tbanner" data-go="einstellungen" style="margin-top:10px">${S.questions.filter(q=>!q.deleted&&!q.done).length} Frage${S.questions.filter(q=>!q.deleted&&!q.done).length>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
   <div class="card pad" data-pl="gomeld" style="cursor:pointer;margin-top:10px"><div class="kv"><span>Aktive Meldungen</span><b>${nRep}</b></div></div>
   <div class="card pad"><div class="barw"><i style="width:${Math.min(100,doneToday/3*100)}%"></i></div>
     <div class="hint" style="margin:6px 0 0">${doneToday>=3?'Feierabendbier verdient 🍺':doneToday+' von 3 Aufgaben bis zum Feierabendbier'}</div></div>
@@ -921,6 +923,24 @@ function planMeld(){
       <div class="p" style="margin-top:6px">Gemeldet von ${esc(r.by||'?')} · ${new Date(r.created||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}${r.assignedTo?' · zugewiesen an '+esc(r.assignedTo):''}</div>
       ${all&&r.status!=='erledigt'?`<div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="rassign" data-v="${r.id}" style="margin:0">Zuweisen</button>${r.status==='neu'?`<button class="btn sec" data-pl="rwork" data-v="${r.id}" style="margin:0">In Arbeit</button>`:''}<button class="btn green" data-pl="rdone" data-v="${r.id}" style="margin:0">Erledigt</button></div>`:''}</div>`};
   return `${cur.rOpen?reportForm():'<button class="btn add" data-pl="rnew" style="margin-top:0">+ Melden</button>'}${seg}${list.map(card).join('')||'<div class="hint">Keine Meldungen in dieser Ansicht.</div>'}`;
+}
+function askQuestion(){
+  const d=document.createElement('div');d.className='cheers';
+  d.innerHTML=`<div><p><b>Frage zur App</b></p><textarea class="t" id="q-text" rows="5" placeholder="Was möchtest du wissen?"></textarea><div style="height:14px"></div><button class="btn" data-ok="1" style="padding:16px">Senden</button><div style="height:14px"></div><button class="btn sec" data-no="1" style="padding:16px">Abbrechen</button></div>`;
+  d.addEventListener('click',e=>{const x=e.target;
+    if(x.dataset.ok){const txt=(d.querySelector('#q-text').value||'').trim();if(!txt)return alert('Bitte eine Frage eintragen.');
+      S.questions.push({id:uid(),text:txt,by:S.me,byUid:S.myUid||'',created:Date.now(),done:false});save();
+      d.innerHTML=`<div><p><b>Till, du bekommst so schnell wie möglich Rückmeldung.</b></p><button class="btn" data-no="1" style="padding:16px">Schließen</button></div>`}
+    else if(x.dataset.no||x===d)d.remove()});
+  document.body.appendChild(d);setTimeout(()=>{const t=d.querySelector('#q-text');if(t)t.focus()},50);
+}
+function questionsBlock(){
+  if(!isAdmin())return '';
+  const qs=S.questions.filter(q=>!q.deleted),open=qs.filter(q=>!q.done).sort((a,b)=>(b.created||0)-(a.created||0)),done=qs.filter(q=>q.done).sort((a,b)=>(b.created||0)-(a.created||0));
+  if(!qs.length)return '';
+  const when=q=>new Date(q.created||Date.now()).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const card=(q,fin)=>`<div class="row" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(q.by||'?')}</div><span class="p">${when(q)}</span></div><div style="margin-top:4px">${esc(q.text)}</div>${fin?'':`<button class="btn sec" data-pl="qdone" data-v="${q.id}" style="margin:8px 0 0;width:auto;padding:8px 14px">Beantwortet</button>`}</div>`;
+  return `<h2>Fragen zur App${open.length?' ('+open.length+')':''}</h2>${open.length?`<div class="card">${open.map(q=>card(q,false)).join('')}</div>`:'<div class="hint">Keine offenen Fragen.</div>'}${done.length?`<details data-det="qdone"><summary>Beantwortet (${done.length})</summary><div class="card">${done.map(q=>card(q,true)).join('')}</div></details>`:''}`;
 }
 function completeTask(id){
   const td=todayStr(),x=S.tasks.find(x=>x.id===id);if(!x)return;
@@ -1180,6 +1200,7 @@ document.addEventListener('click',ev=>{
   if(a==='prtab'){cur.prtab=v;return render()}
   if(a==='vatmode'){cur.vatMode=v;return render()}
   if(a==='vatrate'){cur.vatRate=parseFloat(v);return render()}
+  if(a==='qdone'){const q=S.questions.find(x=>x.id===v);if(q){q.done=true;q.doneAt=Date.now();save();render()}return}
   if(a==='gopen'){tab='plan';cur.ptab='aufg';cur.pf='@open';window.scrollTo(0,0);return render()}
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};window.scrollTo(0,0);render()}return}
   if(a==='penadd'){const per=cur.pen.person||S.people[0];if(!(cur.pen.reason||'').trim())return alert('Bitte einen Grund eintragen.');S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
@@ -1797,6 +1818,7 @@ function vDaten(){
   if(!isAdmin())return vProfil();
   $('#app').innerHTML=`  <h2 style="margin-top:4px">Profil</h2>
   <div class="card pad">${accountBlock()}</div>
+  ${questionsBlock()}
   ${freigaben()}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin sieht alles. Chef sieht alles außer Verwaltung. Verkauf sieht Verkauf und Zahlen. Team ist die Standardrolle. Schonung sieht nur Feld und eigene Aufgaben. Fahrer sieht und fährt seine Touren.</div>
@@ -1977,7 +1999,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],reports:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>pr.role==='admin'||!!((pr.perms||presetFor(pr.role))[k]),ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
@@ -1989,6 +2011,7 @@ document.addEventListener('click',async ev=>{
   if(m){cur.auth=Object.assign(cur.auth||{},{mode:m.dataset.authmode,err:'',info:''});return render()}
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
+  if(ev.target.closest('#help')){askQuestion();return}
   if(ev.target.closest('#refresh')){const b=$('#refresh');b.classList.add('spin');try{if(window.cloud&&window.cloud.resume)await Promise.race([window.cloud.resume(),new Promise(r=>setTimeout(r,2500))])}catch(e){}location.reload();return}
   if(id==='pushOn'){try{await window.cloud.enablePush();toast('Benachrichtigungen sind an')}catch(e){if(e&&e.message==='denied')toast('Benachrichtigungen wurden nicht erlaubt');else alert('Benachrichtigungen konnten nicht eingeschaltet werden.\n\nFehler: '+((e&&(e.code||e.message))||'unbekannt'))}return render()}
   if(id==='pushOff'){try{await window.cloud.disablePush();toast('Benachrichtigungen sind aus')}catch(e){}return render()}
