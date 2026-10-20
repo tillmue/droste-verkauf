@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 r';
+const APP_VERSION='2026-10-21 s';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1776,26 +1776,26 @@ function scheduleDrivers(defs,P){
   const RELOAD=15,D=[...Array(P)].map((_,i)=>({n:i+1,avail:495,bf:false,lu:false,ev:[]})),res=[];let late=0;
   defs.slice().sort((a,b)=>(a.urg-b.urg)||(b.dur-a.dur)).forEach(def=>{
     const need=Math.min(def.crewN,P),pick=D.slice().sort((a,b)=>a.avail-b.avail||a.n-b.n).slice(0,need);
-    const start=Math.max(...pick.map(d=>d.avail)),fl={bf:pick[0].bf,lu:pick[0].lu},r=tourSched(def.items,def.back,start,fl);
+    const start=Math.max(...pick.map(d=>d.avail)),fl={bf:pick[0].bf,lu:pick[0].lu},its=itemsAt(def.items,need),r=tourSched(its,def.back,start,fl);
     let t=r.home,bf=fl.bf||r.road.some(x=>x.k==='Frühstück'),lu=fl.lu||r.road.some(x=>x.k==='Mittag');const hof=[];
     if(!bf&&start<720&&t>=540){hof.push({k:'Frühstück',at:t,len:15});t+=15;bf=true}
     if(!lu&&t>=720){hof.push({k:'Mittag',at:t,len:30});t+=30;lu=true}
     pick.forEach(d=>{d.avail=t+RELOAD;d.bf=bf;d.lu=lu;d.ev.push({idx:def.i,start,home:r.home,hof})});
-    res[def.i]={...r,start,bfPre:fl.bf,luPre:fl.lu,slots:pick.map(d=>d.n),capped:def.crewN>P,hof};late+=r.late;
+    res[def.i]={...r,start,its,bfPre:fl.bf,luPre:fl.lu,slots:pick.map(d=>d.n),capped:def.crewN>P,hof};late+=r.late;
   });
   return {res,D,late,makespan:Math.max(...res.map(r=>r.home))};
 }
 function planSim(t){
   const st=tourStops(t),lg=t.legs||[],start=t.depart||495,back=Math.round((t.backSec||0)/60);
-  const items=st.map((x,i)=>({leg:Math.round((lg[i]||0)/60),svc:svcMin(x),ws:winStart(x.win||''),we:winEnd(x.win||'')}));
+  const cn=tourCrewN(t),items=st.map((x,i)=>({leg:Math.round((lg[i]||0)/60),svc:svcMin(x,cn),ws:winStart(x.win||''),we:winEnd(x.win||'')}));
   const r=tourSched(items,back,start,{bf:!!t.bfPre,lu:!!t.luPre}),eta={};st.forEach((x,i)=>{eta[x.id]=r.eta[i]});
   return {eta,start,end:r.end,home:r.home,dur:r.home-start,drive:items.reduce((a,b)=>a+b.leg,0)+back,stay:items.reduce((a,b)=>a+b.svc,0),wait:r.wait,road:r.road,pb:r.road.reduce((a,b)=>a+b.len,0)};
 }
 const tourDur=t=>planSim(t).dur;
 const brkTxt=(road,t,home)=>{const b=road.find(x=>x.k==='Frühstück'),l=road.find(x=>x.k==='Mittag'),p=[];
-  if(b)p.push(`Frühstück unterwegs ca. ${hmMin(up5(b.at))} (nach Stopp ${b.after})`);else if(!t.bfPre&&(t.depart||495)<720)p.push('Frühstück am Hof');
-  if(l)p.push(`Mittag unterwegs ca. ${hmMin(up5(l.at))} (nach Stopp ${l.after})`);else if(!t.luPre&&home>=720)p.push('Mittag am Hof');
-  return p.join(' · ')};
+  if(b)p.push('Frühstück 15 Min unterwegs eingerechnet');else if(!t.bfPre&&(t.depart||495)<720)p.push('Frühstück am Hof');
+  if(l)p.push('Mittag 30 Min unterwegs eingerechnet');else if(!t.luPre&&home>=720)p.push('Mittag am Hof');
+  return p.join('<br>')};
 const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
 function planCandidates(day){
@@ -1847,10 +1847,11 @@ async function runPlan(){
         if(best.some((o,i)=>o!==ordd[i])){const r2=await window.cloud.routeLegs({origin:depot(),stops:best.map(orderAddr),roundTrip:true,depart:nextDepart()});ordd=best;legs=r2.legs}
       }
       const backMin=Math.round((legs[ordd.length]||0)/60),lg=legs.slice(0,ordd.length);
-      const items=ordd.map((o,i)=>({leg:Math.round((lg[i]||0)/60),svc:orderSvc(o),ws:winStart(o.window),we:winEnd(o.window)}));
+      const items=ordd.map((o,i)=>({leg:Math.round((lg[i]||0)/60),svc2:orderSvc(o),svc:orderSvc(o),ws:winStart(o.window),we:winEnd(o.window)}));
       const stl=ordd.map(o=>({lines:orderLines(o).map(p=>({c:p.cat,l:p.len,q:p.qty}))}));
-      return {size,solo:isSolo,stops:ordd.map((o,i)=>({o,svc:items[i].svc,eta:0,warn:''})),legs:lg,backMin,items,crewN:crewNum(stl),crew:crewHint({stops:stl}),
-        preDur:tourSched(items,backMin,495,{bf:false,lu:false}).home-495,drive:items.reduce((a,b)=>a+b.leg,0)+backMin,stay:items.reduce((a,b)=>a+b.svc,0),
+      const cn=crewNum(stl);
+      return {size,solo:isSolo,stops:ordd.map((o,i)=>({o,svc:items[i].svc,eta:0,warn:''})),legs:lg,backMin,items,crewN:cn,crew:crewHint({stops:stl}),
+        preDur:tourSched(itemsAt(items,cn),backMin,495,{bf:false,lu:false}).home-495,drive:items.reduce((a,b)=>a+b.leg,0)+backMin,stay:items.reduce((a,b)=>a+b.svc,0),
         stand:ordd.reduce((a,o)=>a+(o.positions||[]).filter(p=>p.cat==='Ständer').reduce((x,p)=>x+(+p.qty||0),0),0),bohren:ordd.reduce((a,o)=>a+orderBohren(o),0)};
     };
     for(const [gi,[size,list]] of groups.entries()){
@@ -1885,7 +1886,7 @@ async function runPlan(){
     if(!P){let best=null;for(let p=maxCrew;p<=Math.max(maxCrew,Math.min(10,defs.length*maxCrew));p++){const r=scheduleDrivers(defs,p);if(!best||r.late<best.r.late||(r.late===best.r.late&&r.makespan<best.r.makespan))best={p,r};if(r.late===0&&r.makespan<=960){best={p,r};break}}Puse=best.p;sch=best.r}
     else sch=scheduleDrivers(defs,P);
     tours.forEach((t,i)=>{const r=sch.res[i];t.depart=r.start;t.end=r.end;t.home=r.home;t.road=r.road;t.bfPre=r.bfPre;t.luPre=r.luPre;t.slots=r.slots;t.wait=r.wait;t.pb=r.road.reduce((a,b)=>a+b.len,0);t.capped=r.capped;
-      t.stops.forEach((s,k)=>{s.eta=r.eta[k];const we=winEnd(s.o.window);s.warn=we!=null&&s.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:''})});
+      t.stay=r.its.reduce((a,b)=>a+b.svc,0);t.stops.forEach((s,k)=>{s.eta=r.eta[k];s.svc=r.its[k].svc;const we=winEnd(s.o.window);s.warn=we!=null&&s.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:''})});
     const overview=sch.D.map(d=>({n:d.n,ev:d.ev.map(e=>({tour:tours[e.idx],start:e.start,home:e.home,hof:e.hof}))}));
     tours.sort((a,b)=>a.depart-b.depart||a.slots[0]-b.slots[0]);
     const w=[];
@@ -2067,11 +2068,14 @@ function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank"
 const depot=()=>(S.hofInfo&&S.hofInfo.depot)||'Im Gattberg 19, 49191 Belm';
 const fmtMin=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' Std '+(m%60?m%60+' Min':''):m+' Min'};
 const stopTrees=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>a+(+l.q||0),0);
-const svcMin=x=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x);return base+Math.min(60,Math.round(c.tree*2*Math.sqrt(Math.min(Math.max(0,tr-1),10)))+Math.max(0,tr-11)*c.tree)};
+const CF={1:1.4,2:1,3:1.2};
+const svcMin=(x,n)=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x),extra=Math.round(c.tree*2*Math.sqrt(Math.min(Math.max(0,tr-1),10))+Math.max(0,tr-11)*c.tree*0.5);return Math.round(Math.min(60,base+extra)*(CF[n||2]||1))};
+const tourCrewN=t=>(t.slots&&t.slots.length)||(t.driver&&t.codriver?2:crewNum(tourStops(t)));
+const itemsAt=(items,n)=>items.map(it=>({...it,svc:Math.round(it.svc2*(CF[n]||1))}));
 function etaTimes(t){
   const st=tourStops(t),legs=t.legs||[],out={};if(!t.startedAt||!legs.length)return out;
   let cur=t.startedAt+(t.pausedMs||0);const bs={};
-  for(let i=0;i<st.length;i++){const s=st[i];if(legs[i]===undefined)break;cur+=legs[i]*1000;out[s.id]=cur;cur=s.doneAt?s.doneAt:cur+svcMin(s)*60000;const d0=new Date(cur),m0=d0.getHours()*60+d0.getMinutes();if(!bs.b&&m0>=570){cur+=15*6e4;bs.b=1}const d1=new Date(cur),m1=d1.getHours()*60+d1.getMinutes();if(!bs.l&&m1>=750){cur+=30*6e4;bs.l=1}}
+  for(let i=0;i<st.length;i++){const s=st[i];if(legs[i]===undefined)break;cur+=legs[i]*1000;out[s.id]=cur;cur=s.doneAt?s.doneAt:cur+svcMin(s,tourCrewN(t))*60000;const d0=new Date(cur),m0=d0.getHours()*60+d0.getMinutes();if(!bs.b&&m0>=570){cur+=15*6e4;bs.b=1}const d1=new Date(cur),m1=d1.getHours()*60+d1.getMinutes();if(!bs.l&&m1>=750){cur+=30*6e4;bs.l=1}}
   return out;
 }
 const lineLabel=l=>{const q=+l.q||1,nm=l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);return `${q} × ${nm}${l.l?' '+mFmt(l.l):''}`};
@@ -2106,7 +2110,7 @@ function stopRow(t,x,i,n,plan){
     <button class="chk big ${x.done?'on':''}" ${run&&!pk?'disabled':''} data-pl="${pk?'pickst':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${x.done?'✓':(pk&&x.ready)?'•':''}</button>
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?(x.time?esc(x.time)+' · ':''):(i+1)+'. '}${esc(x.name)}${!pk&&winTxt(x.win||x.time)?` <span class="p">· ${winTxt(x.win||x.time)}</span>`:''}</div>
     ${pk?`<div class="p"><b style="color:${x.done?'var(--green,#27AE60)':x.ready?'var(--orange)':'var(--mut)'}">${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</b></div>`:''}
-    ${(!pk&&t.legs&&t.legs.length&&!x.done)?`<div class="p" style="color:var(--link)">Ankunft ca. ${hmMin(up5(planSim(t).eta[x.id]||0))} · Aufenthalt ${svcMin(x)} Min</div>`:''}
+    ${(!pk&&t.legs&&t.legs.length&&!x.done)?`<div class="p" style="color:var(--link)">Ankunft ca. ${hmMin(up5(planSim(t).eta[x.id]||0))} · Aufenthalt ${svcMin(x,tourCrewN(t))} Min</div>`:''}
     ${x.address?`<div class="p"><a href="${mapUrl(x.address)}" target="_blank" rel="noopener">${esc(x.address)}</a></div>`:''}
     ${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}${x.items?`<div class="p">${esc(mTxt(x.items))}</div>`:''}${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}
     ${x.phone?`<div class="p"><a href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}">${esc(x.phone)}</a></div>`:''}
@@ -2427,11 +2431,11 @@ function vDaten(){
   <input class="t" id="hof-resmin" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveMin)||''))}" placeholder="2">
   <label class="f">Ersatzständer pro Tour: ein Ersatz je so viele Ständer</label>
   <input class="t" id="hof-resevery" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveEvery)||''))}" placeholder="5">
-  <label class="f">Aufenthalt je Stopp in Minuten: nur abladen (Standard 5)</label>
+  <label class="f">Aufenthalt je Stopp in Minuten bei zwei Personen: nur abladen (Standard 5)</label>
   <input class="t" id="hof-svcDrop" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcDrop)||''))}" placeholder="5">
-  <label class="f">Aufenthalt je Stopp in Minuten: abladen und aufstellen (Standard 10)</label>
+  <label class="f">Aufenthalt je Stopp in Minuten bei zwei Personen: abladen und aufstellen (Standard 10)</label>
   <input class="t" id="hof-svcSet" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcSet)||''))}" placeholder="10">
-  <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen 1 Min je Baum, höchstens 60 Min)</label>
+  <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen eine halbe Minute je Baum, höchstens 60 Min). Eine Person braucht 40 % länger, drei Personen (große Bäume) 20 % länger als zwei.</label>
   <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="1">
   <label class="f">MwSt-Satz in Prozent (Standard 7,8)</label>
   <input class="t" id="hof-vat" inputmode="decimal" value="${esc(String((S.hofInfo&&S.hofInfo.vat)||''))}" placeholder="7,8">

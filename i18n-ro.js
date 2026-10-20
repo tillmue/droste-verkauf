@@ -1,4 +1,11 @@
 window.RO_DICT={
+"Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen eine halbe Minute je Baum, höchstens 60 Min). Eine Person braucht 40 % länger, drei Personen (große Bäume) 20 % länger als zwei.": "Durata: supliment pentru fiecare brad în plus (factor, standard 1; primii brazi contează descrescător, de la 11 brazi o jumătate de minut per brad, maxim 60 min). O persoană are nevoie de 40 % mai mult, trei persoane (brazi mari) de 20 % mai mult decât două.",
+"Aufenthalt je Stopp in Minuten bei zwei Personen: abladen und aufstellen (Standard 10)": "Durata la oprire în minute cu două persoane: descărcare și montare (standard 10)",
+"Aufenthalt je Stopp in Minuten bei zwei Personen: nur abladen (Standard 5)": "Durata la oprire în minute cu două persoane: doar descărcare (standard 5)",
+"Mittag 30 Min unterwegs eingerechnet": "Prânz 30 min în drum inclus",
+"Frühstück 15 Min unterwegs eingerechnet": "Mic dejun 15 min în drum inclus",
+"Mittag am Hof": "Prânz la fermă",
+"Frühstück am Hof": "Mic dejun la fermă",
 "Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen 1 Min je Baum, höchstens 60 Min)": "Durata: supliment pentru fiecare brad în plus (factor, standard 1; primii brazi contează descrescător, de la 11 brazi 1 min per brad, maxim 60 min)",
 "Abholungen werden nicht ausgeliefert und nicht in eine Tour eingeplant. Die Bäume müssen trotzdem gepackt, bereitgelegt und etikettiert werden. Die Etikettenliste steht unter Abholung.": "Ridicările nu se livrează și nu se planifică într-un tur. Brazii trebuie totuși împachetați, pregătiți și etichetați. Lista de etichete este la Ridicare.",
 "Zu den Abholungen": "La ridicări",
