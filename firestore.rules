@@ -79,7 +79,7 @@ service cloud.firestore {
     match /tours/{id} {
       allow read: if (perm('lieferungen') || perm('lieferplanung')) && (perm('toursAll') || perm('lieferplanung') || resource.data.get('driver', '') == myName() || resource.data.get('codriver', '') == myName());
       allow create: if perm('lieferplanung');
-      allow update: if perm('lieferplanung') || (perm('lieferungen') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stops', 'loaded', 'pack', 'status', 'startedAt', 'startedBy', 'finishedAt']));
+      allow update: if perm('lieferplanung') || (perm('lieferungen') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stops', 'loaded', 'pack', 'status', 'startedAt', 'startedBy', 'finishedAt', 'paused', 'pausedAt', 'pausedMs']));
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 

@@ -1,4 +1,7 @@
 window.RO_DICT={
+"Tour pausiert": "Tur în pauză",
+"Tour fortsetzen": "Continuă turul",
+"Pause: zurück zur App": "Pauză: înapoi la aplicație",
 "Ersatzständer pro Tour: ein Ersatz je so viele Ständer": "Suporturi de rezervă pe tur: unul la câte suporturi",
 "Ersatzständer pro Tour: mindestens": "Suporturi de rezervă pe tur: minimum",
 "Diese Tour hat noch keine Bäume aus Aufträgen.": "Acest tur nu are încă pomi din comenzi.",
@@ -865,6 +868,8 @@ window.RO_PATTERNS=[
  [/^(\d+) von (\d+) aufgeladen\. Reihenfolge: zuerst der letzte Stopp\.$/,(m,a,b)=>`${a} din ${b} încărcate. Ordinea: mai întâi ultima oprire.`],
  [/^Ständer-Empfehlung: (.+)$/,(m,x)=>`Recomandare suport: ${x}`],
  [/^Ständer (klein|groß), Baum bis (.+): Empfehlung (.+)$/,(m,a,b,c)=>`Suport ${a==="klein"?"mic":"mare"}, copac până la ${b}: recomandare ${c}`],
+ [/^(.+) pausiert, tippen zum Fortsetzen →$/,(m,x)=>`${x} în pauză, atinge pentru a continua →`],
+ [/^Gestartet um (.+?) · (\d+) Min Pause$/,(m,a,b)=>`Pornit la ${a} · ${b} min pauză`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
