@@ -1,4 +1,7 @@
 window.RO_DICT={
+"Aufgabe bearbeiten": "Modifică sarcina",
+"Als erledigt markieren": "Marchează ca terminat",
+"Neue Notiz zu dieser Aufgabe": "Notiță nouă pentru această sarcină",
 "Von": "De la",
 "Spitzenreiter": "Lideri",
 "Gerade ist nichts gemeldet.": "Momentan nu este nimic raportat.",

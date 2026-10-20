@@ -269,6 +269,7 @@ nav button.on{background:var(--blue);color:#fff}
 .tbanner{background:rgba(255,174,66,.15);color:var(--orange)}
 .qtile.g{border-color:rgba(46,158,79,.75)}.qtile.g b{color:#7fe0a0}
 .qtile.o{border-color:rgba(255,174,66,.85)}.qtile.o b{color:var(--orange)}
+.rowedit{flex:none;width:42px;height:42px;border-radius:13px;border:1px solid rgba(124,192,255,.4);background:rgba(124,192,255,.12);color:var(--link);display:flex;align-items:center;justify-content:center;padding:0}
 </style>
 </head>
 <body>
@@ -285,7 +286,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 Q';
+const APP_VERSION='2026-10-21 R';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1171,22 +1172,24 @@ function taskRow(t,showDate,pop){
   const who=t.person?`<span class="who">${esc(t.person)}</span>`:'<span style="color:var(--orange);font-weight:600">Offen</span>';
   return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
-    <div style="min-width:0;flex:1" data-pl="${pop?'sdopen':'tedit'}" data-v="${t.id}"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
+    <div style="min-width:0;flex:1"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
     <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${(()=>{const by=t.assignedBy||t.createdBy;return by&&by!==t.person?`<div class="p">Von ${esc(by)}</div>`:''})()}${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.handedFrom&&!t.done?`<div class="p">Abgegeben von ${esc(t.handedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
-    ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${(t.person&&!t.done&&(t.person===S.me||isAdmin()))?`<button class="claim" data-pl="thand" data-v="${t.id}">Abgeben</button>`:''}</div>`;
+    ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${t.done?'':`<button class="rowedit" data-pl="sdopen" data-v="${t.id}" aria-label="Aufgabe bearbeiten" title="Bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}</div>`;
 }
 function taskDetail(){
   const t=S.tasks.find(x=>x.id===cur.sd);if(!t)return '<div class="hint">Aufgabe nicht gefunden.</div>';
-  const canEdit=isAdmin()||has('tasksAll')||t.createdBy===S.me;
-  const meta=[t.date?wdD(t.date):'',t.time,standNm(t.stand)].filter(Boolean).join(' · ');
-  return `<div class="sheettop"><b>Aufgabe</b><button class="claim" data-pl="sdclose">Schließen</button></div>
-    <div class="n" style="font-size:20px;margin-bottom:4px">${esc(t.title)}</div>
-    <div class="p">${t.person?'<span class="who">'+esc(t.person)+'</span>':'<span style="color:var(--orange);font-weight:600">Offen</span>'}${meta?' · '+esc(meta):''}${t.done?' · <b style="color:var(--green)">erledigt</b>':''}</div>
-    ${(()=>{const by=t.assignedBy||t.createdBy;return by&&by!==t.person?`<div class="p">Von ${esc(by)}</div>`:''})()}
-    ${t.note?`<label class="f" style="margin-top:12px">Notizen</label><div class="card pad" style="white-space:pre-wrap;margin:0">${esc(t.note)}</div>`:''}
-    <label class="f" style="margin-top:12px">Neue Notiz</label><textarea class="t" id="sd-note" rows="3" placeholder="Notiz zu dieser Aufgabe">${esc(cur.sdn||'')}</textarea>
-    <button class="btn" data-pl="sdsave" style="margin-top:8px">Notiz speichern</button>
-    ${canEdit?`<div class="mini" style="margin-top:4px"><button class="btn sec" data-pl="sdedit" style="margin:0">Bearbeiten</button>${t.done?'':`<button class="btn green go" data-pl="sddone" style="margin:0">Erledigt</button>`}</div>`:''}`;
+  const canEdit=isAdmin()||has('tasksAll')||t.createdBy===S.me,canMove=canEdit||t.person===S.me;
+  const f=cur.sdf||(cur.sdf={title:t.title,date:t.date||'',time:t.time||'',person:t.person||'',stand:t.stand||'',note:''}),sel=(a,b)=>a===b?'selected':'';
+  const by=t.assignedBy||t.createdBy;
+  return `${canEdit?`<input class="t" id="sd-title" value="${esc(f.title)}" style="font-weight:700;font-size:20px">`:`<div class="n" style="font-size:21px">${esc(t.title)}</div>`}
+    <div class="p" style="margin:6px 0 0">${by?'Von '+esc(by):''}${t.done?' · <b style="color:var(--green)">erledigt</b>':''}${canMove?'':` · ${t.person?esc(t.person):'Offen'}${t.date?' · '+esc(wdD(t.date)):''}`}</div>
+    ${canMove?`<div class="mini" style="margin-top:12px"><input class="t" type="date" id="sd-date" value="${esc(f.date)}" style="min-width:0"><input class="t" type="time" id="sd-time" value="${esc(f.time)}" style="min-width:0"></div>
+    <div class="mini" style="margin-top:10px"><select class="t" id="sd-person"><option value="">Offen (jeder kann übernehmen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>
+    <select class="t" id="sd-stand"><option value="">Hof (Standard)</option>${S.stands.map(x=>`<option value="${x.id}" ${sel(x.id,f.stand)}>${esc(x.name)}</option>`).join('')}</select></div>`:''}
+    ${t.note?`<label class="f" style="margin-top:14px">Notizen</label><div style="white-space:pre-wrap;color:var(--text);font-size:16px;line-height:1.45;background:var(--fill);border-radius:14px;padding:12px 14px">${esc(t.note)}</div>`:''}
+    <textarea class="t" id="sd-note" rows="3" placeholder="Neue Notiz zu dieser Aufgabe" style="margin-top:14px">${esc(f.note||'')}</textarea>
+    ${canEdit&&!t.done?`<button class="btn sec" data-pl="sddone" style="margin-top:10px">Als erledigt markieren</button>`:''}
+    <div class="mini" style="margin-top:6px"><button class="btn" data-pl="sdsave" style="margin:0">Speichern</button><button class="btn sec" data-pl="sdcancel" style="margin:0">Abbrechen</button></div>`;
 }
 function renderSheet(){
   let el=document.getElementById('sheet');
@@ -1197,7 +1200,7 @@ function renderSheet(){
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
 }
-function closeSheet(){cur.sheet='';cur.sd='';cur.sdn='';cur.tfOpen=false;render()}
+function closeSheet(){cur.sheet='';cur.sd='';cur.sdf=null;cur.tfOpen=false;render()}
 function taskForm(inSheet){
   const f=cur.tf,sel=(a,b)=>a===b?'selected':'';
   const canDel=f.id&&(isAdmin()||f.createdBy===S.me);
@@ -1435,11 +1438,15 @@ document.addEventListener('click',ev=>{
   if(a==='pf'){cur.pf=v;return render()}
   if(a==='dtask'){cur.sheet='task';cur.tf=newTf(todayStr());cur.tf.person=S.me;cur.tfOpen=false;cur.rOpen=false;return render()}
   if(a==='drep'){cur.sheet='rep';cur.rf=newRf();cur.rfile=null;cur.rOpen=false;cur.tfOpen=false;return render()}
-  if(a==='sdopen'){cur.sheet='taskd';cur.sd=v;cur.sdn='';return render()}
-  if(a==='sdclose'){return closeSheet()}
-  if(a==='sdsave'){const t=S.tasks.find(x=>x.id===cur.sd),txt=((document.getElementById('sd-note')||{}).value||'').trim();if(!t)return;if(!txt)return alert('Bitte eine Notiz eintragen.');const d0=new Date().toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'});t.note=(t.note?t.note+'\n':'')+S.me+' ('+d0+'): '+txt;cur.sdn='';save();toast('Notiz gespeichert');return render()}
-  if(a==='sddone'){const t=S.tasks.find(x=>x.id===cur.sd);if(!t)return;cur.sheet='';cur.sd='';render();return askConfirm(`„${t.title}“ wirklich als erledigt markieren?`,'Ja, erledigt',()=>completeTask(t.id))}
-  if(a==='sdedit'){const x=S.tasks.find(y=>y.id===cur.sd);if(!x)return;cur.tf={id:x.id,title:x.title,date:x.date||'',time:x.time||'',person:x.person||'',stand:x.stand||'',type:x.type||'todo',note:x.note||'',noteId:null,createdBy:x.createdBy||''};cur.sheet='task';return render()}
+  if(a==='sdopen'){cur.sheet='taskd';cur.sd=v;cur.sdf=null;return render()}
+  if(a==='sdcancel'){return closeSheet()}
+  if(a==='sdsave'){const t=S.tasks.find(x=>x.id===cur.sd);if(!t)return;const f=cur.sdf||{},canEdit=isAdmin()||has('tasksAll')||t.createdBy===S.me,canMove=canEdit||t.person===S.me,nt=(f.note||'').trim();
+    if(canEdit&&f.title&&f.title.trim())t.title=f.title.trim();
+    if(canMove){if(f.date!==undefined&&f.date!==(t.date||'')){delete t.movedFrom;t.date=f.date}if(f.time!==undefined)t.time=f.time;if(f.stand!==undefined)t.stand=f.stand;
+      if(f.person!==undefined&&f.person!==(t.person||'')){if(t.person===S.me&&f.person!==S.me)t.handedFrom=S.me;t.person=f.person;t.assignedBy=S.me}}
+    if(nt){const d0=new Date().toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'});t.note=(t.note?t.note+'\n':'')+S.me+' ('+d0+'): '+nt}
+    save();closeSheet();toast('Gespeichert');return}
+  if(a==='sddone'){const t=S.tasks.find(x=>x.id===cur.sd);if(!t)return;cur.sheet='';cur.sd='';cur.sdf=null;render();return askConfirm(`„${t.title}“ wirklich als erledigt markieren?`,'Ja, erledigt',()=>completeTask(t.id))}
   if(a==='rankv'){cur.rankv=v;return render()}
   if(a==='rcreset'){if(confirm('Alle Rollen auf den Standard zurücksetzen?')){S.rolesCfg=JSON.parse(JSON.stringify(DEF_ROLECFG));save();render()}return}
   if(a==='gotab'){tab=v;cur.zst=false;window.scrollTo(0,0);return render()}
@@ -1630,6 +1637,7 @@ document.addEventListener('input',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
+  if(t.id&&t.id.startsWith('sd-')&&cur.sdf)cur.sdf[t.id.slice(3)]=t.value;
   if(t.id==='rp-qty')cur.rf.qty=t.value;
   if(t.id==='dl-addr'){cur.dl=cur.dl||{};cur.dl.addr=t.value;if(ev.type==='input')dlSuggest(t.value)}
   if(t.id==='dl-val'){cur.dl=cur.dl||{};cur.dl.val=t.value}
@@ -1657,6 +1665,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='sp-standId'&&String(t.value).startsWith('partner:')){const p0=partnersList()[+t.value.slice(8)];if(p0){cur.stop.standId='';cur.stop.name=p0.n;cur.stop.address=p0.a;cur.stop.note=cur.stop.note||'Partnerstand'}render();return}
   if(t.id==='sp-standId'){const s0=S.stands.find(x=>x.id===t.value);cur.stop.standId=t.value;if(s0){cur.stop.name=s0.name;if(s0.address)cur.stop.address=s0.address}render()}
   if(t.id==='rp-obj')cur.rf.obj=t.value;
+  if(t.id&&t.id.startsWith('sd-')&&cur.sdf)cur.sdf[t.id.slice(3)]=t.value;
   if(t.id==='rp-qty')cur.rf.qty=t.value;
   if(t.id==='dl-addr'){cur.dl=cur.dl||{};cur.dl.addr=t.value;if(ev.type==='input')dlSuggest(t.value)}
   if(t.id==='dl-val'){cur.dl=cur.dl||{};cur.dl.val=t.value}
