@@ -48,6 +48,8 @@ function initCloud(FB) {
     questions:{ get: () => T.S.questions.map(x => [x.id, x]), put: m => { T.S.questions = Object.values(m); }, del: false },
     stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; }, del: false },
     reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
+    orders:   { get: () => T.S.orders.map(x => [x.id, x]), put: m => { T.S.orders = Object.values(m); }, del: true },
+    days:     { get: () => T.S.days.map(x => [x.id, x]), put: m => { T.S.days = Object.values(m); }, del: false },
     shopping: { get: () => T.S.shopping.map(x => [x.id, x]), put: m => { T.S.shopping = Object.values(m); }, del: false },
     penalties:{ get: () => T.S.penalties.map(x => [x.id, x]), put: m => { T.S.penalties = Object.values(m); }, del: false },
     products: { get: () => T.S.products.map(x => [x.id, x]), ordered: true, del: true,
@@ -177,7 +179,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.questions = []; S.stats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.days = []; S.questions = []; S.stats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -187,7 +189,8 @@ function initCloud(FB) {
     }, err => console.error('users', err)));
     ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs', 'reports', 'stats', 'questions'].forEach(listen);
     if (T.permFor(p, 'verkauf') || T.permFor(p, 'zahlen')) ['moves', 'sales'].forEach(listen);
-    if (T.permFor(p, 'lieferungen') || T.permFor(p, 'lieferplanung')) listen('tours');
+    if (T.permFor(p, 'lieferungen') || T.permFor(p, 'lieferplanung')) { listen('tours'); listen('days'); }
+    if (T.permFor(p, 'lieferplanung')) listen('orders');
     if (T.permFor(p, 'einkauf')) listen('shopping');
     if (T.permFor(p, 'feld')) listen('feld');
   }

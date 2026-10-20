@@ -229,7 +229,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-20 a';
+const APP_VERSION='2026-10-20 b';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -269,7 +269,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -1238,6 +1238,10 @@ document.addEventListener('click',ev=>{
   if(a==='cdd'){cur.cday=shiftDate(cur.cday,+v);cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='cwk'){cur.cday=shiftDate(cur.cday,7*(+v));cur.cal=cur.cday.slice(0,7);if(!cur.tf.id)cur.tf.date=cur.cday;if(!cur.ef.id)cur.ef.date=cur.cday;return render()}
   if(a==='goliefer'){const [d0,k0]=v.split('|');tab='lieferungen';cur.lday=d0;cur.lcal=d0.slice(0,7);cur.lkind=k0==='abh'?'abh':'lief';cur.lview='tag';window.scrollTo(0,0);return render()}
+  if(a==='ost'){cur.ost=v;return render()}
+  if(a==='ordplan'){assignOrder(v);return}
+  if(a==='ordunplan'){const o=S.orders.find(x=>x.id===v);if(!o)return;const t=S.tours.find(x=>x.id===o.tourId);if(t&&t.stops&&t.stops[o.stopId])t.stops[o.stopId].deleted=true;o.status='offen';o.tourId='';o.stopId='';save();return render()}
+  if(a==='dayveh'){const [ds,...r]=v.split('|'),veh=r.join('|');let d=S.days.find(x=>x.id===ds);if(!d){d={id:ds,vehicles:[]};S.days.push(d)}d.vehicles=d.vehicles||[];const i=d.vehicles.indexOf(veh);if(i>=0)d.vehicles.splice(i,1);else d.vehicles.push(veh);save();return render()}
   if(a==='lkind'){cur.lkind=v;return render()}
   if(a==='lview'){cur.lview=v;return render()}
   if(a==='lmon'){const [y,m]=(cur.lcal||todayStr().slice(0,7)).split('-').map(Number),d=new Date(y,m-1+(+v),1);cur.lcal=d.getFullYear()+'-'+p2(d.getMonth()+1);return render()}
@@ -1278,12 +1282,12 @@ document.addEventListener('click',ev=>{
   if(a==='lwk'){cur.lday=shiftDate(cur.lday||td,7*(+v));cur.lcal=cur.lday.slice(0,7);return render()}
   if(a==='ldelta'){cur.lday=shiftDate(cur.lday||td,+v);return render()}
   if(a==='tournew'){cur.tour=newTour(cur.lday||td);cur.tourOpen=true;cur.stopOpen=false;return render()}
-  if(a==='touredit'){const t=S.tours.find(x=>x.id===v);if(!t)return;cur.tour={id:t.id,date:t.date,driver:t.driver||'',codriver:t.codriver||'',vehicle:t.vehicle||'',color:t.color||'',note:t.note||''};cur.tourOpen=true;cur.stopOpen=false;window.scrollTo(0,document.body.scrollHeight);return render()}
+  if(a==='touredit'){const t=S.tours.find(x=>x.id===v);if(!t)return;cur.tour={id:t.id,date:t.date,driver:t.driver||'',codriver:t.codriver||'',vehicle:t.vehicle||'',color:t.color||'',size:t.size||'',note:t.note||''};cur.tourOpen=true;cur.stopOpen=false;window.scrollTo(0,document.body.scrollHeight);return render()}
   if(a==='tourcancel'){cur.tourOpen=false;return render()}
   if(a==='toursave'){
     const f=cur.tour;if(!f.date)return alert('Bitte ein Datum wählen.');
-    if(f.id)Object.assign(S.tours.find(x=>x.id===f.id),{date:f.date,driver:f.driver,codriver:f.codriver||'',vehicle:f.vehicle,color:f.color||'',note:f.note});
-    else{if(!f.color){const free=TCOL.find(c=>!S.tours.some(t=>!t.deleted&&t.type!=='abholung'&&t.date===f.date&&t.color===c[0]));f.color=(free||TCOL[0])[0]}S.tours.push({id:uid(),date:f.date,driver:f.driver,codriver:f.codriver||'',vehicle:f.vehicle,color:f.color||'',note:f.note,stops:{},createdBy:S.me,created:Date.now()})}
+    if(f.id)Object.assign(S.tours.find(x=>x.id===f.id),{date:f.date,driver:f.driver,codriver:f.codriver||'',vehicle:f.vehicle,color:f.color||'',size:f.size||'',note:f.note});
+    else{if(!f.color){const free=TCOL.find(c=>!S.tours.some(t=>!t.deleted&&t.type!=='abholung'&&t.date===f.date&&t.color===c[0]));f.color=(free||TCOL[0])[0]}S.tours.push({id:uid(),date:f.date,driver:f.driver,codriver:f.codriver||'',vehicle:f.vehicle,color:f.color||'',size:f.size||'',note:f.note,stops:{},createdBy:S.me,created:Date.now()})}
     cur.lday=f.date;cur.tourOpen=false;save();return render();
   }
   if(a==='tourdel'){const t=S.tours.find(x=>x.id===cur.tour.id);if(t&&confirm('Tour ins Archiv verschieben?')){softDel(t);cur.tourOpen=false;save();render()}return}
@@ -1403,6 +1407,7 @@ document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
+  if(t.dataset.tveh){const tt=S.tours.find(x=>x.id===t.dataset.tveh);if(tt){tt.vehicle=t.value;save();render()}}
   if(t.id==='ef-repeat'||t.id==='ef-remind')render();
   if(t.id==='asrole'){asRole=t.value;try{localStorage.setItem('droste-asrole',asRole)}catch(e){}tab='ich';cur.ptab='aufg';window.scrollTo(0,0);return render()}
   if(t.id&&t.id.startsWith('pk-counter-')){const k=t.id.slice(11),pk=S.packs.find(x=>x.id===cur.pstand);if(pk){const v=t.value.trim();pk.counter={...(pk.counter||{}),[k]:{v:v===''?'':v,by:S.me,at:Date.now()}};save();render()}}
@@ -1547,8 +1552,90 @@ const vehiclesList=()=>(S.hofInfo&&S.hofInfo.vehicles&&S.hofInfo.vehicles.length
 const tourStops=t=>Object.values(t.stops||{}).filter(x=>!x.deleted).sort(t.type==='abholung'?((a,b)=>(a.time||'99')<(b.time||'99')?-1:(a.time||'99')>(b.time||'99')?1:(a.order||0)-(b.order||0)):((a,b)=>(a.order||0)-(b.order||0)));
 const TCOL=[['rot','Rot','#e5484d'],['blau','Blau','#3b82f6'],['gruen','Grün','#2e9e4f'],['gelb','Gelb','#f5c518'],['orange','Orange','#f97316'],['lila','Lila','#a855f7'],['tuerkis','Türkis','#14b8a6']];
 const tcol=t=>(TCOL.find(c=>c[0]===t.color)||[0,0,'#8e99a0'])[2];
-const tourName=t=>{const c=TCOL.find(x=>x[0]===t.color);return c?'Tour '+c[1]:'Tour'};
+const tourName=t=>{const c=TCOL.find(x=>x[0]===t.color);return (c?'Tour '+c[1]:'Tour')+(t.size?' · '+(t.size==='gross'?'große Bäume':'kleine Bäume'):'')};
 const mTxt=s=>String(s||'').replace(/(\d{2,3})\s*cm/gi,(m,n)=>(n/100).toFixed(2).replace('.',',')+' m');
+const dayVeh=ds=>{const d=S.days.find(x=>x.id===ds);return d&&d.vehicles&&d.vehicles.length?d.vehicles:null};
+const vlist=ds=>{const a=dayVeh(ds);return a||vehiclesList()};
+const LINECATS=['Baum','Deko','Laternenbaum','Grün','Ständer'];
+const mFmt=l=>l?String(Number(l).toFixed(2)).replace('.',',')+' m':'';
+const orderTrees=o=>(o.positions||[]).filter(p=>['Baum','Deko','Laternenbaum'].includes(p.cat));
+function orderBohren(o){
+  const ps=o.positions||[],st=ps.filter(p=>p.cat==='Ständer').reduce((a,p)=>a+(+p.qty||0),0);
+  const small=ps.filter(p=>p.cat==='Baum'&&(p.len==null||p.len<=3.1)).reduce((a,p)=>a+(+p.qty||0),0);
+  const n1=st&&small?Math.min(st,small):0;
+  const n2=ps.filter(p=>/geb[oö]h?rt|bohr/i.test((p.text||'')+' '+(p.detail||''))).reduce((a,p)=>a+(+p.qty||0),0);
+  return Math.max(n1,n2);
+}
+function posLabel(p){
+  const q=+p.qty||1,qs=Number.isInteger(q)?q:String(q).replace('.',',');
+  if(p.cat==='Ständer')return `${qs} × ${p.text.replace(/^Leihgebühr\s+(für\s+)?/i,'')}`;
+  if(p.cat==='Grün')return `${qs} × ${p.text}`;
+  const nm=p.cat==='Deko'?'Dekobaum':p.cat==='Laternenbaum'?'Laternenbaum':(p.species||p.text);
+  return `${qs} × ${nm}${p.len?' '+mFmt(p.len):''}${p.detail&&!/^\d/.test(p.detail)&&p.cat==='Baum'?' ('+p.detail.replace(/^\d+[.,]?\d*\s*m,?\s*/,'')+')':''}`.replace(/\(\)/,'');
+}
+const orderLines=o=>(o.positions||[]).filter(p=>LINECATS.includes(p.cat));
+const orderService=o=>[...new Set((o.positions||[]).filter(p=>p.cat==='Service').map(p=>(p.text.match(/^(Aufstellen|Lieferung|Abholung)/i)||[''])[0]).filter(Boolean))].join(', ');
+const orderAddr=o=>[o.street,o.zipcity].filter(Boolean).join(', ');
+function orderToStop(o,order){
+  const hints=[...(o.hints||[]),o.contact?'Ansprechpartner: '+o.contact:''].filter(Boolean).join(' · ');
+  const wm=(o.window||'').match(/(\d{1,2})[:.](\d{2})/);
+  const st=(o.positions||[]).filter(p=>p.cat==='Ständer').map(p=>posLabel(p)).join(', ');
+  const id=uid();
+  return {id,order,done:false,time:wm?wm[1].padStart(2,'0')+':'+wm[2]:'',name:o.name,address:orderAddr(o),phone:o.phone||'',
+    items:orderLines(o).map(posLabel).join('; '),note:hints,callBefore:/vorher anrufen/i.test(hints)?'15':'',orderId:o.id,
+    lines:orderLines(o).map(p=>({q:+p.qty||1,t:p.text,c:p.cat,l:p.len||null,s:p.species||''})),bohren:orderBohren(o),staender:st,service:orderService(o)};
+}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`<div class="seg">${[['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']].concat(plan?[['auf','Aufträge']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function orderCard(o){
+  const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
+  const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
+  return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(o.name)}</div><span class="p">LS ${esc(o.ls||'')}</span></div>
+    ${addr?`<div class="p"><a href="${mapUrl(addr)}" target="_blank" rel="noopener">${esc(addr)}</a></div>`:''}
+    <div class="p">${when}${o.window?' · '+esc(o.window):''}${o.phone?' · '+esc(o.phone):''}</div>
+    ${(o.hints||[]).length?`<div class="p" style="font-style:italic">${esc(o.hints.join(' · '))}</div>`:''}
+    <div style="margin-top:6px">${orderLines(o).map(p=>`<div class="p" style="color:var(--text)">${esc(posLabel(p))}</div>`).join('')}</div>
+    ${b?`<div style="margin-top:6px"><span class="bdg">Baum bohren${b>1?' ×'+b:''}</span></div>`:''}
+    ${sv?`<div class="p">Service: ${esc(sv)}</div>`:''}
+    <div class="mini" style="margin-top:8px">${o.status==='geplant'?`<button class="btn sec" data-pl="ordunplan" data-v="${o.id}" style="margin:0">Aus Tour nehmen</button>`:`<button class="btn" data-pl="ordplan" data-v="${o.id}" style="margin:0">In Tour</button>`}</div></div>`;
+}
+function vAuftraege(kind,fahrer,plan){
+  const st=['offen','geplant','alle'].includes(cur.ost)?cur.ost:'offen',all=S.orders.filter(o=>!o.deleted);
+  const nOff=all.filter(o=>o.status!=='geplant').length,nPl=all.length-nOff;
+  const list=all.filter(o=>st==='alle'||(st==='offen'?o.status!=='geplant':o.status==='geplant')).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
+  const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge in dieser Ansicht. Lieferscheine kommen über Daten, Import.</div>'}`;
+}
+function assignOrder(id){
+  const o=S.orders.find(x=>x.id===id);if(!o)return;
+  const d=document.createElement('div');d.className='cheers';
+  const opts=ds=>S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.date===ds).map(t=>`<option value="${t.id}">${esc(tourName(t))}${t.vehicle?' · '+esc(t.vehicle):''}</option>`).join('');
+  d.innerHTML=`<div><p><b>${esc(o.name)}</b></p><label class="f">Liefertag</label><input class="t" type="date" id="ot-date" value="${o.from||todayStr()}"><label class="f">Tour</label><select class="t" id="ot-tour"></select>
+    <label class="f">Falls neue Tour: Art</label><select class="t" id="ot-size"><option value="klein">Kleine Bäume</option><option value="gross">Große Bäume</option></select>
+    <div style="height:14px"></div><button class="btn" data-ok="1" style="padding:16px">In Tour übernehmen</button><div style="height:14px"></div><button class="btn sec" data-no="1" style="padding:16px">Abbrechen</button></div>`;
+  const fill=()=>{d.querySelector('#ot-tour').innerHTML='<option value="">Neue Tour anlegen</option>'+opts(d.querySelector('#ot-date').value)};
+  fill();
+  d.addEventListener('change',e=>{if(e.target.id==='ot-date')fill()});
+  d.addEventListener('click',e=>{const x=e.target;
+    if(x.dataset.ok){const ds=d.querySelector('#ot-date').value,tid=d.querySelector('#ot-tour').value,size=d.querySelector('#ot-size').value;if(!ds)return alert('Bitte einen Liefertag wählen.');d.remove();
+      let t=tid?S.tours.find(y=>y.id===tid):null;
+      if(!t){const free=TCOL.find(c=>!S.tours.some(y=>!y.deleted&&y.type!=='abholung'&&y.date===ds&&y.color===c[0]));t={id:uid(),date:ds,driver:'',codriver:'',vehicle:'',color:(free||TCOL[0])[0],size,note:'',stops:{},createdBy:S.me,created:Date.now()};S.tours.push(t)}
+      t.stops=t.stops||{};const mx=Object.values(t.stops).reduce((m,s)=>Math.max(m,s.order||0),0),stop=orderToStop(o,mx+1);t.stops[stop.id]=stop;
+      o.status='geplant';o.tourId=t.id;o.stopId=stop.id;o.plannedFor=ds;save();cur.lday=ds;cur.lcal=ds.slice(0,7);toast('In Tour übernommen');render()}
+    else if(x.dataset.no||x===d)d.remove()});
+  document.body.appendChild(d);
+}
+function packSummary(ds){
+  const ts=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.date===ds),trees={},stands={},gruen={};let boh=0,n=0;
+  ts.forEach(t=>tourStops(t).forEach(s=>{(s.lines||[]).forEach(l=>{n++;
+    if(l.c==='Ständer')stands[l.t.replace(/^Leihgebühr\s+(für\s+)?/i,'')]=(stands[l.t.replace(/^Leihgebühr\s+(für\s+)?/i,'')]||0)+l.q;
+    else if(l.c==='Grün')gruen[l.t]=(gruen[l.t]||0)+l.q;
+    else{const k=(l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t))+(l.l?' '+mFmt(l.l):'');trees[k]=(trees[k]||0)+l.q}});boh+=+s.bohren||0}));
+  if(!n)return '';
+  const rows=m=>Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0],'de',{numeric:true})).map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><b>${v}</b></div>`).join('');
+  return `<details data-det="packsum" open><summary>Packen für diesen Tag</summary><div class="card pad">${boh?`<div style="margin-bottom:8px"><span class="bdg">Bäume bohren: ${boh}</span></div>`:''}
+    ${Object.keys(trees).length?`<label class="f">Bäume</label>${rows(trees)}`:''}${Object.keys(stands).length?`<label class="f">Ständer</label>${rows(stands)}`:''}${Object.keys(gruen).length?`<label class="f">Grün</label>${rows(gruen)}`:''}</div></details>`;
+}
+const vehBar=ds=>{const sel=dayVeh(ds)||[];return `<div class="card pad"><label class="f">Fahrzeuge an diesem Tag</label><div class="chips">${vehiclesList().map(v=>`<button class="chip ${sel.includes(v)?'on':''}" data-pl="dayveh" data-v="${ds}|${esc(v)}">${esc(v)}</button>`).join('')}</div><div class="hint" style="margin:6px 0 0">Nichts gewählt: alle Fahrzeuge zur Auswahl. Zuweisen kannst du im Voraus oder beim Packen.</div></div>`};
 const canRun=t=>t.driver===S.me||t.codriver===S.me||has('lieferplanung');
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):'';
 const runningTour=()=>S.tours.find(t=>!t.deleted&&t.type!=='abholung'&&t.status==='gestartet'&&(t.driver===S.me||t.codriver===S.me));
@@ -1565,7 +1652,7 @@ function vTourRun(t){
     ${tourCard(t,false)}</div>`;
 }
 setInterval(()=>{const e=document.getElementById('tmr'),t=runningTour();if(e&&t)e.textContent=fmtDur(Date.now()-(t.startedAt||Date.now()))},1000);
-const newTour=d=>({id:null,date:d,driver:'',codriver:'',vehicle:'',color:'',note:''});
+const newTour=d=>({id:null,date:d,driver:'',codriver:'',vehicle:'',color:'',size:'klein',note:''});
 const newStop=tid=>({id:null,tourId:tid,name:'',address:'',time:'',phone:'',items:'',note:'',callBefore:'',standId:''});
 cur.tour=newTour(todayStr());cur.stop=newStop('');cur.lday=todayStr();
 const mapUrl=a=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a);
@@ -1587,7 +1674,7 @@ function stopRow(t,x,i,n,plan){
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?'':(i+1)+'. '}${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
     ${pk?`<div class="p"><b style="color:${x.done?'var(--green,#27AE60)':x.ready?'var(--orange)':'var(--mut)'}">${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</b></div>`:''}
     ${x.address?`<div class="p"><a href="${mapUrl(x.address)}" target="_blank" rel="noopener">${esc(x.address)}</a></div>`:''}
-    ${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}${x.items?`<div class="p">${esc(mTxt(x.items))}</div>`:''}${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}
+    ${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}${x.items?`<div class="p">${esc(mTxt(x.items))}</div>`:''}${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}
     ${x.phone?`<div class="p"><a href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}">${esc(x.phone)}</a></div>`:''}
     ${info}${act}
     ${plan?`<div style="display:flex;gap:8px;margin-top:8px">${pk?'':`<button data-pl="stopup" data-v="${t.id}|${x.id}" ${i===0?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▲</button><button data-pl="stopdown" data-v="${t.id}|${x.id}" ${i===n-1?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▼</button>`}<button class="claim" data-pl="stopedit" data-v="${t.id}|${x.id}">Ändern</button></div>`:''}</div></div></div>`;
@@ -1603,10 +1690,11 @@ function tourCard(t,plan){
   if(t.type==='abholung')return pickCard(t,plan);
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const stat=stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
-  const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div></div></div></div>`).join('')}</div></details>`:'';
+  const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div>${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}</div></div></div>`).join('')}</div></details>`:'';
   const ctrl=run&&!stt&&st.length?`<button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`<button class="btn ${st.length&&done===st.length?'green go':'sec'}" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:'');
   return `<div class="tour"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n" style="font-size:17px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
     <div class="p">${esc(t.vehicle||'Fahrzeug offen')}</div>
+    ${plan&&!t.vehicle?`<select class="t" data-tveh="${t.id}" style="margin:4px 0"><option value="">Fahrzeug zuweisen</option>${vlist(t.date).map(v=>`<option>${esc(v)}</option>`).join('')}</select>`:''}
     <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div>${t.codriver?`<div class="p">Beifahrer: <span class="who">${esc(t.codriver)}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>
     ${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}">Tour ändern</button>`:''}</div>
     ${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}
@@ -1619,7 +1707,8 @@ function tourForm(){
     <div class="mini"><input class="t" type="date" id="tr-date" value="${f.date}" style="min-width:0"><select class="t" id="tr-color"><option value="">Tourfarbe wählen</option>${TCOL.map(c=>`<option value="${c[0]}" ${sel(c[0],f.color)}>Tour ${c[1]}</option>`).join('')}</select></div>
     <div class="mini" style="margin-top:8px"><select class="t" id="tr-driver"><option value="">Fahrer offen</option>${S.people.map(x=>`<option ${sel(x,f.driver)}>${esc(x)}</option>`).join('')}</select>
     <select class="t" id="tr-codriver"><option value="">Beifahrer offen</option>${S.people.map(x=>`<option ${sel(x,f.codriver)}>${esc(x)}</option>`).join('')}</select></div>
-    <select class="t" id="tr-vehicle" style="margin-top:8px"><option value="">Fahrzeug wählen</option>${vehiclesList().map(v=>`<option ${sel(v,f.vehicle)}>${esc(v)}</option>`).join('')}</select>
+    <select class="t" id="tr-size" style="margin-top:8px"><option value="klein" ${sel('klein',f.size)}>Kleine Bäume</option><option value="gross" ${sel('gross',f.size)}>Große Bäume</option><option value="" ${sel('',f.size)}>Tourart offen</option></select>
+    <select class="t" id="tr-vehicle" style="margin-top:8px"><option value="">Fahrzeug später zuweisen</option>${vlist(f.date).map(v=>`<option ${sel(v,f.vehicle)}>${esc(v)}</option>`).join('')}</select>
     <input class="t" id="tr-note" placeholder="Notiz zur Tour (optional)" value="${esc(f.note)}" style="margin-top:8px">
     <div class="mini" style="margin-top:8px"><button class="btn" data-pl="toursave" style="margin:0">${f.id?'Speichern':'Tour anlegen'}</button><button class="btn sec" data-pl="tourcancel" style="margin:0">Abbrechen</button></div>
     ${f.id?'<button class="btn red" data-pl="tourdel">Tour ins Archiv</button>':''}</div>`;
@@ -1640,21 +1729,22 @@ function stopForm(){
 function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
   const fahrer=!has('toursAll')&&!has('lieferplanung');
-  const kind=fahrer?'lief':['lief','abh','ges'].includes(cur.lkind)?cur.lkind:'lief',view=['monat','woche','tag','liste'].includes(cur.lview)?cur.lview:'monat';
+  const kind=fahrer?'lief':['lief','abh','ges'].concat(plan?['auf']:[]).includes(cur.lkind)?cur.lkind:'lief',view=['monat','woche','tag','liste'].includes(cur.lview)?cur.lview:'monat';
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
+  if(kind==='auf'){vAuftraege(kind,fahrer,plan);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));
   const nOf=t=>isP(t)?tourStops(t).length:Math.max(tourStops(t).length,1);
   const on=ds=>live.filter(t=>t.date===ds).sort((a,b)=>(isP(a)-isP(b))||(a.driver||'~').localeCompare(b.driver||'~'));
   const nL=ds=>on(ds).filter(t=>!isP(t)).reduce((s,t)=>s+nOf(t),0),nA=ds=>on(ds).filter(isP).reduce((s,t)=>s+nOf(t),0);
   const badge=ds=>{const l=nL(ds),a=nA(ds);return (l&&kind!=='abh'?`<i class="c-t" style="text-align:center;font-size:13px;font-weight:700">${l}</i>`:'')+(a&&kind!=='lief'?`<i class="c-o" style="text-align:center;font-size:13px;font-weight:700">${a}</i>`:'')};
-  const seg=(fahrer?'':`<div class="seg">${[['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']].map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`)+`
+  const seg=kindSeg(kind,fahrer,plan)+`
     <div class="seg">${[['monat','Monat'],['woche','Woche'],['tag','Tag'],['liste','Liste']].map(([k,l])=>`<button class="${view===k?'on':''}" data-pl="lview" data-v="${k}">${l}</button>`).join('')}</div>`;
   const hint=kind==='abh'?'Zahl = Abholungen pro Tag':kind==='lief'?'Zahl = Stopps pro Tag':'Stopps und Abholungen pro Tag';
   const empty=kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':kind==='lief'?'Für diesen Tag sind keine Touren geplant.':'Für diesen Tag steht nichts an.';
   const add=plan?((kind!=='abh'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn add" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
   const forms=(cur.tourOpen?tourForm():'')+(cur.stopOpen?stopForm():'');
-  const dayBlock=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>${on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`}${add}${forms}`;
+  const dayBlock=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>${plan&&kind!=='abh'?vehBar(day):''}${on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`}${plan&&kind!=='abh'?packSummary(day):''}${add}${forms}`;
   let body='';
   if(view==='monat'){
     const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate(),rows=Math.ceil((off+dim)/7),first=`${y}-${p2(m)}-01`,start=shiftDate(first,-off);
@@ -1675,7 +1765,7 @@ function vLieferungen(){
       +days.map(ds=>`<h3 data-pl="lday" data-v="${ds}" style="${ds===td?'color:#ffd60a':''}">${wdD(ds)}</h3><div class="card">${on(ds).map(t=>calRow({k:isP(t)?'pick':'tour',o:t})).join('')||'<div class="row"><span class="p">–</span></div>'}</div>`).join('')+add+forms;
   }else if(view==='tag'){
     body=`<div class="card pad"><div class="calhead"><button data-pl="ldd" data-v="-1">‹</button><b style="${day===td?'color:#ffd60a':''}">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</b><button data-pl="ldd" data-v="1">›</button></div><div class="hint">${hint}</div></div>
-      ${on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`}${add}${forms}`;
+      ${plan&&kind!=='abh'?vehBar(day):''}${on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`}${plan&&kind!=='abh'?packSummary(day):''}${add}${forms}`;
   }else{
     const up={},past={};
     live.forEach(t=>{const mp=t.date<td?past:up;(mp[t.date]=mp[t.date]||[]).push(t)});
@@ -1847,21 +1937,22 @@ function seedDemo(){
   S.tasks.push(...tasks);S.events.push(...events);S.tours.push(...tours);save();render();
 }
 function removeDemo(){
-  const n=S.tasks.filter(t=>t.demo).length+S.events.filter(e=>e.demo).length+S.tours.filter(t=>t.demo).length;
+  const n=S.tasks.filter(t=>t.demo).length+S.events.filter(e=>e.demo).length+S.tours.filter(t=>t.demo).length+S.orders.filter(o=>o.demo).length;
   if(!n)return alert('Es gibt keine Beispieldaten.');
   if(!confirm(`${n} Beispieleinträge endgültig entfernen? Eigene Einträge bleiben erhalten.`))return;
-  S.tasks=S.tasks.filter(t=>!t.demo);S.events=S.events.filter(e=>!e.demo);S.tours=S.tours.filter(t=>!t.demo);save();render();
+  S.tasks=S.tasks.filter(t=>!t.demo);S.events=S.events.filter(e=>!e.demo);S.tours=S.tours.filter(t=>!t.demo);S.orders=S.orders.filter(o=>!o.demo);save();render();
 }
 function importCal(txt){
   try{
     const d=JSON.parse(txt);let ne=0,nt=0;
     (d.events||[]).forEach(e=>{if(e&&e.id&&e.title&&e.date&&!S.events.some(x=>x.id===e.id)){S.events.push({...e,createdBy:S.me});ne++}});
     (d.tasks||[]).forEach(k=>{if(k&&k.id&&k.title&&!S.tasks.some(x=>x.id===k.id)){S.tasks.push({done:false,created:Date.now(),createdBy:S.me,...k});nt++}});
+    let nor=0;(d.orders||[]).forEach(o=>{if(o&&o.id&&!S.orders.some(x=>x.id===o.id)){S.orders.push({status:'offen',tourId:'',stopId:'',...o});nor++}});
     let ntr=0;(d.tours||[]).forEach(t=>{if(t&&t.id&&t.date&&!S.tours.some(x=>x.id===t.id)){S.tours.push({stops:{},...t});ntr++}});
     let np=0;
     (d.packs||[]).forEach(pk=>{if(!pk||!pk.id||!pk.groups)return;const ex=S.packs.find(x=>x.id===pk.id);
       if(ex){ex.name=pk.name||ex.name;ex.info=pk.info||{};ex.groups=pk.groups;ex.checks=ex.checks||{}}else S.packs.push({checks:{},info:{},...pk});np++});
-    save();alert(`${ne} Kalendereinträge, ${nt} Aufgaben, ${ntr} Touren und ${np} Packlisten importiert.`);render();
+    save();if(nor&&!ne&&!nt&&!ntr&&!np)alert(`${nor} Aufträge importiert.`);else alert(`${ne} Kalendereinträge, ${nt} Aufgaben, ${ntr} Touren und ${np} Packlisten importiert.`+(nor?` Dazu ${nor} Aufträge.`:''));render();
   }catch(e){alert('Das ist keine gültige Importdatei. Der Text muss mit { beginnen.')}
 }
 function permBlock(p,i){
@@ -2067,7 +2158,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{rolesCfg:{},feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{orders:[],days:[],rolesCfg:{},feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>{const r=pr.role;if(r==='admin'||r==='demo')return true;const ov=pr.perms||{};return ov[k]!==undefined?!!ov[k]:!!presetFor(r)[k]},ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
