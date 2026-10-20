@@ -172,16 +172,54 @@ exports.taskStats = onDocumentWritten('tasks/{id}', async event => {
   await db.collection('stats').doc('ranking').set({ all, week, at: Date.now() });
 });
 
-/* Fahrzeiten entlang einer Tour (Google Routes API, Schlüssel liegt nur in secrets/maps) */
+/* OpenRouteService (HeiGIT): Schlüssel in secrets/ors, sonst Rückfall auf Google (secrets/maps) */
+const ORS = 'https://api.openrouteservice.org';
+async function orsKey() { const k = await db.doc('secrets/ors').get(); return k.exists && k.data().key ? k.data().key : null; }
+async function orsGeocode(key, a) {
+  const r = await fetch(`${ORS}/geocode/search?api_key=${encodeURIComponent(key)}&text=${encodeURIComponent(a)}&boundary.country=DE&size=1&layers=address,street,venue`, { headers: { Accept: 'application/json' } });
+  if (r.status === 401 || r.status === 403) throw new HttpsError('failed-precondition', 'OpenRouteService lehnt den Schlüssel ab (Daten, Einstellungen).');
+  if (r.status === 429) throw new HttpsError('resource-exhausted', 'OpenRouteService: Limit erreicht, bitte eine Minute warten.');
+  const j = await r.json();
+  const f = j.features && j.features[0];
+  if (!f) return null;
+  return { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], partial: (f.properties.confidence || 0) < 0.8 };
+}
+async function orsGeocodeMany(key, addrs) {
+  const out = [];
+  for (let i = 0; i < addrs.length; i += 8) out.push(...await Promise.all(addrs.slice(i, i + 8).map(a => orsGeocode(key, a))));
+  return out;
+}
+async function orsLegs(key, pts) {
+  const r = await fetch(`${ORS}/v2/directions/driving-car`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: key }, body: JSON.stringify({ coordinates: pts.map(p => [p.lng, p.lat]) }) });
+  const j = await r.json();
+  if (!r.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', String((j.error && (j.error.message || j.error)) || 'Keine Route gefunden'));
+  return j.routes[0].segments.map(s => Math.round(s.duration || 0));
+}
+async function orsRoute(key, origin, stops, optimize) {
+  const pts = await orsGeocodeMany(key, [origin, ...stops]);
+  const bad = pts.findIndex(p => !p);
+  if (bad >= 0) throw new HttpsError('not-found', 'Adresse nicht gefunden: ' + (bad ? stops[bad - 1] : origin));
+  const o = pts[0], sp = pts.slice(1);
+  if (!optimize) return { legs: await orsLegs(key, [o, ...sp]) };
+  const r = await fetch(`${ORS}/optimization`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: key }, body: JSON.stringify({ jobs: sp.map((p, i) => ({ id: i + 1, location: [p.lng, p.lat] })), vehicles: [{ id: 1, profile: 'driving-car', start: [o.lng, o.lat], end: [o.lng, o.lat] }] }) });
+  const j = await r.json();
+  if (!r.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', String((j.error && (j.error.message || j.error)) || 'Optimierung fehlgeschlagen'));
+  const order = j.routes[0].steps.filter(s => s.type === 'job').map(s => s.id - 1);
+  return { legs: await orsLegs(key, [o, ...order.map(i => sp[i]), o]), order };
+}
+
+/* Fahrzeiten entlang einer Tour (OpenRouteService oder Google Routes API, Schlüssel liegt nur in secrets/maps) */
 exports.routeLegs = onCall(async req => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
   const u = await db.collection('users').doc(req.auth.uid).get();
   if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const ok = await orsKey();
   const k = await db.doc('secrets/maps').get();
-  if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Google-Maps-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
+  if (!ok && (!k.exists || !k.data().key)) throw new HttpsError('failed-precondition', 'Der Routing-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
   const { origin, stops, depart } = req.data || {};
   if (!origin || !Array.isArray(stops) || !stops.length || stops.length > 25) throw new HttpsError('invalid-argument', 'Start und 1 bis 25 Adressen nötig');
   const optimize = req.data && req.data.optimize === true;
+  if (ok) return orsRoute(ok, origin, stops, optimize);
   const body = { origin: { address: origin }, destination: { address: optimize ? origin : stops[stops.length - 1] }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'de-DE', regionCode: 'DE' };
   if (optimize) { body.intermediates = stops.map(a => ({ address: a })); body.optimizeWaypointOrder = true; }
   else if (stops.length > 1) body.intermediates = stops.slice(0, -1).map(a => ({ address: a }));
@@ -203,10 +241,12 @@ exports.geocode = onCall(async req => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
   const u = await db.collection('users').doc(req.auth.uid).get();
   if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const ok = await orsKey();
   const k = await db.doc('secrets/maps').get();
-  if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Google-Maps-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
+  if (!ok && (!k.exists || !k.data().key)) throw new HttpsError('failed-precondition', 'Der Routing-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
   const addrs = (req.data && req.data.addresses) || [];
   if (!Array.isArray(addrs) || addrs.length > 60) throw new HttpsError('invalid-argument', 'Höchstens 60 Adressen');
+  if (ok) return { coords: await orsGeocodeMany(ok, addrs) };
   const out = [];
   for (let i = 0; i < addrs.length; i += 8) {
     const part = await Promise.all(addrs.slice(i, i + 8).map(async a => {
