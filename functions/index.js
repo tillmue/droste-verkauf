@@ -195,12 +195,12 @@ async function orsLegs(key, pts) {
   if (!r.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', String((j.error && (j.error.message || j.error)) || 'Keine Route gefunden'));
   return j.routes[0].segments.map(s => Math.round(s.duration || 0));
 }
-async function orsRoute(key, origin, stops, optimize) {
+async function orsRoute(key, origin, stops, optimize, roundTrip) {
   const pts = await orsGeocodeMany(key, [origin, ...stops]);
   const bad = pts.findIndex(p => !p);
   if (bad >= 0) throw new HttpsError('not-found', 'Adresse nicht gefunden: ' + (bad ? stops[bad - 1] : origin));
   const o = pts[0], sp = pts.slice(1);
-  if (!optimize) return { legs: await orsLegs(key, [o, ...sp]) };
+  if (!optimize) return { legs: await orsLegs(key, roundTrip ? [o, ...sp, o] : [o, ...sp]) };
   const r = await fetch(`${ORS}/optimization`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: key }, body: JSON.stringify({ jobs: sp.map((p, i) => ({ id: i + 1, location: [p.lng, p.lat] })), vehicles: [{ id: 1, profile: 'driving-car', start: [o.lng, o.lat], end: [o.lng, o.lat] }] }) });
   const j = await r.json();
   if (!r.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', String((j.error && (j.error.message || j.error)) || 'Optimierung fehlgeschlagen'));
@@ -219,9 +219,11 @@ exports.routeLegs = onCall(async req => {
   const { origin, stops, depart } = req.data || {};
   if (!origin || !Array.isArray(stops) || !stops.length || stops.length > 25) throw new HttpsError('invalid-argument', 'Start und 1 bis 25 Adressen nötig');
   const optimize = req.data && req.data.optimize === true;
-  if (ok) return orsRoute(ok, origin, stops, optimize);
-  const body = { origin: { address: origin }, destination: { address: optimize ? origin : stops[stops.length - 1] }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'de-DE', regionCode: 'DE' };
+  const roundTrip = req.data && req.data.roundTrip === true;
+  if (ok) return orsRoute(ok, origin, stops, optimize, roundTrip);
+  const body = { origin: { address: origin }, destination: { address: (optimize || roundTrip) ? origin : stops[stops.length - 1] }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'de-DE', regionCode: 'DE' };
   if (optimize) { body.intermediates = stops.map(a => ({ address: a })); body.optimizeWaypointOrder = true; }
+  else if (roundTrip) body.intermediates = stops.map(a => ({ address: a }));
   else if (stops.length > 1) body.intermediates = stops.slice(0, -1).map(a => ({ address: a }));
   if (depart && new Date(depart) > new Date()) body.departureTime = depart;
   const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {

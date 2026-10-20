@@ -37,10 +37,10 @@ function initCloud(FB) {
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
     settings: { get: () => { const h = T.S.hofInfo || {}, out = [];
-                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || h.machines || h.vat || h.reserveMin || h.reserveEvery || h.depot || h.mapsSet || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
+                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || (h.trailers && h.trailers.length) || h.machines || h.vat || h.reserveMin || h.reserveEvery || h.depot || h.mapsSet || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
                   if (T.S.rolesCfg && Object.keys(T.S.rolesCfg).length) out.push(['roles', T.S.rolesCfg]);
                   return out; },
-                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', reserveMin: h.reserveMin || '', reserveEvery: h.reserveEvery || '', depot: h.depot || '', mapsSet: !!h.mapsSet, schonungen: h.schonungen || {} };
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], trailers: h.trailers || [], orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', reserveMin: h.reserveMin || '', reserveEvery: h.reserveEvery || '', depot: h.depot || '', mapsSet: !!h.mapsSet, schonungen: h.schonungen || {} };
                             const rc = m.roles || {}; const changed = JSON.stringify(rc) !== JSON.stringify(T.S.rolesCfg || {}); T.S.rolesCfg = rc; if (changed && T.rolesChanged) setTimeout(() => T.rolesChanged(), 0); }, del: true },
     packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
     feld:     { get: () => T.S.feld.map(x => [x.id, x]), put: m => { T.S.feld = Object.values(m); }, del: false, maps: ['bal'] },
