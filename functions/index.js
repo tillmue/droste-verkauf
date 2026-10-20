@@ -143,11 +143,11 @@ exports.reportCreated = onDocumentCreated('reports/{id}', async event => {
 });
 exports.reportUpdated = onDocumentUpdated('reports/{id}', async event => {
   const b = event.data.before.data(), a = event.data.after.data();
-  if (b.status === a.status || !a.byUid || !['arbeit', 'erledigt'].includes(a.status)) return;
+  if (b.status === a.status || !a.byUid || a.status !== 'erledigt') return;
   const users = await approvedUsers();
   const u = users.find(x => x.id === a.byUid);
   if (!u) return;
-  await pushTo(u, lang => T[a.status === 'erledigt' ? 'repDone' : 'repWork'][lang](a.text || ''));
+  await pushTo(u, lang => T.repDone[lang](a.text || ''));
 });
 /* Wird die zugewiesene Aufgabe erledigt, gilt die Meldung als erledigt */
 exports.reportTaskDone = onDocumentWritten('tasks/{id}', async event => {

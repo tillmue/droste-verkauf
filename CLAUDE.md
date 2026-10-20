@@ -5,6 +5,8 @@
 ## Aktueller Stand (21.10.2026, Version 2026-10-21 S)
 Arbeitsreihenfolge laut Till: erst alle Funktionen, dann Design (läuft, Reiter für Reiter), dann Rollenverteilung, dann Go-Live. Fertig im neuen Stil (Blöcke, Pop-ups, Farbkonzept Grün bestätigen, Rot abbrechen/löschen, Blau neutral, Orange Achtung): Übersicht und Plan (Aufgaben, Kalender, Meldungen, Einkauf, Archiv). **Als Nächstes im selben Stil: Stände, Logistik, Feld, Preise.** Offen von Till: Verkaufsbeginn-Datum, Schonungsnamen, Ständerpreise (mit Rolf), Mac-Dienst für Bestellungs-PDFs (Okay fehlt), Zurücksetzen der Test-Haken in Packlisten (später), Anleitung-Texte erst am Ende. Rollenverteilung (wer was darf) kommt nach dem Design; Rolle Allrounder existiert bereits.
 
+**Meldungen (Version 2026-10-21 T):** Der Melder steht fest auf der Aufgabe (`reportBy`, `reportAt`, `reportText`), weil Mitarbeiter die Meldung selbst nicht lesen dürfen. Anzeige in Aufgabenzeile, Aufgabendetail (Block Meldung) und Meldungskarte (Gemeldet von A, zugewiesen von B an C). `functions/index.js`: Push bei "In Arbeit" entfernt, nur noch bei Erledigt. **Till muss die Functions neu veröffentlichen.**
+
 ## Regeln für jede Änderung
 1. Alles auf Deutsch und Rumänisch: jeder neue Text auch in `i18n-ro.js` (`RO_DICT` exakt, `RO_PATTERNS` mit Zahlen/Namen).
 2. `APP_VERSION` in `index.html` hochzählen.

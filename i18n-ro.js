@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Meldung": "Raport",
 "Das Foto konnte nicht hochgeladen werden. Der Eintrag wird ohne Foto gespeichert.": "Fotografia nu a putut fi încărcată. Intrarea se salvează fără foto.",
 "Das Foto konnte nicht hochgeladen werden. Die Aufgabe wird ohne Foto gespeichert.": "Fotografia nu a putut fi încărcată. Sarcina se salvează fără foto.",
 "Das Foto konnte nicht hochgeladen werden.": "Fotografia nu a putut fi încărcată.",
@@ -1124,6 +1125,7 @@ window.RO_PATTERNS=[
  [/^Verschoben von (.+)$/,(m,d)=>`Mutat de la ${d}`],
  [/^Abgegeben von (.+)$/,(m,d)=>`Predat de ${d}`],
  [/^Von (.+)$/,(m,n)=>`De la ${n}`],
+ [/^Zugewiesen von (.+?) an (.+)$/,(m,a,b)=>`Atribuit de ${a} lui ${b}`],
  [/^Gestartet um (.+)$/,(m,x)=>`Pornit la ${x}`],
  [/^Angekommen um (.+)$/,(m,x)=>`Ajuns la ${x}`],
  [/^Beladung \((\d+)\/(\d+)\)$/,(m,a,b)=>`Încărcare (${a}/${b})`],
