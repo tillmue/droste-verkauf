@@ -154,7 +154,7 @@ main{max-width:600px;margin:0 auto;padding:12px 16px}
 .card.pad{padding:6px 0}
 .row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);gap:10px}
 .row:last-child{border-bottom:0}
-.row .n{font-weight:600}.row .p{color:var(--mut);font-size:13px}
+.row .n{font-weight:600}.row .p{color:var(--mut);font-size:15px}.card .p{font-size:15px}.infoi{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--link);background:none;color:var(--link);font-size:14px;font-weight:700;font-style:italic;padding:0;margin-left:8px}.ihead{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 6px}.ihead b{font-size:19px}.infobox{background:var(--fill);border-radius:12px;padding:10px 12px;margin:0 0 10px;color:var(--text)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;border:1px solid rgba(0,0,0,.2)}
 .ctr{display:flex;align-items:center;gap:4px}
 .ctr button{width:42px;height:42px;border-radius:12px;border:0;font-size:24px;background:var(--fill);color:var(--text)}
@@ -174,7 +174,7 @@ textarea.t{min-height:76px}
 .btn.sec{background:var(--card);color:var(--link);border:1px solid var(--line)}
 .btn.red{background:var(--red)}
 .btn.green{background:var(--green)}
-.hint{color:var(--mut);font-size:13px;margin:6px 2px 8px}
+.hint{color:var(--mut);font-size:15px;margin:6px 2px 8px}
 .warn{background:rgba(255,174,66,.18);color:#ffd08a;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{background:var(--panel);color:var(--link);text-align:left;padding:8px 6px;font-size:12px}
@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 i';
+const APP_VERSION='2026-10-21 j';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -937,7 +937,7 @@ function locAgo(ts){const m=Math.round((Date.now()-ts)/60000);return m<1?'gerade
 function locBox(){
   if(!has('lieferplanung'))return '';
   const L=Object.values(cur.locs||{}).filter(l=>l&&l.at&&Date.now()-l.at<12*36e5&&l.uid!==(cur.cloud&&cur.cloud.profile&&cur.cloud.profile.uid)).sort((a,b)=>b.at-a.at);
-  if(!L.length)return `<div class="hint">Unterwegs: niemand teilt gerade den Standort.</div>`;
+  if(!L.length)return '';
   return `<div class="card pad"><h3 style="margin-top:0">Unterwegs</h3>${L.map(l=>`<div class="kv"><span><b>${esc(l.name||'?')}</b>${l.tour?' · '+esc(l.tour):''}<br><span class="p">${locAgo(l.at)}${Date.now()-l.at>10*60000?' (App zuletzt offen)':''}</span></span><a href="https://www.google.com/maps?q=${l.lat},${l.lng}" target="_blank" rel="noopener" class="claim">Karte</a></div>`).join('')}</div>`
 }
 function askConfirm(msg,ok,cb,no){
@@ -1332,6 +1332,7 @@ document.addEventListener('click',ev=>{
   if(a==='tresume'){const t=S.tours.find(x=>x.id===v);if(!t||!t.paused)return;t.pausedMs=(t.pausedMs||0)+(Date.now()-(t.pausedAt||Date.now()));t.paused=false;t.pausedAt=0;save();window.scrollTo(0,0);return render()}
   if(a==='plsel'){cur.pd.sel[v]=!cur.pd.sel[v];return render()}
   if(a==='plall'){planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);return render()}
+  if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
   if(a==='plrun'){runPlan();return}
   if(a==='planauto'){(async()=>{planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
   if(a==='planok'){applyPlan(v==='all'?null:+v);return}
@@ -1723,8 +1724,10 @@ async function ensureDepotLL(){
 async function runPlan(){
   const pd=cur.pd;pd.busy=true;pd.err='';pd.res=null;pd.msg='Orte werden ermittelt …';render();
   try{
-    const sel=S.orders.filter(o=>!o.deleted&&o.status!=='geplant'&&pd.sel[o.id]);
-    if(!sel.length)throw new Error('Bitte mindestens einen Auftrag auswählen.');
+    const pick=()=>S.orders.filter(o=>!o.deleted&&o.status!=='geplant'&&pd.sel[o.id]);
+    let sel=pick();
+    if(!sel.length){planCandidates(pd.date).forEach(x=>pd.sel[x.o.id]=true);sel=pick()}
+    if(!sel.length)throw new Error('Keine offenen Aufträge für diesen Tag.');
     const dep=await ensureDepotLL();
     const need=sel.filter(o=>!(o.lat&&o.lng)&&orderAddr(o));
     for(let i=0;i<need.length;i+=40){const part=need.slice(i,i+40),r=await window.cloud.geocode({addresses:part.map(orderAddr)});part.forEach((o,j)=>{if(r.coords[j]){o.lat=r.coords[j].lat;o.lng=r.coords[j].lng}})}
@@ -1769,7 +1772,9 @@ function applyPlan(idx){
     pt.stops.forEach((s,k)=>{const lo=S.orders.find(x=>x.id===s.o.id)||s.o,stop=orderToStop(lo,k+1);t.stops[stop.id]=stop;lo.status='geplant';lo.tourId=t.id;lo.stopId=stop.id;lo.plannedFor=pd.date});
     t.legsSig=tourStops(t).map(s=>s.address||'').join('|');
     S.tours.push(t);pt.applied=true;});
-  save();cur.lday=pd.date;cur.lcal=pd.date.slice(0,7);toast('Touren übernommen');render();
+  save();cur.lday=pd.date;cur.lcal=pd.date.slice(0,7);
+  if(pd.res.tours.every(t=>t.applied)){const n=pd.res.tours.length;pd.res=null;pd.sel={};pd.msg='';pd.err='';cur.lkind='lief';cur.lview='tag';toast(`${n} ${n===1?'Tour':'Touren'} angelegt. Jetzt Fahrer und Fahrzeug zuweisen.`)}else toast('Tour übernommen');
+  render();
 }
 async function optimizeTour(t){
   const st=tourStops(t),wa=st.filter(s=>s.address);if(wa.length<2||!window.cloud||!window.cloud.routeLegs)return;
@@ -1779,6 +1784,8 @@ async function optimizeTour(t){
     const after=t.legs.reduce((a,b)=>a+b,0)/60;save();toast(before?`Reihenfolge optimiert (Fahrt ${fmtMin(after)}, vorher ${fmtMin(before)})`:`Reihenfolge optimiert (Fahrt ${fmtMin(after)})`);render()}
   catch(e){alert('Optimieren nicht möglich: '+((e&&(e.message||e.code))||''))}
 }
+const infoBtn=k=>`<button class="infoi" data-pl="info" data-v="${k}" aria-label="Info">i</button>`;
+const infoBox=(k,t)=>(cur.info&&cur.info[k])?`<div class="hint infobox">${t}</div>`:'';
 function planBox(){
   if(!cur.pd)initPlan();
   const pd=cur.pd,cands=planCandidates(pd.date);
@@ -1788,15 +1795,18 @@ function planBox(){
     ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(s.eta)}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}</span></div><div class="p">${esc(orderAddr(s.o))}</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
     ${t.applied?'<div class="hint">Übernommen.</div>':`<button class="btn" data-pl="planok" data-v="${i}" style="margin:8px 0 0">Diese Tour übernehmen</button>`}</div>`;
   const res=pd.res;
-  return `<div class="card pad formc"><label class="f">Tourvorschlag für einen Tag</label>
+  const nSel=Object.values(pd.sel).filter(Boolean).length,anyOpen=S.orders.some(o=>!o.deleted&&o.status!=='geplant');
+  if(!anyOpen&&!res)return '';
+  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App sortiert die offenen Aufträge nach Gebiet und Baumgröße und legt Touren mit Reihenfolge und Fahrzeit an. Danach weist du Fahrer und Fahrzeug zu. Unter "Auswählen und Einstellungen" kannst du einzelne Aufträge, die Anzahl der Touren und die Dauer festlegen.')}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
-    <div class="mini" style="margin-top:8px"><select class="t" id="pd-k"><option value="auto" ${pd.K==='auto'?'selected':''}>Anzahl Touren automatisch</option>${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${String(pd.K)===String(n)?'selected':''}>${n} ${n===1?'Tour':'Touren'} je Gruppe</option>`).join('')}</select>
+    <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`Alle ${cands.length} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
+    ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}
+    <details data-det="planadv" style="margin-top:6px"><summary>Auswählen und Einstellungen</summary>
+    <div class="mini" style="margin-top:4px"><select class="t" id="pd-k"><option value="auto" ${pd.K==='auto'?'selected':''}>Anzahl Touren automatisch</option>${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${String(pd.K)===String(n)?'selected':''}>${n} ${n===1?'Tour':'Touren'} je Gruppe</option>`).join('')}</select>
     <select class="t" id="pd-b"><option value="3.5" ${pd.budget==3.5?'selected':''}>Dauer je Tour 3,5 Std</option><option value="4.5" ${pd.budget==4.5?'selected':''}>Dauer je Tour 4,5 Std</option><option value="6" ${pd.budget==6?'selected':''}>Dauer je Tour 6 Std</option></select></div>
-    <label class="f">Aufträge für diesen Tag (${Object.values(pd.sel).filter(Boolean).length} gewählt)</label>
+    <label class="f">Aufträge (${nSel} gewählt)</label>
     <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}${x.late?' · überfällig':x.must?'':' · flexibel'}</div></div></div><span class="p">${mFmt(orderMaxTree(x.o))}</span></div>`).join('')||'<div class="row"><span class="p">Keine passenden Aufträge für diesen Tag.</span></div>'}</div>
-    <button class="btn green go" data-pl="planauto" style="margin:0 0 8px" ${pd.busy?'disabled':''}>Alle ${cands.length} Aufträge automatisch planen und übernehmen</button>
-    <div class="mini"><button class="btn sec" data-pl="plall" style="margin:0">Alle wählen</button><button class="btn" data-pl="plrun" style="margin:0" ${pd.busy?'disabled':''}>${pd.busy?'Rechnet …':'Vorschlag berechnen'}</button></div>
-    ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
+    <div class="mini"><button class="btn sec" data-pl="plall" style="margin:0">Alle wählen</button><button class="btn" data-pl="plrun" style="margin:0" ${pd.busy?'disabled':''}>${pd.busy?'Rechnet …':'Nur Vorschlag zeigen'}</button></div></details></div>
     ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
 }
 const crewHintTxt=c=>c;
