@@ -230,7 +230,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-20 d';
+const APP_VERSION='2026-10-20 e';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -942,7 +942,7 @@ const catName=k=>(RCAT.find(c=>c[0]===k)||[0,k])[1];
 const repObj=r=>r.cat==='stand'?standNm(r.obj):(r.obj||'');
 const myStand=()=>{const t=S.tasks.find(x=>!x.deleted&&x.person===S.me&&x.stand&&x.date===todayStr());return t?t.stand:''};
 const newRf=()=>({cat:'',obj:'',text:'',urgent:false});
-cur.rOpen=false;cur.rf=newRf();cur.rfile=null;cur.rst='offen';cur.rcat='';
+cur.rOpen=false;cur.rf=newRf();cur.rfile=null;cur.rst='offen';cur.rcat='';cur.dn={};
 const openReports=()=>S.reports.filter(r=>!r.deleted&&r.status!=='erledigt'&&(seeAllReports()||r.byUid===S.myUid||r.by===S.me));
 function reportForm(){
   const f=cur.rf,sel=(a,b)=>a===b?'selected':'';
@@ -1308,13 +1308,20 @@ document.addEventListener('click',ev=>{
     return askConfirm(all?'Tour starten?':'Es ist noch nicht alles als beladen markiert. Trotzdem starten?','Ja, Tour starten',()=>{t.status='gestartet';t.startedAt=Date.now();t.startedBy=S.me;save();render()})}
   if(a==='tpause'){const t=S.tours.find(x=>x.id===v);if(!t||t.paused)return;t.paused=true;t.pausedAt=Date.now();save();window.scrollTo(0,0);return render()}
   if(a==='tresume'){const t=S.tours.find(x=>x.id===v);if(!t||!t.paused)return;t.pausedMs=(t.pausedMs||0)+(Date.now()-(t.pausedAt||Date.now()));t.paused=false;t.pausedAt=0;save();window.scrollTo(0,0);return render()}
-  if(a==='tfinish'){const t=S.tours.find(x=>x.id===v);if(!t)return;const open=tourStops(t).filter(x=>!x.done).length;
+  if(a==='dnchip'){const [sid,...r]=v.split('|'),txt=r.join('|');cur.dn[sid]=(cur.dn[sid]?cur.dn[sid]+'. ':'')+txt;return render()}
+  if(a==='dnedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
+    const d=document.createElement('div');d.className='cheers';
+    d.innerHTML=`<div><p><b>${esc(x.name||'')}</b></p><label class="f">Notiz zur Lieferung</label><textarea class="t" id="dne-text" rows="4">${esc(x.drvNote||'')}</textarea><div style="height:14px"></div><button class="btn" data-ok="1" style="padding:16px">Speichern</button><div style="height:14px"></div><button class="btn sec" data-no="1" style="padding:16px">Abbrechen</button></div>`;
+    d.addEventListener('click',e=>{const y=e.target;if(y.dataset.ok){const nt=(d.querySelector('#dne-text').value||'').trim();d.remove();if(nt)x.drvNote=nt;else delete x.drvNote;save();render()}else if(y.dataset.no||y===d)d.remove()});
+    document.body.appendChild(d);return}
+  if(a==='tfinish'){const t=S.tours.find(x=>x.id===v);if(!t)return;const open=tourStops(t).filter(x=>!x.done).length,force=has('lieferplanung')&&!mineRun(t);
+    if(open&&!force)return alert(`Es sind noch ${open} Stopps offen. Jeder Stopp muss auf Geliefert oder Nicht angetroffen stehen.`);
     return askConfirm(open?`Es sind noch ${open} Stopps offen. Tour trotzdem beenden?`:'Tour beenden?','Ja, Tour beenden',()=>{if(t.paused){t.pausedMs=(t.pausedMs||0)+(Date.now()-(t.pausedAt||Date.now()));t.paused=false;t.pausedAt=0}t.status='beendet';t.finishedAt=Date.now();save();render()})}
   if(a==='sarrive'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;x.arrivedAt=Date.now();save();return render()}
   if(a==='sdeliv'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
-    return askConfirm(`„${x.name||x.address}“ als geliefert markieren?`,'Ja, geliefert',()=>{x.done=true;x.outcome='geliefert';x.doneBy=S.me;x.doneAt=Date.now();save();render()})}
+    return askConfirm(`„${x.name||x.address}“ als geliefert markieren?`,'Ja, geliefert',()=>{x.done=true;x.outcome='geliefert';x.doneBy=S.me;x.doneAt=Date.now();const nt=(cur.dn[sid]||'').trim();if(nt)x.drvNote=nt;delete cur.dn[sid];save();render()})}
   if(a==='snone'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
-    return askConfirm(`„${x.name||x.address}“ nicht angetroffen?`,'Ja, nicht angetroffen',()=>{x.done=true;x.outcome='nicht';x.doneBy=S.me;x.doneAt=Date.now();save();render()})}
+    return askConfirm(`„${x.name||x.address}“ nicht angetroffen?`,'Ja, nicht angetroffen',()=>{x.done=true;x.outcome='nicht';x.doneBy=S.me;x.doneAt=Date.now();const nt=(cur.dn[sid]||'').trim();if(nt)x.drvNote=nt;delete cur.dn[sid];save();render()})}
   if(a==='stopnew'){cur.stop=newStop(v);cur.stopOpen=true;cur.tourOpen=false;return render()}
   if(a==='stopedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     cur.stop={id:sid,tourId:tid,name:x.name||'',address:x.address||'',time:x.time||'',phone:x.phone||'',items:x.items||'',note:x.note||'',callBefore:x.callBefore||'',standId:x.standId||''};cur.stopOpen=true;cur.tourOpen=false;return render()}
@@ -1335,7 +1342,7 @@ document.addEventListener('click',ev=>{
   if(a==='stopdone'){
     const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     return askConfirm(x.done?'Wieder auf „offen“ setzen?':`„${x.name||x.address}“ als geliefert markieren?`,x.done?'Ja, wieder öffnen':'Ja, geliefert',()=>{
-      x.done=!x.done;if(x.done){x.doneBy=S.me;x.doneAt=Date.now()}else{delete x.doneBy;delete x.doneAt}save();render()});
+      x.done=!x.done;if(x.done){x.doneBy=S.me;x.doneAt=Date.now();x.outcome=x.outcome||'geliefert'}else{delete x.doneBy;delete x.doneAt;delete x.outcome}save();render()});
   }
   if(a==='stopup'||a==='stopdown'){
     const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid);if(!t)return;
@@ -1405,6 +1412,7 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='pk-note')cur.pknote=t.value;
+  if(t.id&&t.id.startsWith('dn-')){cur.dn[t.id.slice(3)]=t.value}
   if(t.id==='vat-net'){cur.vN=t.value;vatSync('net')}
   if(t.id==='vat-gross'){cur.vG=t.value;vatSync('gross')}
   if(t.id==='vat-rate'){cur.vR=t.value;vatSync('rate')}
@@ -1697,6 +1705,7 @@ function packSummary(ds){
 const vehBar=ds=>{const sel=dayVeh(ds)||[];return `<div class="card pad"><label class="f">Fahrzeuge an diesem Tag</label><div class="chips">${vehiclesList().map(v=>`<button class="chip ${sel.includes(v)?'on':''}" data-pl="dayveh" data-v="${ds}|${esc(v)}">${esc(v)}</button>`).join('')}</div><div class="hint" style="margin:6px 0 0">Nichts gewählt: alle Fahrzeuge zur Auswahl. Zuweisen kannst du im Voraus oder beim Packen.</div></div>`};
 const canRun=t=>t.driver===S.me||t.codriver===S.me||has('lieferplanung');
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):'';
+const DNCHIPS=['Nur abgelegt','Nicht aufgestellt','Kunde wollte keine Aufstellung','Bei Nachbar abgegeben','Ständer dagelassen'];
 const mineRun=t=>t.startedBy===S.me||(!t.startedBy&&(t.driver===S.me||t.codriver===S.me));
 const runningTour=()=>S.tours.find(t=>!t.deleted&&t.type!=='abholung'&&t.status==='gestartet'&&!t.paused&&mineRun(t));
 const pausedTour=()=>S.tours.find(t=>!t.deleted&&t.type!=='abholung'&&t.status==='gestartet'&&t.paused&&mineRun(t));
@@ -1730,10 +1739,11 @@ function appleRoute(stops){const ad=stops.filter(x=>x.address).map(x=>x.address)
 function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Google Maps</a><a class="btn sec" href="${a}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Karten</a>`:''}
 function stopRow(t,x,i,n,plan){
   const pk=t.type==='abholung',run=!pk&&t.status==='gestartet'&&canRun(t),nxt=tourStops(t).find(s=>!s.done),isNext=run&&nxt&&nxt.id===x.id;
-  const info=(x.arrivedAt?`<div class="p">Angekommen um ${hm(x.arrivedAt)}</div>`:'')+(x.outcome==='nicht'?'<div class="p" style="color:var(--orange)"><b>Nicht angetroffen</b></div>':'');
-  const act=isNext?`<div class="mini" style="margin-top:8px">${x.address?routeBtns(gmapsUrl(x.address),appleUrl(x.address)):''}${x.phone?`<a class="btn sec" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Anrufen</a>`:''}</div><div class="mini" style="margin-top:8px">${!x.arrivedAt?`<button class="btn" data-pl="sarrive" data-v="${t.id}|${x.id}" style="margin:0">Angekommen</button>`:`<button class="btn green go" data-pl="sdeliv" data-v="${t.id}|${x.id}" style="margin:0">Geliefert</button><button class="btn sec" data-pl="snone" data-v="${t.id}|${x.id}" style="margin:0;color:var(--orange)">Nicht angetroffen</button>`}</div>`:'';
+  const info=(x.arrivedAt?`<div class="p">Angekommen um ${hm(x.arrivedAt)}</div>`:'')+(x.drvNote?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.drvNote)}</div>`:'')+(x.done&&(run||plan)&&!pk?`<button class="claim" data-pl="dnedit" data-v="${t.id}|${x.id}" style="margin-top:4px">${x.drvNote?'Notiz ändern':'Notiz hinzufügen'}</button>`:'')+(x.outcome==='nicht'?'<div class="p" style="color:var(--orange)"><b>Nicht angetroffen</b></div>':'');
+  const noteBlock=`<div class="card pad formc" style="margin:8px 0 0"><label class="f">Notiz zur Lieferung (optional)</label><div class="chips">${DNCHIPS.map(c=>`<button class="chip" data-pl="dnchip" data-v="${x.id}|${c}">${c}</button>`).join('')}</div><textarea class="t" id="dn-${x.id}" rows="2" placeholder="z. B. nur abgelegt, nicht aufgestellt">${esc(cur.dn[x.id]||'')}</textarea></div>`;
+  const act=isNext?`<div class="mini" style="margin-top:8px">${x.address?routeBtns(gmapsUrl(x.address),appleUrl(x.address)):''}${x.phone?`<a class="btn sec" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Anrufen</a>`:''}</div>${x.arrivedAt?noteBlock:''}<div class="mini" style="margin-top:8px">${!x.arrivedAt?`<button class="btn" data-pl="sarrive" data-v="${t.id}|${x.id}" style="margin:0">Angekommen</button>`:`<button class="btn green go" data-pl="sdeliv" data-v="${t.id}|${x.id}" style="margin:0">Geliefert</button><button class="btn sec" data-pl="snone" data-v="${t.id}|${x.id}" style="margin:0;color:var(--orange)">Nicht angetroffen</button>`}</div>`:'';
   return `<div class="row ${x.done?'dim':''}" style="align-items:flex-start${isNext?';background:var(--panel);border-radius:10px':''}"><div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0">
-    <button class="chk big ${x.done?'on':''}" data-pl="${pk?'pickst':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${x.done?'✓':(pk&&x.ready)?'•':''}</button>
+    <button class="chk big ${x.done?'on':''}" ${run&&!pk?'disabled':''} data-pl="${pk?'pickst':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${x.done?'✓':(pk&&x.ready)?'•':''}</button>
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?'':(i+1)+'. '}${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
     ${pk?`<div class="p"><b style="color:${x.done?'var(--green,#27AE60)':x.ready?'var(--orange)':'var(--mut)'}">${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</b></div>`:''}
     ${x.address?`<div class="p"><a href="${mapUrl(x.address)}" target="_blank" rel="noopener">${esc(x.address)}</a></div>`:''}
@@ -1754,7 +1764,7 @@ function tourCard(t,plan){
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div>${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}</div></div></div>`).join('')}</div></details>`:'';
-  const ctrl=run&&!stt&&st.length?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}<button class="btn ${st.length&&done===st.length?'green go':'sec'}" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:'');
+  const ctrl=run&&!stt&&st.length?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}${st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:(has('lieferplanung')&&!mineRun(t)?`<button class="btn sec" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden (Admin, mit offenen Stopps)</button>`:`<div class="hint">Noch ${st.length-done} Stopps offen. Beenden geht, sobald jeder Stopp auf Geliefert oder Nicht angetroffen steht.</div>`)}`:'');
   return `<div class="tour"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n" style="font-size:17px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
     <div class="p">${esc(t.vehicle||'Fahrzeug offen')}</div>
     ${plan&&!t.vehicle?`<select class="t" data-tveh="${t.id}" style="margin:4px 0"><option value="">Fahrzeug zuweisen</option>${vlist(t.date).map(v=>`<option>${esc(v)}</option>`).join('')}</select>`:''}
