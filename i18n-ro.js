@@ -1,4 +1,6 @@
 window.RO_DICT={
+"Gespeichert. Der Schlüssel wird aus Sicherheitsgründen nicht mehr angezeigt.": "Salvat. Cheia nu mai este afișată din motive de securitate.",
+"Wird gespeichert …": "Se salvează …",
 "Schlüssel gespeichert": "Cheie salvată",
 "Schlüssel einfügen und bestätigen": "Lipește cheia și confirmă",
 "Startpunkt für Routen (Hof)": "Punct de plecare pentru trasee (fermă)",

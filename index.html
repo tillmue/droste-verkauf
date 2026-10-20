@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-20 f';
+const APP_VERSION='2026-10-20 g';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2102,6 +2102,7 @@ function vDaten(){
   <input class="t" id="hof-depot" value="${esc((S.hofInfo&&S.hofInfo.depot)||'')}" placeholder="Im Gattberg 19, 49191 Belm">
   <label class="f">Google-Maps-Schlüssel für Fahrzeiten ${S.hofInfo&&S.hofInfo.mapsSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
   <input class="t" id="hof-mapskey" type="password" autocomplete="off" placeholder="Schlüssel einfügen und bestätigen">
+  <div class="hint" id="mapskey-msg"></div>
   <label class="f">Ersatzständer pro Tour: mindestens</label>
   <input class="t" id="hof-resmin" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveMin)||''))}" placeholder="2">
   <label class="f">Ersatzständer pro Tour: ein Ersatz je so viele Ständer</label>
@@ -2325,7 +2326,9 @@ document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
   if(t.id==='hof-depot'){S.hofInfo={...S.hofInfo,depot:t.value.trim()};save()}
-  if(t.id==='hof-mapskey'&&t.value.trim()&&window.cloud&&window.cloud.setSecret){const kv=t.value.trim();t.value='';window.cloud.setSecret('maps',kv).then(()=>{S.hofInfo={...S.hofInfo,mapsSet:true};save();toast('Schlüssel gespeichert');render()}).catch(e=>alert('Schlüssel konnte nicht gespeichert werden: '+(e.code||e.message)))}
+  if(t.id==='hof-mapskey'&&t.value.trim()&&window.cloud&&window.cloud.setSecret){const kv=t.value.trim(),msg=document.getElementById('mapskey-msg');if(msg){msg.textContent='Wird gespeichert …';msg.style.color=''}
+    window.cloud.setSecret('maps',kv).then(()=>{t.value='';S.hofInfo={...S.hofInfo,mapsSet:true};save();toast('Schlüssel gespeichert');render();const m2=document.getElementById('mapskey-msg');if(m2){m2.textContent='Gespeichert. Der Schlüssel wird aus Sicherheitsgründen nicht mehr angezeigt.';m2.style.color='#7fe0a0'}})
+    .catch(e=>{if(msg){msg.textContent='Nicht gespeichert: '+(e.code||e.message)+(e.code==='permission-denied'?'. Sind die neuen Firestore-Regeln veröffentlicht?':'');msg.style.color='var(--red)'}})}
   if(t.id==='hof-resmin'){S.hofInfo={...S.hofInfo,reserveMin:t.value.trim()};save()}
   if(t.id==='hof-resevery'){S.hofInfo={...S.hofInfo,reserveEvery:t.value.trim()};save()}
   if(t.id==='hof-vat'){S.hofInfo={...S.hofInfo,vat:t.value.trim()};save()}
