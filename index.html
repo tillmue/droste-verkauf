@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 d';
+const APP_VERSION='2026-10-21 e';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1860,7 +1860,7 @@ function etaTimes(t){
   return out;
 }
 const lineLabel=l=>{const q=+l.q||1,nm=l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);return `${q} × ${nm}${l.l?' '+mFmt(l.l):''}`};
-function nextDepart(){const n=new Date();if(n.getHours()<16){const d=new Date(n.getTime()+36e5);return d.toISOString()}const d=new Date(n);d.setDate(d.getDate()+1);while([0,6].includes(d.getDay()))d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString()}
+function nextDepart(){const n=new Date();if(n.getHours()<16){const d=new Date(n.getTime()+36e5);return d.toISOString()}const d=new Date(n);d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString()}
 async function computeLegs(t,quiet){
   const st=tourStops(t);if(!st.length||!window.cloud||!window.cloud.routeLegs)return;
   const withAddr=st.filter(s=>s.address);if(!withAddr.length)return;
