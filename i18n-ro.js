@@ -1,4 +1,7 @@
 window.RO_DICT={
+"Abholungen werden nicht ausgeliefert und nicht in eine Tour eingeplant. Die Bäume müssen trotzdem gepackt, bereitgelegt und etikettiert werden. Die Etikettenliste steht unter Abholung.": "Ridicările nu se livrează și nu se planifică într-un tur. Brazii trebuie totuși împachetați, pregătiți și etichetați. Lista de etichete este la Ridicare.",
+"Zu den Abholungen": "La ridicări",
+"Noch vorzubereiten": "De pregătit",
 "Aufenthalt: Zuschlag je weiterem Baum (Standard 1, mehrere Bäume zählen abnehmend, höchstens 15 Min)": "Durata: supliment pentru fiecare brad în plus (standard 1, mai mulți brazi contează descrescător, maxim 15 min)",
 "Werden nicht ausgeliefert, aber gepackt, bereitgelegt und etikettiert.": "Nu se livrează, dar se împachetează, se pregătesc și se etichetează.",
 "In Abholungen übernehmen": "Preia în ridicări",
@@ -1027,6 +1030,7 @@ window.RO_PATTERNS=[
  [/^Abholungen auf dem Hof \((\d+)\)$/,(m,n)=>`Ridicări de la fermă (${n})`],
  [/^Etiketten schreiben \((\d+)\)$/,(m,n)=>`Scrie etichetele (${n})`],
  [/^(\d+) (Abholung|Abholungen) übernommen$/,(m,n)=>`${n} ridicări preluate`],
+ [/^(\d+) (Baum|Bäume) zu packen, bereitzulegen und zu etikettieren\.$/,(m,n)=>`${n} brazi de împachetat, pregătit și etichetat.`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],

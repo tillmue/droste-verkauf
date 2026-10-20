@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 p';
+const APP_VERSION='2026-10-21 q';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1340,7 +1340,6 @@ document.addEventListener('click',ev=>{
   if(a==='ttog'){cur.tex=cur.tex||{};const t0=S.tours.find(x=>x.id===v),cur0=cur.tex[v]!==undefined?!!cur.tex[v]:!!(t0&&t0.status==='gestartet');cur.tex[v]=!cur0;return render()}
   if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
   if(a==='plrun'){runPlan();return}
-  if(a==='pickplan'){const n=planPickups(cur.pd.date);if(n){cur.lday=cur.pd.date;cur.lcal=cur.pd.date.slice(0,7);cur.lkind='abh';toast(`${n} ${n===1?'Abholung':'Abholungen'} übernommen`)}return render()}
   if(a==='planauto'){(async()=>{planPickups(cur.pd.date);if(!Object.values(cur.pd.sel).some(Boolean))planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
   if(a==='planok'){applyPlan(v==='all'?null:+v);return}
   if(a==='topt'){const t=S.tours.find(x=>x.id===v);if(t){toast('Reihenfolge wird optimiert …');optimizeTour(t)}return}
@@ -1735,14 +1734,20 @@ const toRad=d=>d*Math.PI/180;
 const havKm=(a,b)=>{const R=6371,dl=toRad(b.lat-a.lat),dg=toRad(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
 const orderPickup=o=>/abgeholt|abholung|selbst\s*abhol/i.test([...(o.hints||[]),o.window||''].join(' '))||(/Abholung/i.test(orderService(o))&&!/Lieferung|Aufstellen/i.test(orderService(o)));
 const inWindow=(o,day)=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&t>=day};
-function planPickups(day){
-  const L=S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,day));
+function planPickups(day,list){
+  const L=list||S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,day));
   if(!L.length)return 0;
   let p=S.tours.find(x=>!x.deleted&&x.type==='abholung'&&x.date===day);
   if(!p){p={id:uid(),type:'abholung',date:day,driver:'',vehicle:'',note:'',stops:{},createdBy:S.me,created:Date.now()};S.tours.push(p)}
   p.stops=p.stops||{};
   L.forEach(o=>{const mx=Object.values(p.stops).reduce((m,s)=>Math.max(m,s.order||0),0),stop=orderToStop(o,mx+1);stop.address='';stop.pickup=true;p.stops[stop.id]=stop;o.status='geplant';o.tourId=p.id;o.stopId=stop.id;o.plannedFor=day});
   save();return L.length;
+}
+function syncPickups(){
+  if(!has('lieferplanung')||cur.pkSync)return;
+  const td=todayStr(),L=S.orders.filter(o=>orderOpen(o)&&orderPickup(o));if(!L.length)return;
+  const dayOf=o=>{const d=o.from||o.to||td;return d<td?td:d};
+  cur.pkSync=true;try{[...new Set(L.map(dayOf))].forEach(d=>planPickups(d,L.filter(o=>dayOf(o)===d)))}finally{cur.pkSync=false}
 }
 const orderOpen=o=>!o.deleted&&o.status!=='geplant'&&o.status!=='erledigt';
 const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),0),ls=tr.map(p=>+p.len||0).filter(Boolean),mn=ls.length?Math.min(...ls):0,mx=ls.length?Math.max(...ls):0;
@@ -1897,7 +1902,6 @@ function planBox(){
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
-    ${(()=>{const pk=S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,pd.date));return pk.length?`<div class="card pad" style="margin:8px 0"><div class="n">Abholungen auf dem Hof (${pk.length})</div><div class="hint" style="margin:2px 0 6px">Werden nicht ausgeliefert, aber gepackt, bereitgelegt und etikettiert.</div>${pk.map(o=>`<div class="kv"><span>${esc(o.name)}${winTxt(o.window)?' · '+winTxt(o.window):''}</span><span class="p">${orderTreeInfo(o)}</span></div>`).join('')}<button class="btn sec" data-pl="pickplan" style="margin:8px 0 0">In Abholungen übernehmen</button></div>`:''})()}
     <label class="f">Aufträge für diesen Tag (${nSel} von ${cands.length} gewählt)</label>
     <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
@@ -1906,16 +1910,24 @@ function planBox(){
     ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
 }
 const crewHintTxt=c=>c;
+function prepBox(){
+  const day=cur.pd.date,pk=S.orders.filter(o=>!o.deleted&&orderPickup(o)&&o.status!=='erledigt'&&(o.plannedFor===day||(orderOpen(o)&&inWindow(o,day))));
+  if(!pk.length)return '';
+  const n=pk.reduce((a,o)=>a+nTrees(o),0);
+  return `<div class="card pad"><div class="ihead"><b>Noch vorzubereiten</b>${infoBtn('prep')}</div>${infoBox('prep','Abholungen werden nicht ausgeliefert und nicht in eine Tour eingeplant. Die Bäume müssen trotzdem gepackt, bereitgelegt und etikettiert werden. Die Etikettenliste steht unter Abholung.')}
+    ${pk.map(o=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(o.name)}</b>${winTxt(o.window)?` <span class="p">· ${winTxt(o.window)}</span>`:''}<br><span class="p">${orderTreeInfo(o)}</span></span></div>`).join('')}
+    <div class="hint">${n} ${n===1?'Baum':'Bäume'} zu packen, bereitzulegen und zu etikettieren.</div><button class="btn sec" data-pl="goliefer" data-v="${day}|abh" style="margin:0">Zu den Abholungen</button></div>`;
+}
 function vAuftraege(kind,fahrer,plan){
   if(!cur.pd)initPlan();
   const day=cur.pd.date,all=S.orders.filter(o=>!o.deleted);
   const inWin=o=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&t>=day};
-  const planned=o=>o.status==='geplant'&&(o.plannedFor===day||(!o.plannedFor&&inWin(o))),isOff=o=>orderOpen(o)&&inWin(o);
+  const planned=o=>!orderPickup(o)&&o.status==='geplant'&&(o.plannedFor===day||(!o.plannedFor&&inWin(o))),isOff=o=>!orderPickup(o)&&orderOpen(o)&&inWin(o);
   const st=['offen','geplant','alle'].includes(cur.ost)?cur.ost:'offen';
   const nOff=all.filter(isOff).length,nPl=all.filter(planned).length;
-  const list=all.filter(o=>st==='alle'?(isOff(o)||planned(o)||(o.status==='erledigt'&&inWin(o))):st==='offen'?isOff(o):planned(o)).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
+  const list=all.filter(o=>st==='alle'?(isOff(o)||planned(o)||(!orderPickup(o)&&o.status==='erledigt'&&inWin(o))):st==='offen'?isOff(o):planned(o)).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
   const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${locBox()}${nachBox()}${planBox()}<h3 style="margin-bottom:2px">Aufträge am ${wdD(day)}</h3>${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge für diesen Tag in dieser Ansicht.</div>'}`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${locBox()}${nachBox()}${planBox()}<h3 style="margin-bottom:2px">Aufträge am ${wdD(day)}</h3>${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge für diesen Tag in dieser Ansicht.</div>'}${prepBox()}`;
 }
 function nacharbeit(){
   const td=todayStr(),out=[],seen=new Set();
@@ -2132,6 +2144,7 @@ function vLieferungen(){
   const kinds=['lief','abh','ges'].concat(plan?['auf']:[]);
   const kind=fahrer?'lief':kinds.includes(cur.lkind)?cur.lkind:(plan?'auf':'lief');
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
+  syncPickups();
   if(kind==='auf'){vAuftraege(kind,fahrer,plan);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));
