@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 z';
+const APP_VERSION='2026-10-21 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -719,9 +719,10 @@ function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>`;
 }
 /* ---------- Wetter (Bright Sky, Daten des Deutschen Wetterdienstes) ---------- */
-const WX={lat:52.2799,lon:8.0472,ort:'Osnabrück'};
+const WX={lat:52.3125,lon:8.1475,ort:'Hof Droste, Belm'};
+const salesStarted=()=>{const d=S.hofInfo&&S.hofInfo.salesStart;return !!d&&todayStr()>=d};
 let wxData=null,wxBusy=null;
-const wxLoc=()=>{const s=S.stands.find(x=>x.id===cur.stand);return s&&s.lat&&s.lng?{lat:s.lat,lon:s.lng,ort:s.name,key:s.id}:{...WX,key:'hof'}};
+const wxLoc=()=>{const ps=S.pstand&&S.pstand[S.me],s=salesStarted()&&ps?S.stands.find(x=>x.id===ps):null;return s&&s.lat&&s.lng?{lat:s.lat,lon:s.lng,ort:s.name,key:s.id}:{...WX,key:'hof'}};
 async function ensureStandCoords(){
   if(cur.sgeo||!isAdmin()||!window.cloud||!window.cloud.geocode)return;cur.sgeo=true;
   const need=S.stands.filter(s=>s.address&&!(s.lat&&s.lng));if(!need.length)return;
@@ -1648,7 +1649,7 @@ function vStaende(){
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */
 const DEF_VEH=['Transit Reinhard','Vito Felix','Pritsche Hegger','Kasten Hegger','(T5 Kimme)','(T5 Magnus)','(Ranger Felix)','(Ford Galaxy, kein Lieferfahrzeug)'];
-const DEF_PARTNER=['E-Center Schinkel | Tannenburgstraße 236, 49084 Osnabrück-Schinkel','Sannemann | Belmer Str. 96, 49084 Osnabrück-Schinkel','Hoppe | Dorfstraße 30, 49565 Bramsche','Sehlmeyer | Stirper Str. 42, 49163 Bohmte-Stirpe','Massmann | Flachswandstraße 15, 49152 Bad Essen'];
+const DEF_PARTNER=['Sannemann | Belmer Str. 96, 49084 Osnabrück-Schinkel','Hoppe | Dorfstraße 30, 49565 Bramsche','Sehlmeyer | Stirper Str. 42, 49163 Bohmte-Stirpe','Massmann | Flachswandstraße 15, 49152 Bad Essen'];
 const partnersList=()=>(((S.hofInfo&&S.hofInfo.partners)||DEF_PARTNER.join('\n')).split('\n').map(x=>x.trim()).filter(Boolean)).map(l=>{const i=l.indexOf('|');return i<0?{n:l,a:''}:{n:l.slice(0,i).trim(),a:l.slice(i+1).trim()}});
 const DEF_TRL=['Holzanhänger 1-achser 1','Holzanhänger 1-achser 2','Kipper','Tandem Grün','Kofferanhänger Reinhard','Helges Anhänger','Planenanhänger Reinhard','Autotransporter Reinhard','Langer Anhänger','(Blauer Anhänger Felix)','(Peter Kipper)','(Peter Gitter)','(Peter Einachser)'];
 const trailersList=()=>(S.hofInfo&&S.hofInfo.trailers&&S.hofInfo.trailers.length)?S.hofInfo.trailers:DEF_TRL;
@@ -1759,7 +1760,7 @@ function vPacken(t){
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}
     ${fin}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung'],['part','Partner']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
@@ -2084,6 +2085,22 @@ function freeStopOrder(s){
   if(s.done&&s.outcome==='geliefert'){o.status='erledigt';return}
   o.status='offen';o.tourId='';o.stopId='';delete o.plannedFor;if(s.pickup)o.pickupSkip=true;
 }
+const nameKey=n=>String(n||'').toLowerCase().replace(/[^a-zäöüß0-9]/g,'');
+const partnerMatch=(p,n)=>{const a=nameKey(p.n),b=nameKey(n);return a.length>=4&&b.length>=4&&(b.includes(a)||a.includes(b))};
+function partnerDeliveries(p){
+  const out=[];
+  S.orders.filter(o=>!o.deleted&&partnerMatch(p,o.name)).forEach(o=>{
+    const t=S.tours.find(x=>x.id===o.tourId),st=t&&t.stops&&t.stops[o.stopId],done=o.status==='erledigt'||(st&&st.done&&st.outcome==='geliefert');
+    out.push({date:o.plannedFor||o.from||'',items:orderLines(o).filter(l=>l.cat!=='Ständer').map(posLabel).join('; '),trees:nTrees(o),state:done?'geliefert':o.status==='geplant'?'in Tour':'offen'});
+  });
+  S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(t=>tourStops(t).forEach(s=>{if(s.orderId)return;if(partnerMatch(p,s.name))out.push({date:t.date,items:s.items||'',trees:stopTrees(s),state:s.done&&s.outcome==='geliefert'?'geliefert':s.done?'nicht angetroffen':'in Tour'})}));
+  return out.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+function vPartner(kind,fahrer,plan){
+  const P=partnersList();
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<h2 style="margin-top:4px">Partnerstände</h2><div class="hint">Unabhängige Stände, die Bäume von uns bekommen. Die Liste zeigt Lieferscheine und Stopps mit dem Namen des Partners.</div>${P.map(p=>{const L=partnerDeliveries(p),del=L.filter(x=>x.state==='geliefert').reduce((a,x)=>a+x.trees,0),open=L.filter(x=>x.state!=='geliefert').length;
+    return `<div class="card pad"><div class="n">${esc(p.n)}</div><div class="p">${esc(p.a)}</div><div class="kv"><span>Bäume geliefert</span><b>${del}</b></div>${open?`<div class="p" style="color:var(--orange)">${open} offen oder unterwegs</div>`:''}${L.length?`<details data-det="part-${esc(p.n)}"><summary>Lieferungen (${L.length})</summary>${L.map(x=>`<div class="row" style="display:block"><div class="n">${x.date?wdD(x.date):'ohne Datum'} · <span style="color:${x.state==='geliefert'?'var(--green)':'var(--orange)'}">${x.state}</span></div><div class="p">${esc(mTxt(x.items))||'–'}</div></div>`).join('')}</details>`:'<div class="hint">Noch keine Lieferung erfasst.</div>'}</div>`}).join('')||'<div class="hint">Keine Partnerstände hinterlegt (Daten, Einstellungen).</div>'}`;
+}
 function nacharbeit(){
   const td=todayStr(),out=[],seen=new Set();
   S.orders.filter(orderOpen).forEach(o=>{const d=o.to||o.from;if(d&&d<td){out.push({o,why:'Nicht in einer Tour geplant',day:d});seen.add(o.id)}});
@@ -2299,11 +2316,12 @@ function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
   if(cur.packTour){const pt=S.tours.find(x=>x.id===cur.packTour&&!x.deleted);if(pt&&(plan||canRun(pt))){vPacken(pt);return}cur.packTour=''}
   const fahrer=!has('toursAll')&&!has('lieferplanung');
-  const kinds=['lief','abh','ges'].concat(plan?['auf','best']:[]);
+  const kinds=['lief','abh','ges'].concat(plan?['auf','best','part']:[]);
   const kind=fahrer?'lief':kinds.includes(cur.lkind)?cur.lkind:(plan?'auf':'lief');
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
   syncPickups();
   if(kind==='best'){vBestellungen(kind,fahrer,plan);return}
+  if(kind==='part'){vPartner(kind,fahrer,plan);return}
   if(kind==='auf'){vAuftraege(kind,fahrer,plan);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));
@@ -2570,6 +2588,8 @@ function vDaten(){
   <textarea class="t" id="hof-mach" rows="3">${esc(machinesList().join('\n'))}</textarea>
   <label class="f">Fahrzeuge für Touren (eins pro Zeile)</label>
   <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea>
+  <label class="f">Verkaufsbeginn (bis dahin zeigt das Wetter den Hof, danach den Stand der Person)</label>
+  <input class="t" type="date" id="hof-salesStart" value="${esc((S.hofInfo&&S.hofInfo.salesStart)||'')}">
   <label class="f">Partnerstände, die nur Bäume von uns bekommen (Name | Adresse, einer pro Zeile)</label>
   <textarea class="t" id="hof-partner" rows="5">${esc(partnersList().map(p=>p.n+' | '+p.a).join('\n'))}</textarea>
   <label class="f">Anhänger für Touren (einer pro Zeile)</label>
@@ -2801,6 +2821,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-mach'){S.hofInfo={...S.hofInfo,machines:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
+  if(t.id==='hof-salesStart'){S.hofInfo={...S.hofInfo,salesStart:t.value};wxData=null;save()}
   if(t.id==='hof-partner'){S.hofInfo={...S.hofInfo,partners:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
   if(t.id==='hof-trl'){S.hofInfo={...S.hofInfo,trailers:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
