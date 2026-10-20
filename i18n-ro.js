@@ -1,4 +1,14 @@
 window.RO_DICT={
+"Tippe auf die Karte zum Vergrößern. Dann mit zwei Fingern zoomen.": "Atinge harta pentru a o mări. Apoi mărește cu două degete.",
+"Orte mit Bäumen": "Locuri cu arbori",
+"liegt": "se află",
+"liegt hier": "se află aici",
+"Menge offen": "Cantitate necunoscută",
+"Leer": "Gol",
+"Sorte hinzufügen, die hier noch liegt …": "Adaugă un soi care mai este aici …",
+"Hier ist nichts eingetragen. Unter Netzen angeben, was hier liegt, oder unten eine Sorte hinzufügen.": "Aici nu este nimic înregistrat. La Împachetat indică ce se află aici sau adaugă mai jos un soi.",
+"Palette voll? Sag, wie viele Bäume hier noch liegen. Eine ungefähre Zahl reicht.": "Paletul e plin? Spune câți arbori mai sunt aici. Un număr aproximativ este suficient.",
+"Tippe die Sorten an, die hier liegen. Du musst keine Anzahl angeben.": "Atinge soiurile care se află aici. Nu trebuie să indici numărul.",
 "Ort": "Loc",
 "Uhrzeit": "Ora",
 "Zuständig": "Responsabil",
@@ -1100,6 +1110,9 @@ window.RO_DICT={
 };
 
 window.RO_PATTERNS=[
+ [/^ca\. (\d+) liegen noch$/,(m,n)=>`aprox. ${n} mai sunt`],
+ [/^ca\. (\d+)$/,(m,n)=>`aprox. ${n}`],
+ [/^(\d+) liegen$/,(m,n)=>`${n} se află`],
  [/^(\d+) offen$/,(m,n)=>`${n} deschise`],
  [/^(\d+) Stk\. davon automatisch aus Logistik \(geliefert\)\. Hier nur zusätzliche Lieferungen oder Retouren eintragen\.$/,(m,n)=>`${n} buc. din care automat din logistică (livrate). Aici se introduc doar livrări suplimentare sau retururi.`],
  [/^Stand (.+) abends$/,(m,d)=>`Situația ${d}, seara`],

@@ -289,6 +289,12 @@ nav button.on{background:var(--blue);color:#fff}
 #app[data-tab="feld"] .blk>.tiles,#app[data-tab="preise"] .blk>.tiles{margin:0 0 8px}
 #app[data-tab="lieferungen"] .tour{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px}
 #app[data-tab="feld"] .blk .fmap{margin:0 0 6px}
+.sortile{flex-direction:row;justify-content:flex-start;gap:10px;text-align:left;min-height:56px;padding:10px 12px;flex-wrap:wrap}
+.sortile b{font-size:15px;flex:1;min-width:0}.sortile .sw{flex:none}.sortile small{flex-basis:100%;margin-left:30px;margin-top:-6px;color:#7fe0a0}
+.sortile.on{background:rgba(46,158,79,.25);border-color:rgba(46,158,79,.85);color:var(--text)}.sortile.on small{color:#7fe0a0}
+.est{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.est button{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:12px;padding:12px 2px;font:inherit;font-size:15px;font-weight:700}
+.est button.on{background:var(--blue);border-color:var(--blue);color:#fff}
 </style>
 </head>
 <body>
@@ -305,7 +311,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 B';
+const APP_VERSION='2026-10-22 C';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -532,6 +538,35 @@ function render(){
 }
 
 /* Logistik, Feld und Preise bekommen die Blockoptik: Überschrift plus Liste werden zu einem Block, Formulare und Details ebenso */
+function planViewer(getUrl){
+  const d=document.createElement('div');d.className='planview';let rot=false,sc=1,tx=0,ty=0;
+    d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""></div></div><div class="pvh">Mit zwei Fingern zoomen</div>';
+    const im=d.querySelector('img'),pvs=d.querySelector('.pvs'),wr=d.querySelector('.pvw');
+    let W=0,H=0;
+    const clamp=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,w=W*sc,h=H*sc;tx=w<=cw?(cw-w)/2:Math.min(0,Math.max(cw-w,tx));ty=h<=ch?(ch-h)/2:Math.min(0,Math.max(ch-h,ty))};
+    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')'};
+    const lay=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,r=(im.naturalWidth&&im.naturalHeight)?im.naturalWidth/im.naturalHeight:1.414;
+      const iw=rot?1/r:r;let w0=cw,h0=cw/iw;if(h0>ch){h0=ch;w0=ch*iw}
+      W=w0;H=h0;wr.style.cssText='position:absolute;left:0;top:0;transform-origin:0 0;width:'+W+'px;height:'+H+'px';
+      if(!rot)im.style.cssText='position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;max-width:none';
+      else im.style.cssText='position:absolute;left:0;top:0;width:'+H+'px;height:'+W+'px;max-width:none;transform-origin:0 0;transform:translateX('+W+'px) rotate(90deg)';
+      apply()};
+    im.onload=lay;lay();window.addEventListener('resize',lay);new MutationObserver(()=>{if(!d.isConnected)window.removeEventListener('resize',lay)}).observe(document.body,{childList:true});
+    Promise.resolve().then(getUrl).then(u=>{im.src=u}).catch(()=>{pvs.innerHTML='<div style="color:#fff;padding:24px">Der Plan konnte nicht geladen werden.</div>'});
+    const pt=t=>[t.clientX,t.clientY],mid=ts=>[(ts[0].clientX+ts[1].clientX)/2,(ts[0].clientY+ts[1].clientY)/2],dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
+    let g=null,last=0;
+    pvs.addEventListener('touchstart',e=>{const ts=e.touches;
+      if(ts.length===2){const m=mid(ts),r=pvs.getBoundingClientRect();g={k:'pinch',d0:dist(ts),s0:sc,px:(m[0]-r.left-tx)/sc,py:(m[1]-r.top-ty)/sc}}
+      else if(ts.length===1){const n=Date.now();if(n-last<300){sc=sc>1.2?1:2.5;tx=ty=0;apply();last=0;g=null;return}last=n;g={k:'pan',x:ts[0].clientX,y:ts[0].clientY,tx,ty}}},{passive:true});
+    pvs.addEventListener('touchmove',e=>{if(!g)return;e.preventDefault();const ts=e.touches,r=pvs.getBoundingClientRect();
+      if(g.k==='pinch'&&ts.length===2){const m=mid(ts);sc=Math.min(8,Math.max(1,g.s0*dist(ts)/g.d0));tx=m[0]-r.left-g.px*sc;ty=m[1]-r.top-g.py*sc;apply()}
+      else if(g.k==='pan'&&ts.length===1){tx=g.tx+ts[0].clientX-g.x;ty=g.ty+ts[0].clientY-g.y;apply()}},{passive:false});
+    pvs.addEventListener('touchend',e=>{if(e.touches.length===0)g=null;else if(e.touches.length===1)g={k:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,tx,ty}},{passive:true});
+    pvs.addEventListener('wheel',e=>{e.preventDefault();const r=pvs.getBoundingClientRect(),px=(e.clientX-r.left-tx)/sc,py=(e.clientY-r.top-ty)/sc;sc=Math.min(8,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15)));tx=e.clientX-r.left-px*sc;ty=e.clientY-r.top-py*sc;apply()},{passive:false});
+    d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;sc=1;tx=ty=0;lay()}});
+    document.body.appendChild(d);
+}
+
 function blockify(){
   const app=$('#app');if(!app)return;app.dataset.tab=tab;
   if(!['lieferungen','feld','preise'].includes(tab)||document.body.classList.contains('run'))return;
@@ -1573,7 +1608,9 @@ document.addEventListener('click',ev=>{
     S.reports.push({id:uid(),cat:'feld',obj:curOrt(),text:txt,urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});cur.fnote='';save();toast('Notiz gesendet');return render()}
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
   if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
-  if(a==='fzoom'){const d=document.createElement('div');d.className='zoomv';d.innerHTML=`<button class="zx">×</button><div class="zs"><img src="${esc(v)}" alt=""></div>`;d.addEventListener('click',e=>{if(e.target.className==='zx'||e.target===d)d.remove()});document.body.appendChild(d);return}
+  if(a==='fzoom'){planViewer(()=>Promise.resolve(v));return}
+  if(a==='ftoggle'){const o=curOrt(),q0=feldQ(o,v);feldChange(o,v,q0>0?-q0:1,'netz');return}
+  if(a==='fest'){const [sid,n]=v.split('|'),o=curOrt(),q0=feldQ(o,sid),nn=+n;feldChange(o,sid,(nn===0?0:nn)-q0,'rest');return}
   if(a==='fch'){const [sid,dl]=v.split('|');feldChange(curOrt(),sid,+dl,cur.fmode==='abfahrt'?'abfahrt':'netz');return}
   if(a==='fall'){const o=curOrt();feldChange(o,v,-feldQ(o,v),'abfahrt');return}
   if(a==='fset'){const o=curOrt(),q0=feldQ(o,v),r=prompt('Exakte Anzahl hier:',String(q0));if(r===null)return;const n=parseInt(r);if(isNaN(n)||n<0)return alert('Bitte eine Zahl eingeben.');feldChange(o,v,n-q0,'rest');return}
@@ -1611,32 +1648,7 @@ document.addEventListener('click',ev=>{
   if(a==='dlcalc'){dlRun();return}
   if(a==='dlclear'){clearTimeout(window.__dls);cur.dl={addr:'',val:'',res:null,busy:false,err:'',sug:[],pick:null};render();return}
   if(a==='dlpick'){const d=cur.dl,x=(d.sug||[])[+v];if(!x)return;d.addr=x.addr;d.pick=x;d.sug=[];dlRun();return}
-  if(a==='splan'){const [sid,typ]=v.split('|'),d=document.createElement('div');d.className='planview';let rot=false,sc=1,tx=0,ty=0;
-    d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""></div></div><div class="pvh">Mit zwei Fingern zoomen</div>';
-    const im=d.querySelector('img'),pvs=d.querySelector('.pvs'),wr=d.querySelector('.pvw');
-    let W=0,H=0;
-    const clamp=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,w=W*sc,h=H*sc;tx=w<=cw?(cw-w)/2:Math.min(0,Math.max(cw-w,tx));ty=h<=ch?(ch-h)/2:Math.min(0,Math.max(ch-h,ty))};
-    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')'};
-    const lay=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,r=(im.naturalWidth&&im.naturalHeight)?im.naturalWidth/im.naturalHeight:1.414;
-      const iw=rot?1/r:r;let w0=cw,h0=cw/iw;if(h0>ch){h0=ch;w0=ch*iw}
-      W=w0;H=h0;wr.style.cssText='position:absolute;left:0;top:0;transform-origin:0 0;width:'+W+'px;height:'+H+'px';
-      if(!rot)im.style.cssText='position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;max-width:none';
-      else im.style.cssText='position:absolute;left:0;top:0;width:'+H+'px;height:'+W+'px;max-width:none;transform-origin:0 0;transform:translateX('+W+'px) rotate(90deg)';
-      apply()};
-    im.onload=lay;lay();window.addEventListener('resize',lay);new MutationObserver(()=>{if(!d.isConnected)window.removeEventListener('resize',lay)}).observe(document.body,{childList:true});
-    if(window.cloud&&window.cloud.imageUrl)window.cloud.imageUrl('standplaene/'+sid+'-'+typ+'.png').then(u=>{im.src=u}).catch(()=>{pvs.innerHTML='<div style="color:#fff;padding:24px">Der Plan konnte nicht geladen werden.</div>'});
-    const pt=t=>[t.clientX,t.clientY],mid=ts=>[(ts[0].clientX+ts[1].clientX)/2,(ts[0].clientY+ts[1].clientY)/2],dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
-    let g=null,last=0;
-    pvs.addEventListener('touchstart',e=>{const ts=e.touches;
-      if(ts.length===2){const m=mid(ts),r=pvs.getBoundingClientRect();g={k:'pinch',d0:dist(ts),s0:sc,px:(m[0]-r.left-tx)/sc,py:(m[1]-r.top-ty)/sc}}
-      else if(ts.length===1){const n=Date.now();if(n-last<300){sc=sc>1.2?1:2.5;tx=ty=0;apply();last=0;g=null;return}last=n;g={k:'pan',x:ts[0].clientX,y:ts[0].clientY,tx,ty}}},{passive:true});
-    pvs.addEventListener('touchmove',e=>{if(!g)return;e.preventDefault();const ts=e.touches,r=pvs.getBoundingClientRect();
-      if(g.k==='pinch'&&ts.length===2){const m=mid(ts);sc=Math.min(8,Math.max(1,g.s0*dist(ts)/g.d0));tx=m[0]-r.left-g.px*sc;ty=m[1]-r.top-g.py*sc;apply()}
-      else if(g.k==='pan'&&ts.length===1){tx=g.tx+ts[0].clientX-g.x;ty=g.ty+ts[0].clientY-g.y;apply()}},{passive:false});
-    pvs.addEventListener('touchend',e=>{if(e.touches.length===0)g=null;else if(e.touches.length===1)g={k:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,tx,ty}},{passive:true});
-    pvs.addEventListener('wheel',e=>{e.preventDefault();const r=pvs.getBoundingClientRect(),px=(e.clientX-r.left-tx)/sc,py=(e.clientY-r.top-ty)/sc;sc=Math.min(8,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15)));tx=e.clientX-r.left-px*sc;ty=e.clientY-r.top-py*sc;apply()},{passive:false});
-    d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;sc=1;tx=ty=0;lay()}});
-    document.body.appendChild(d);return}
+  if(a==='splan'){const [sid,typ]=v.split('|');planViewer(()=>window.cloud.imageUrl('standplaene/'+sid+'-'+typ+'.png'));return}
   if(a==='bfnew'){cur.bf=bfNew();cur.bOpen=true;window.scrollTo(0,0);return render()}
   if(a==='bfedit'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.bf=JSON.parse(JSON.stringify(b));cur.bOpen=true;window.scrollTo(0,0);return render()}
   if(a==='bfcancel'){cur.bOpen=false;cur.bf=null;return render()}
@@ -2736,48 +2748,44 @@ function vFeld(){
     const sch=schon(cur.fs),url=imgUrl(sch.img);
     $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
       ${sch.address?`<div class="card pad"><label class="f">Adresse</label><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
-      ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}`;
+      ${url?`<div class="fmap" data-pl="fzoom" data-v="${esc(url)}" style="cursor:zoom-in"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf die Karte zum Vergrößern. Dann mit zwei Fingern zoomen.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}`;
     return;
   }
   if(mode==='uebersicht'){
     const bySch={},perSort={};let tot=0;
     S.feld.forEach(d=>{const bal=Object.entries(d.bal||{}).filter(([,b])=>b.q>0);if(!bal.length)return;
-      const i=d.ort.indexOf(' · '),s=i<0?d.ort:d.ort.slice(0,i),g=i<0?'':d.ort.slice(i+3),q=bal.reduce((a,[,b])=>a+b.q,0);tot+=q;
-      (bySch[s]=bySch[s]||[]).push({g,bal,q});bal.forEach(([sid,b])=>{perSort[sid]=(perSort[sid]||0)+b.q})});
+      const i=d.ort.indexOf(' · '),s=i<0?d.ort:d.ort.slice(0,i),g=i<0?'':d.ort.slice(i+3),q=bal.reduce((a,[,b])=>a+(b.q>1?b.q:0),0);tot++;
+      (bySch[s]=bySch[s]||[]).push({g,bal,q});bal.forEach(([sid,b])=>{perSort[sid]=(perSort[sid]||0)+(b.q>1?b.q:1)})});
     const order=[...os.map(x=>x.name),...Object.keys(bySch).filter(n=>!os.some(x=>x.name===n))].filter(n=>bySch[n]);
     const gIdx=(s,g)=>{const o2=os.find(x=>x.name===s);const i=o2?o2.gaenge.indexOf(g):-1;return i<0?99:i};
-    const sortLine=([sid,b])=>{const k=sortById(sid);return k?`<div class="p" style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${swatchCss(k.f)};width:12px;height:12px"></span><span>${esc(sorteLabel(k))}</span><b style="margin-left:auto">${num(b.q)}</b></div>`:''};
+    const sortLine=([sid,b])=>{const k=sortById(sid);return k?`<div class="p" style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${swatchCss(k.f)};width:12px;height:12px"></span><span>${esc(sorteLabel(k))}</span><b style="margin-left:auto">${b.q>1?'ca. '+num(b.q):'liegt'}</b></div>`:''};
     const blocks=order.map(s=>{const gs=bySch[s].sort((a,b)=>gIdx(s,a.g)-gIdx(s,b.g)),sum=gs.reduce((a,x)=>a+x.q,0);
-      return `<h3>${esc(s)} (${num(sum)})</h3><div class="card">${gs.map(x=>`<div class="row" style="display:block"><div style="display:flex;justify-content:space-between"><div class="n">${esc(x.g||s)}</div><b>${num(x.q)}</b></div>${x.bal.sort((a,b)=>b[1].q-a[1].q).map(sortLine).join('')}</div>`).join('')}</div>`}).join('');
+      return `<h3>${esc(s)}${sum?' ('+num(sum)+')':''}</h3><div class="card">${gs.map(x=>`<div class="row" style="display:block"><div style="display:flex;justify-content:space-between"><div class="n">${esc(x.g||s)}</div><b>${x.q?'ca. '+num(x.q):''}</b></div>${x.bal.sort((a,b)=>b[1].q-a[1].q).map(sortLine).join('')}</div>`).join('')}</div>`}).join('');
     const rows=Object.entries(perSort).map(([sid,q])=>({k:sortById(sid),q})).filter(x=>x.k).sort((a,b)=>b.q-a.q);
-    $('#app').innerHTML=`${chips}${seg}<div class="tiles"><div class="tile b"><small>Liegen noch auf dem Feld</small><b>${num(tot)}</b></div></div>
+    $('#app').innerHTML=`${chips}${seg}<div class="tiles"><div class="tile b"><small>Orte mit Bäumen</small><b>${num(tot)}</b></div></div>
       ${blocks||'<div class="hint">Noch nichts eingetragen.</div>'}
-      ${rows.length?`<h3>Gesamt nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${num(x.q)}</b></div>`).join('')}</div>`:''}`;
+      ${rows.length?`<h3>Gesamt nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${x.q>1?'ca. '+num(x.q):'liegt'}</b></div>`).join('')}</div>`:''}`;
     return;
   }
   const qOf=k=>feldQ(ort,k.id);
-  if(mode==='abfahrt'&&cur.frest){
-    const ids=[...new Set([...SORT.filter(k=>qOf(k)>0).map(k=>k.id),...cur.fextra])];
-    $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(ort)}</h2><div class="hint">Was liegt hier noch? Schätze die Anzahl.</div>
-      <div class="card">${ids.map(id=>{const k=sortById(id);return `<div class="row"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0">${esc(sorteLabel(k))}</div><input class="t" style="width:90px;text-align:center;font-size:20px" type="number" inputmode="numeric" min="0" data-fr="${k.id}" value="${qOf(k)}"></div>`}).join('')||'<div class="row"><span class="p">Nichts mehr hier.</span></div>'}</div>
-      <select class="t" id="frest-add"><option value="">Sorte hinzufügen …</option>${SORT.filter(k=>!ids.includes(k.id)).map(k=>`<option value="${k.id}">${esc(sorteLabel(k))}</option>`).join('')}</select>
-      <div class="mini" style="margin-top:12px"><button class="btn green" data-pl="frestsave" style="margin:0">Rest speichern</button><button class="btn sec" data-pl="frestno" style="margin:0">Abbrechen</button></div>`;
-    return;
+  const present=SORT.filter(k=>qOf(k)>0);
+  const estTxt=q=>q>1?'ca. '+num(q):'liegt hier';
+  const EST=[[0,'Leer'],[10,'10'],[20,'20'],[50,'50'],[100,'100']];
+  const tileN=k=>{const on=qOf(k)>0;return `<button class="stile sortile ${on?'on':''}" data-pl="ftoggle" data-v="${k.id}"><span class="sw" style="background:${swatchCss(k.f)}"></span><b>${esc(sorteLabel(k))}</b>${on?'<small>liegt hier</small>':''}</button>`};
+  const rowA=k=>{const q=qOf(k);
+    return `<div class="row" style="display:block;padding:10px 0"><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0">${esc(sorteLabel(k))}</div><span class="p">${q>1?'ca. '+num(q)+' liegen noch':'Menge offen'}</span></div>
+      <div class="est">${EST.map(([n,l])=>`<button class="${(n===0?q===0:(q===n))?'on':''}" data-pl="fest" data-v="${k.id}|${n}">${l}</button>`).join('')}</div></div>`};
+  let body;
+  if(mode==='netz'){
+    const groups=Object.keys(SGN).map(g=>({g,its:SORT.filter(k=>sortGroup(k)===g)})).filter(x=>x.its.length);
+    body=`<div class="hint">Tippe die Sorten an, die hier liegen. Du musst keine Anzahl angeben.</div>${groups.map(g=>`<section class="blk"><div class="blk-h"><h3>${esc(SGN[g.g])}</h3>${g.its.filter(k=>qOf(k)>0).length?pill(g.its.filter(k=>qOf(k)>0).length+' liegen','g'):''}</div><div class="sgrid">${g.its.map(tileN).join('')}</div></section>`).join('')}`;
+  }else{
+    const groups=Object.keys(SGN).map(g=>({g,its:present.filter(k=>sortGroup(k)===g)})).filter(x=>x.its.length);
+    const add=SORT.filter(k=>qOf(k)===0);
+    body=`<div class="hint">Palette voll? Sag, wie viele Bäume hier noch liegen. Eine ungefähre Zahl reicht.</div>${groups.map(g=>blk(esc(SGN[g.g]),g.its.map(rowA).join(''))).join('')||'<div class="hint">Hier ist nichts eingetragen. Unter Netzen angeben, was hier liegt, oder unten eine Sorte hinzufügen.</div>'}
+      <select class="t" id="fadd" style="margin:0 0 14px"><option value="">Sorte hinzufügen, die hier noch liegt …</option>${add.map(k=>`<option value="${k.id}">${esc(sorteLabel(k))}</option>`).join('')}</select>`;
   }
-  const items=mode==='abfahrt'?SORT.filter(k=>qOf(k)>0):SORT;
-  const groups=Object.keys(SGN).map(g=>({g,its:items.filter(k=>sortGroup(k)===g)})).filter(x=>x.its.length);
-  const rowN=k=>{const q=qOf(k);
-    return `<div class="row" style="padding:7px 0"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0;font-size:15px">${esc(sorteLabel(k))}</div>
-      <div class="ctr">${mode==='abfahrt'
-        ?`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−1</button><button class="fb" data-pl="fch" data-v="${k.id}|-10">−10</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fall" data-v="${k.id}">Alles</button>`
-        :`<button class="fb" data-pl="fch" data-v="${k.id}|-1">−</button><b class="fn" data-pl="fset" data-v="${k.id}">${q}</b><button class="plus fb" data-pl="fch" data-v="${k.id}|1">+1</button><button class="plus fb" data-pl="fch" data-v="${k.id}|10">+10</button>`}</div></div>`};
-  const sec=g=>{const sum=g.its.reduce((a,k)=>a+qOf(k),0);
-    return `<h3>${esc(SGN[g.g])} (${sum})</h3><div class="card">${g.its.map(rowN).join('')}</div>`};
-  $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(ort)}</h2>
-    <div class="hint">${mode==='netz'?'Netzfahrer: trage ein, was hier am Weg liegt.':'Tippe, was abgefahren wurde. Hier steht nur, was noch liegt. Ist die Palette voll, melde den Rest.'}</div>
-    ${mode==='abfahrt'&&!items.length?'<div class="hint">Nichts mehr hier.</div>':''}
-    ${groups.map(sec).join('')}
-    ${mode==='abfahrt'?'<button class="btn sec" data-pl="frest" style="margin-top:14px">Palette voll: Rest melden</button>':''}
+  $('#app').innerHTML=`${chips}${seg}${gchips}<h2 style="margin-top:4px">${esc(ort)}</h2>${body}
     <div class="card pad formc" style="margin-top:14px"><label class="f">Notiz für Chef und Admin (z. B. Gang blockiert, Sorte fehlt)</label><textarea class="t" id="fn-note" rows="2" placeholder="Notiz zu ${esc(ort)}">${esc(cur.fnote||'')}</textarea><button class="btn" data-pl="fnote" style="margin-bottom:0">Notiz senden</button></div>`;
 }
 /* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
@@ -3146,6 +3154,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='hof-vat'){S.hofInfo={...S.hofInfo,vat:t.value.trim()};save()}
   if(t.id==='hof-paypal'){S.hofInfo={...S.hofInfo,paypal:t.value.trim()};save()}
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
+  if(t.id==='fadd'&&t.value){feldChange(curOrt(),t.value,1,'netz');return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-mach'){S.hofInfo={...S.hofInfo,machines:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
   if(t.id==='hof-salesStart'){S.hofInfo={...S.hofInfo,salesStart:t.value};wxData=null;save()}
