@@ -314,7 +314,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 K';
+const APP_VERSION='2026-10-22 L';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -354,7 +354,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -951,6 +951,8 @@ function approveAsk(n,cb){
   d.addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k==null&&e.target!==d)return;d.remove();if(k==='1')cb(true);else if(k==='0')cb(false)});
   document.body.appendChild(d);
 }
+const KRAFT=[['normal','Normal'],['kraeftig','Kräftig'],['sehr','Sehr kräftig']],LIZ=[['','Unbekannt'],['keiner','Kein Führerschein'],['auto','Auto'],['anhaenger','Auto mit Anhänger']];
+const traitsOf=n=>({kraft:'normal',lizenz:'',...((S.traits||{})[n]||{})});
 function einstSheet(){
   const L=S.people.filter(p=>S.approved[p]!==false),has0=p=>S.penalties.some(x=>!x.deleted&&x.person===p&&x.reason==='Einstand in die App');
   return `<div class="n" style="font-size:21px;margin:0 0 4px">Einstand-Strafbierkiste</div><div class="hint" style="margin:0 0 10px">Grund „Einstand in die App“. Haken weg bei allen, die keine bekommen sollen.</div>${L.map(p=>`<label class="chkrow" style="padding:8px 0"><input type="checkbox" data-ein="${esc(p)}" ${has0(p)?'disabled':(cur.einstOff.has(p)?'':'checked')}> ${esc(p)}${has0(p)?' <span class="p">(hat schon eine)</span>':''}</label>`).join('')}<div class="mini" style="margin-top:14px"><button class="btn sec" data-pl="einstcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="einstgo" style="margin:0">Vergeben</button></div>`;
@@ -2951,7 +2953,7 @@ function vDaten(){
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${k===''?'Führerschein: unbekannt':l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
@@ -3008,6 +3010,8 @@ function vDaten(){
     <label class="f">Adresse des Stands (für die Route in Google Maps und Karten)</label><input class="t" data-sa="${s.id}" value="${esc(s.address||'')}" placeholder="Straße Nr., PLZ Ort" autocomplete="street-address">
     <label class="f">Ansprechpartner / Telefon</label><input class="t" data-sx="contact" data-sid="${s.id}" value="${esc(s.contact||'')}">
     <label class="f">Öffnungszeiten</label><input class="t" data-sx="hours" data-sid="${s.id}" value="${esc(s.hours||'')}">
+    <div class="mini"><div><label class="f">Öffnet um</label><input class="t" type="time" data-sx="openFrom" data-sid="${s.id}" value="${esc(s.openFrom||'')}"></div><div><label class="f">Schließt um</label><input class="t" type="time" data-sx="openTo" data-sid="${s.id}" value="${esc(s.openTo||'')}"></div></div>
+    <div class="mini"><div><label class="f">Verkauf ab</label><input class="t" type="date" data-sx="salesFrom" data-sid="${s.id}" value="${esc(s.salesFrom||'')}"></div><div><label class="f">Verkauf bis</label><input class="t" type="date" data-sx="salesTo" data-sid="${s.id}" value="${esc(s.salesTo||'')}"></div></div>
     <label class="f">Starkstrom (Ort)</label><input class="t" data-sx="power" data-sid="${s.id}" value="${esc(s.power||'')}">
     <div class="mini"><div><label class="f">Aufbau am</label><input class="t" type="date" data-sx="buildDate" data-sid="${s.id}" value="${esc(s.buildDate||'')}"></div><div><label class="f">Abbau am</label><input class="t" type="date" data-sx="teardownDate" data-sid="${s.id}" value="${esc(s.teardownDate||'')}"></div></div>
     <div class="mini">
@@ -3109,6 +3113,7 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
+  if(t.dataset.trait!=null){const [i,k]=t.dataset.trait.split('|'),n=S.people[+i];S.traits=S.traits||{};S.traits[n]={...traitsOf(n),[k]:t.value};if(window.cloud&&window.cloud.setTraits)window.cloud.setTraits(n,S.traits[n]).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));else save();render();return}
   if(t.dataset.ein!=null){if(t.checked)cur.einstOff.delete(t.dataset.ein);else cur.einstOff.add(t.dataset.ein);return}
   if(t.dataset.pe!=null){
     const i=+t.dataset.pe,old=S.people[i],nw=t.value.trim().replace(/\s+/g,' ')||old;
