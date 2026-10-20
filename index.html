@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 m';
+const APP_VERSION='2026-10-21 n';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1667,6 +1667,16 @@ function packUnits(t){
   });
   return out.reverse();
 }
+const shortName=n=>{const s=String(n||'').split(/[,(]/)[0].replace(/\b(GmbH|AG|OHG|KG|UG|mbH)\b/gi,'').replace(/\be\.\s?V\./gi,'').replace(/&/g,' ').replace(/\s+/g,' ').trim();return s.split(' ').slice(0,2).join(' ')};
+const lenC=l=>l?String(+l).replace('.',',')+' m':'';
+function treeTag(s,l){const d=String(l.d||''),dia=d.match(/(\d{1,2})\s*cm/i),hul=/bodenh[üu]lse/i.test(d),sp=l.c==='Baum'&&l.s&&!/nordmann/i.test(l.s)?' '+l.s:l.c==='Deko'?' Deko':l.c==='Laternenbaum'?' Laterne':'';
+  return `${shortName(s.name)}${sp}${l.l?', '+lenC(l.l):''}${dia?', Ø '+dia[1]+' cm':''}${hul?', Bodenhülse':''}`}
+function labelItems(s){
+  const inst=[];(s.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).forEach(l=>{for(let k=0;k<(+l.q||1);k++)inst.push(l)});
+  let boh=+s.bohren||0;const x=new Set();
+  inst.map((l,i)=>({l,i})).filter(o=>o.l.c==='Baum'&&(o.l.l==null||o.l.l<=3.1)).sort((a,b)=>(a.l.l||0)-(b.l.l||0)).forEach(o=>{if(boh>0){x.add(o.i);boh--}});
+  return inst.map((l,i)=>({text:treeTag(s,l),x:x.has(i)}));
+}
 function vPacken(t){
   const plan=has('lieferplanung'),pk=t.pack||{},units=packUnits(t),stops=tourStops(t);
   const stand={};let nStand=0,nBoh=0;
@@ -1682,8 +1692,8 @@ function vPacken(t){
   const chk=(u,f,l)=>`<span class="pkl"><button class="chk ${pk[u.id]&&pk[u.id][f]?'on':''}" data-pl="pkck" data-v="${t.id}|${u.id}|${f}">${pk[u.id]&&pk[u.id][f]?'✓':''}</button>${l}</span>`;
   const nm=l=>l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);
   const rev=stops.map((s,i)=>({s,nr:i+1})).reverse(),isTree=l=>['Baum','Deko','Laternenbaum'].includes(l.c);
-  const labels=`<div class="card pad"><div class="ihead"><b>1. Etiketten schreiben</b>${infoBtn('pklabel')}</div>${infoBox('pklabel','Reihenfolge wie beim Einladen: der letzte Stopp zuerst. Die Nummer ist die Stoppnummer der Tour. Schreibe die Etiketten der Reihe nach und lege sie zu den Bäumen.')}
-    ${rev.map(({s,nr})=>`<div class="kv" style="align-items:flex-start"><span><b>Etikett ${nr}</b> · ${esc(s.name)}${winTxt(s.win||s.time)?` · ${winTxt(s.win||s.time)}`:''}<br><span class="p">${esc((s.lines||[]).filter(isTree).map(l=>lineLabel(l)).join(', ')||'–')}</span></span></div>`).join('')||'<div class="p">Keine Stopps.</div>'}</div>`;
+  const labels=`<div class="card pad"><div class="ihead"><b>1. Etiketten schreiben</b>${infoBtn('pklabel')}</div>${infoBox('pklabel','Eine Zeile pro Baum, in der Reihenfolge zum Schreiben: der letzte Stopp zuerst. Ø = Stammdurchmesser, X = Baum wird gebohrt. Schreibe die Etiketten der Reihe nach und lege sie zu den Bäumen.')}
+    ${rev.map(({s,nr})=>labelItems(s).map(it=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(it.text)}</b>${it.x?' <b style="color:var(--red)">X</b>':''}</span><span class="p">Stopp ${nr}</span></div>`).join('')).join('')||'<div class="p">Keine Bäume.</div>'}</div>`;
   const sp=rev.map(({s,nr})=>{const ds=[...(s.lines||[]).filter(l=>isTree(l)&&l.d).map(l=>`${lineLabel(l)}: ${l.d}`),s.note].filter(Boolean);return ds.length?`<div style="margin-bottom:8px"><b>${nr}. ${esc(s.name)}</b><div class="p" style="color:var(--orange)">${ds.map(esc).join('<br>')}</div></div>`:''}).join('');
   const special=sp?`<div class="card pad"><div class="n">Sonderwünsche und Hinweise</div><div class="hint" style="margin-top:2px">Zum Beispiel Stamm vorher passend sägen.</div>${sp}</div>`:'';
   const lastStop={};
@@ -1732,7 +1742,9 @@ const winEnd=w=>{const t=winTimes(w);if(!t.length)return null;return t.length===
 const winStart=w=>{const t=winTimes(w);if(!t.length)return null;return t.length>1?t[0]:(/\bab\s*\d/i.test(w)?t[0]:450)};
 const winTxt=w=>{const e=winEnd(w);if(e==null)return '';const s=winStart(w),f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /\bab\s*\d/i.test(w)&&winTimes(w).length===1?'ab '+f(s)+' Uhr':f(s)+' bis '+f(e)+' Uhr'};
 const nTrees=o=>orderTrees(o).reduce((a,p)=>a+(+p.qty||1),0);
-const SOLO=15;
+const SOLO=20;
+const brkAdd=(c,s)=>{if(!s.b&&c>=570){c+=15;s.b=1}if(!s.l&&c>=750){c+=30;s.l=1}return c};
+const tourDur=t=>{const st=tourStops(t),lg=t.legs||[],s={};let c=450;st.forEach((x,i)=>{c+=Math.round((lg[i]||0)/60);c+=svcMin(x);c=brkAdd(c,s)});return c-450+Math.round((t.backSec||0)/60)};
 const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
 function planCandidates(day){
@@ -1767,9 +1779,9 @@ async function runPlan(){
     const est=o=>orderSvc(o)+6,kAuto=l=>Math.min(l.length,Math.max(1,Math.ceil((l.reduce((a,o)=>a+est(o),0)+40)/(pd.budget*60))));
     const ks=groups.map(g=>kAuto(g[1])),P=+pd.P||0;let warn='';
     if(P){let tot=ks.reduce((a,b)=>a+b,0)+solo.length;while(tot>P&&ks.some(k=>k>1)){ks[ks.indexOf(Math.max(...ks))]--;tot--}
-      if(tot>P)warn=`Mit ${P} Lieferern reichen die Touren nicht: ${tot} Touren nötig, jede braucht mindestens eine Person.`}
+      if(tot>P)warn=`Mit ${P} Fahrern reichen die Touren nicht: ${tot} Touren nötig.`}
     const tours=[];
-    const sim=(list,lg)=>{let c=timeToMin(pd.start),bad=0;const out=[];list.forEach((o,i)=>{c+=Math.round((lg[i]||0)/60);const ws=winStart(o.window),we=winEnd(o.window);if(ws!=null&&c<ws)c=ws;if(we!=null&&c>we)bad++;out.push({o,eta:c,svc:orderSvc(o)});c+=orderSvc(o)});return {out,end:c,bad}};
+    const sim=(list,lg)=>{let c=timeToMin(pd.start),bad=0;const out=[],bs={};list.forEach((o,i)=>{c+=Math.round((lg[i]||0)/60);const ws=winStart(o.window),we=winEnd(o.window);if(ws!=null&&c<ws)c=ws;if(we!=null&&c>we)bad++;out.push({o,eta:c,svc:orderSvc(o)});c+=orderSvc(o);c=brkAdd(c,bs)});return {out,end:c,bad}};
     const mkTour=async(size,sec,isSolo)=>{
       let ordd,legs;
       if(sec.length===1){const r=await window.cloud.routeLegs({origin:depot(),stops:[orderAddr(sec[0])],roundTrip:true,depart:nextDepart()});ordd=sec;legs=r.legs}
@@ -1787,7 +1799,8 @@ async function runPlan(){
       }
       const s=sim(ordd,legs);
       const stopsOut=s.out.map(x=>{const we=winEnd(x.o.window);return {o:x.o,eta:x.eta,svc:x.svc,warn:we!=null&&x.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:''}});
-      return {size,solo:isSolo,stops:stopsOut,legs:legs.slice(0,ordd.length),end:s.end,backMin:Math.round((legs[ordd.length]||0)/60),
+      const depart=Math.max(timeToMin(pd.start),s.out[0].eta-Math.round((legs[0]||0)/60));
+      return {size,solo:isSolo,stops:stopsOut,legs:legs.slice(0,ordd.length),depart,end:s.end,backMin:Math.round((legs[ordd.length]||0)/60),
         stand:ordd.reduce((a,o)=>a+(o.positions||[]).filter(p=>p.cat==='Ständer').reduce((x,p)=>x+(+p.qty||0),0),0),bohren:ordd.reduce((a,o)=>a+orderBohren(o),0),
         crew:crewHint({stops:ordd.map(o=>({lines:orderLines(o).map(p=>({c:p.cat,l:p.len,q:p.qty}))}))})};
     };
@@ -1806,6 +1819,7 @@ async function runPlan(){
       }
     }
     for(const o of solo){pd.msg=`Einzelfahrt für ${o.name} wird berechnet …`;render();tours.push(await mkTour(orderMaxTree(o)>3.5?'gross':'klein',[o],true))}
+    tours.sort((a,b)=>a.depart-b.depart);
     pd.res={tours,missing,warn};pd.msg='';
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
   pd.busy=false;render();
@@ -1837,17 +1851,17 @@ function planBox(){
   if(!cur.pd)initPlan();
   const pd=cur.pd,cands=planCandidates(pd.date),res=pd.res;
   const tourCard2=(t,i)=>`<div class="card pad"><div class="n"><span class="tdot" style="background:${TCOL[i%TCOL.length][2]}"></span>${t.solo?'Einzelfahrt':'Vorschlag '+(i+1)} · ${t.size==='gross'?'große Bäume':'kleine Bäume'}</div>
-    <div class="p">${t.stops.length} Stopps · ${hmMin(timeToMin(pd.start))} bis ${hmMin(t.end)} (+ ${t.backMin} Min zurück) · ${crewHintTxt(t.crew)}</div>
+    <div class="p">${t.stops.length} Stopps · Abfahrt ca. ${hmMin(t.depart)}, fertig ca. ${hmMin(t.end)} (+ ${t.backMin} Min zurück) · ${crewHintTxt(t.crew)}</div>
     <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Beim Packen bohren: '+t.bohren:''}</div>
     ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(s.eta)}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}${winTxt(s.o.window)?` <span class="p">· ${winTxt(s.o.window)}</span>`:''}</span></div><div class="p">${esc(orderAddr(s.o))}</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
     ${t.applied?'<div class="hint">Übernommen.</div>':`<button class="btn" data-pl="planok" data-v="${i}" style="margin:8px 0 0">Diese Tour übernehmen</button>`}</div>`;
   const nSel=Object.values(pd.sel).filter(Boolean).length,anyOpen=S.orders.some(orderOpen);
   if(!anyOpen&&!res)return '';
   const allOn=cands.length&&cands.every(x=>pd.sel[x.o.id]);
-  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie sortiert sie nach Gebiet und Baumgröße, beachtet Zeitfenster, legt Touren mit Reihenfolge und Fahrzeit an (Start und Ende am Hof) und gibt sehr große Lieferungen (ab '+SOLO+' Bäumen) eine eigene Fahrt. Danach weist du Fahrer und Fahrzeug zu.')}
+  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie sortiert sie nach Gebiet und Baumgröße, beachtet Zeitfenster, legt Touren mit Reihenfolge und Fahrzeit an (Start und Ende am Hof) und gibt sehr große Lieferungen (ab '+SOLO+' Bäumen) eine eigene Fahrt. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet. Danach weist du Fahrer und Fahrzeug zu.')}
     ${(()=>{const c={};S.orders.filter(orderOpen).forEach(o=>{const d=o.from||o.to;if(d&&d>=todayStr())c[d]=(c[d]||0)+1});const ds=Object.keys(c).sort().slice(0,8);return ds.length?`<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${c[d]})</button>`).join('')}</div>`:''})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
-    <select class="t" id="pd-p" style="margin-top:8px"><option value="">Lieferer: automatisch</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} ${n===1?'Lieferer':'Lieferer'} (Fahrer und Beifahrer)</option>`).join('')}</select>
+    <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
     <label class="f">Aufträge für diesen Tag (${nSel} von ${cands.length} gewählt)</label>
     <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
@@ -1857,11 +1871,15 @@ function planBox(){
 }
 const crewHintTxt=c=>c;
 function vAuftraege(kind,fahrer,plan){
-  const st=['offen','geplant','alle'].includes(cur.ost)?cur.ost:'offen',all=S.orders.filter(o=>!o.deleted);
-  const nOff=all.filter(orderOpen).length,nPl=all.filter(o=>o.status==='geplant').length;
-  const list=all.filter(o=>st==='alle'||(st==='offen'?orderOpen(o):o.status==='geplant')).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
+  if(!cur.pd)initPlan();
+  const day=cur.pd.date,all=S.orders.filter(o=>!o.deleted);
+  const inWin=o=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&t>=day};
+  const planned=o=>o.status==='geplant'&&(o.plannedFor===day||(!o.plannedFor&&inWin(o))),isOff=o=>orderOpen(o)&&inWin(o);
+  const st=['offen','geplant','alle'].includes(cur.ost)?cur.ost:'offen';
+  const nOff=all.filter(isOff).length,nPl=all.filter(planned).length;
+  const list=all.filter(o=>st==='alle'?(isOff(o)||planned(o)||(o.status==='erledigt'&&inWin(o))):st==='offen'?isOff(o):planned(o)).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
   const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${locBox()}${nachBox()}${planBox()}${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge in dieser Ansicht. Lieferscheine kommen über Daten, Import.</div>'}`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${locBox()}${nachBox()}${planBox()}<h3 style="margin-bottom:2px">Aufträge am ${wdD(day)}</h3>${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge für diesen Tag in dieser Ansicht.</div>'}`;
 }
 function nacharbeit(){
   const td=todayStr(),out=[],seen=new Set();
@@ -1969,8 +1987,8 @@ const stopTrees=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includ
 const svcMin=x=>{const base=/aufstellen/i.test(x.service||'')?10:5,tr=stopTrees(x);return base+Math.min(30,3*Math.max(0,tr-1))};
 function etaTimes(t){
   const st=tourStops(t),legs=t.legs||[],out={};if(!t.startedAt||!legs.length)return out;
-  let cur=t.startedAt+(t.pausedMs||0);
-  for(let i=0;i<st.length;i++){const s=st[i];if(legs[i]===undefined)break;cur+=legs[i]*1000;out[s.id]=cur;cur=s.doneAt?s.doneAt:cur+svcMin(s)*60000}
+  let cur=t.startedAt+(t.pausedMs||0);const bs={};
+  for(let i=0;i<st.length;i++){const s=st[i];if(legs[i]===undefined)break;cur+=legs[i]*1000;out[s.id]=cur;cur=s.doneAt?s.doneAt:cur+svcMin(s)*60000;const d0=new Date(cur),m0=d0.getHours()*60+d0.getMinutes();if(!bs.b&&m0>=570){cur+=15*6e4;bs.b=1}const d1=new Date(cur),m1=d1.getHours()*60+d1.getMinutes();if(!bs.l&&m1>=750){cur+=30*6e4;bs.l=1}}
   return out;
 }
 const lineLabel=l=>{const q=+l.q||1,nm=l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);return `${q} × ${nm}${l.l?' '+mFmt(l.l):''}`};
@@ -2025,7 +2043,7 @@ function tourCard(t,plan){
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const trees=st.reduce((a,s)=>a+stopTrees(s),0),open=cur.tex&&cur.tex[t.id]!==undefined?!!cur.tex[t.id]:stt==='gestartet';
   const legSum=(t.legs||[]).reduce((a,b)=>a+b,0)/60,back=(t.backSec||0)/60,svSum=st.reduce((a,s)=>a+svcMin(s),0);
-  const dur=st.length?((t.legs&&t.legs.length)?`Dauer ca. ${fmtMin(legSum+back+svSum)} (Hof bis Hof)`:`Stoppzeiten ca. ${fmtMin(svSum)}, Fahrzeit noch offen`):'';
+  const dur=st.length?((t.legs&&t.legs.length)?`Dauer ca. ${fmtMin(tourDur(t))} (Hof bis Hof, mit Pausen)`:`Stoppzeiten ca. ${fmtMin(svSum)}, Fahrzeit noch offen`):'';
   const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
   const ps=!stt?packStatus(t):null;
   const orange=v=>`<span style="color:var(--orange);font-weight:600">${v}</span>`;
