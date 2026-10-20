@@ -284,6 +284,11 @@ nav button.on{background:var(--blue);color:#fff}
 .stile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:16px;padding:16px 10px;font:inherit;text-align:center;min-height:68px;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .stile b{font-size:17px;font-weight:700}.stile small{color:var(--mut);font-size:12px}
 .stile.on{background:var(--blue);border-color:var(--blue);color:#fff}.stile.on small{color:rgba(255,255,255,.8)}
+#app[data-tab="feld"] .chips,#app[data-tab="lieferungen"] .chips,#app[data-tab="preise"] .chips{flex-wrap:wrap;overflow:visible}
+#app[data-tab="feld"] .blk>.card.pad,#app[data-tab="lieferungen"] .blk>.card.pad,#app[data-tab="preise"] .blk>.card.pad,#app[data-tab="feld"] .blk>.card.pad.formc,#app[data-tab="lieferungen"] .blk>.card.pad.formc,#app[data-tab="preise"] .blk>.card.pad.formc{background:none!important;border:0!important;padding:0!important;margin:0}
+#app[data-tab="feld"] .blk>.tiles,#app[data-tab="preise"] .blk>.tiles{margin:0 0 8px}
+#app[data-tab="lieferungen"] .tour{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px}
+#app[data-tab="feld"] .blk .fmap{margin:0 0 6px}
 </style>
 </head>
 <body>
@@ -300,7 +305,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 A';
+const APP_VERSION='2026-10-22 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -522,9 +527,36 @@ function render(){
   ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,feld:vFeld,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten,anleitung:vAnleitung,auswertung:vAuswertung})[tab]();
   {const pt=pausedTour();if(pt)$('#app').insertAdjacentHTML('afterbegin',`<div class="tbanner" data-pl="tresume" data-v="${pt.id}" style="margin-top:4px">${esc(tourName(pt))} pausiert, tippen zum Fortsetzen →</div>`)}
   if(tab==='staende'||tab==='erfassen'||tab==='zahlen'){const sg=standSeg();if(sg)$('#app').insertAdjacentHTML('afterbegin',sg)}
+  blockify();
   renderSheet();
 }
 
+/* Logistik, Feld und Preise bekommen die Blockoptik: Überschrift plus Liste werden zu einem Block, Formulare und Details ebenso */
+function blockify(){
+  const app=$('#app');if(!app)return;app.dataset.tab=tab;
+  if(!['lieferungen','feld','preise'].includes(tab)||document.body.classList.contains('run'))return;
+  const mk=(title,pillTxt)=>{const s=document.createElement('section');s.className='blk';if(title){const hd=document.createElement('div');hd.className='blk-h';const h3=document.createElement('h3');h3.textContent=title;hd.appendChild(h3);if(pillTxt){const p=document.createElement('span');p.className='pill';p.textContent=pillTxt;hd.appendChild(p)}s.appendChild(hd)}return s};
+  const kids=[...app.children];
+  for(let i=0;i<kids.length;i++){
+    const el=kids[i],cl=el.classList;
+    if(el.tagName==='H3'&&kids[i+1]&&kids[i+1].classList.contains('card')){
+      const t=el.textContent.trim(),m=t.match(/^(.*?)\s*\((\d+[^)]*)\)$/),sec=mk(m?m[1]:t,m?m[2]:'');
+      app.insertBefore(sec,el);sec.appendChild(kids[i+1]);el.remove();i++;
+    }else if(el.tagName==='DETAILS'){
+      const sec=mk('');app.insertBefore(sec,el);sec.appendChild(el);
+    }else if(cl.contains('calhead')&&kids[i+1]&&kids[i+1].classList.contains('mcal')){
+      const sec=mk('');app.insertBefore(sec,el);sec.appendChild(el);sec.appendChild(kids[i+1]);i++;
+    }else if(cl.contains('fmap')){
+      const sec=mk('Karte');app.insertBefore(sec,el);sec.appendChild(el);
+    }else if(cl.contains('card')||cl.contains('tiles')){
+      let title='';const f=el.firstElementChild;
+      if(cl.contains('pad')&&f&&f.tagName==='LABEL'&&f.classList.contains('f')){title=f.textContent.trim();f.remove()}
+      const sec=mk(title);app.insertBefore(sec,el);sec.appendChild(el);
+    }
+  }
+  document.querySelectorAll('#app .btn').forEach(b=>{const t=(b.textContent||'').trim();
+    if(/^(Abbrechen|Verwerfen|Zurücksetzen|Löschen)/.test(t)&&!b.classList.contains('red')){b.classList.remove('sec');b.classList.add('no')}});
+}
 /* ---------- Drehrad ---------- */
 const WH=40;
 const wheelHtml=(id,min,max,val)=>`<div class="wcol"><div class="wheel" id="${id}" data-min="${min}" data-max="${max}" data-val="${val}">${Array.from({length:max-min+1},(_,i)=>`<div data-v="${min+i}">${min+i}</div>`).join('')}</div><i class="band"></i></div>`;
@@ -2037,7 +2069,7 @@ function vPacken(t){
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}
     ${fin}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg ptabs">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
@@ -2703,7 +2735,7 @@ function vFeld(){
   if(mode==='karte'){
     const sch=schon(cur.fs),url=imgUrl(sch.img);
     $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
-      ${sch.address?`<div class="card pad"><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
+      ${sch.address?`<div class="card pad"><label class="f">Adresse</label><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
       ${url?`<div class="fmap"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf das Bild zum Vergrößern.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}`;
     return;
   }
