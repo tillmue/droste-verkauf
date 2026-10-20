@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 o';
+const APP_VERSION='2026-10-21 p';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1340,7 +1340,8 @@ document.addEventListener('click',ev=>{
   if(a==='ttog'){cur.tex=cur.tex||{};const t0=S.tours.find(x=>x.id===v),cur0=cur.tex[v]!==undefined?!!cur.tex[v]:!!(t0&&t0.status==='gestartet');cur.tex[v]=!cur0;return render()}
   if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
   if(a==='plrun'){runPlan();return}
-  if(a==='planauto'){(async()=>{if(!Object.values(cur.pd.sel).some(Boolean))planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
+  if(a==='pickplan'){const n=planPickups(cur.pd.date);if(n){cur.lday=cur.pd.date;cur.lcal=cur.pd.date.slice(0,7);cur.lkind='abh';toast(`${n} ${n===1?'Abholung':'Abholungen'} übernommen`)}return render()}
+  if(a==='planauto'){(async()=>{planPickups(cur.pd.date);if(!Object.values(cur.pd.sel).some(Boolean))planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
   if(a==='planok'){applyPlan(v==='all'?null:+v);return}
   if(a==='topt'){const t=S.tours.find(x=>x.id===v);if(t){toast('Reihenfolge wird optimiert …');optimizeTour(t)}return}
   if(a==='tlegs'){const t=S.tours.find(x=>x.id===v);if(t){toast('Fahrzeiten werden berechnet …');computeLegs(t,false)}return}
@@ -1720,7 +1721,7 @@ function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="te
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
-  return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n">${esc(o.name)}${winTxt(o.window)?` <span class="p">· ${winTxt(o.window)}</span>`:''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(o)}${orderTreeInfo(o)?' · ':''}LS ${esc(o.ls||'')}</div></div><button class="dots" data-pl="ordmenu" data-v="${o.id}" aria-label="Mehr">⋯</button></div>
+  return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n">${esc(o.name)}${winTxt(o.window)?` <span class="p">· ${winTxt(o.window)}</span>`:''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(o)}${orderTreeInfo(o)?' · ':''}LS ${esc(o.ls||'')}</div>${orderPickup(o)?'<span class="bdg">Abholung auf dem Hof</span>':''}</div><button class="dots" data-pl="ordmenu" data-v="${o.id}" aria-label="Mehr">⋯</button></div>
     ${addr?`<div class="p"><a href="${mapUrl(addr)}" target="_blank" rel="noopener">${esc(addr)}</a></div>`:''}
     <div class="p">${when}${o.window&&!winTxt(o.window)?' · '+esc(o.window):''}${o.phone?' · '+esc(o.phone):''}</div>
     ${(o.hints||[]).length?`<div class="p" style="font-style:italic">${esc(o.hints.join(' · '))}</div>`:''}
@@ -1732,6 +1733,17 @@ function orderCard(o){
 }
 const toRad=d=>d*Math.PI/180;
 const havKm=(a,b)=>{const R=6371,dl=toRad(b.lat-a.lat),dg=toRad(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+const orderPickup=o=>/abgeholt|abholung|selbst\s*abhol/i.test([...(o.hints||[]),o.window||''].join(' '))||(/Abholung/i.test(orderService(o))&&!/Lieferung|Aufstellen/i.test(orderService(o)));
+const inWindow=(o,day)=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&t>=day};
+function planPickups(day){
+  const L=S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,day));
+  if(!L.length)return 0;
+  let p=S.tours.find(x=>!x.deleted&&x.type==='abholung'&&x.date===day);
+  if(!p){p={id:uid(),type:'abholung',date:day,driver:'',vehicle:'',note:'',stops:{},createdBy:S.me,created:Date.now()};S.tours.push(p)}
+  p.stops=p.stops||{};
+  L.forEach(o=>{const mx=Object.values(p.stops).reduce((m,s)=>Math.max(m,s.order||0),0),stop=orderToStop(o,mx+1);stop.address='';stop.pickup=true;p.stops[stop.id]=stop;o.status='geplant';o.tourId=p.id;o.stopId=stop.id;o.plannedFor=day});
+  save();return L.length;
+}
 const orderOpen=o=>!o.deleted&&o.status!=='geplant'&&o.status!=='erledigt';
 const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),0),ls=tr.map(p=>+p.len||0).filter(Boolean),mn=ls.length?Math.min(...ls):0,mx=ls.length?Math.max(...ls):0;
   if(n<=0)return '';if(n===1)return mFmt(mx)||'1 Baum';return `${n} Stk.`+(mx?' · '+(mn===mx?mFmt(mx):mFmt(mn).replace(' m','')+' bis '+mFmt(mx)):'')};
@@ -1746,7 +1758,7 @@ const SOLO=20;
 const up5=m=>Math.ceil(m/5)*5;
 const hmUp=ts=>{if(!ts)return '';const d=new Date(ts),m=Math.ceil((d.getHours()*60+d.getMinutes())/5)*5;return hmMin(m%1440)};
 const brkAdd=(c,s,rec,idx)=>{if(!s.b&&c>=570){if(rec)rec.push({k:'Frühstück',at:c,len:15,after:idx});c+=15;s.b=1}if(!s.l&&c>=750){if(rec)rec.push({k:'Mittag',at:c,len:30,after:idx});c+=30;s.l=1}return c};
-const SVC=()=>{const h0=S.hofInfo||{},n=(v,d)=>{const x=parseInt(v);return isNaN(x)?d:x};return {drop:n(h0.svcDrop,5),set:n(h0.svcSet,10),tree:n(h0.svcTree,3)}};
+const SVC=()=>{const h0=S.hofInfo||{},n=(v,d)=>{const x=parseInt(v);return isNaN(x)?d:x};return {drop:n(h0.svcDrop,5),set:n(h0.svcSet,10),tree:n(h0.svcTree,1)}};
 function planSim(t){
   const st=tourStops(t),lg=t.legs||[],bs={},brk=[],eta={},start=t.depart||495;let c=start,drive=0,stay=0,wait=0;
   st.forEach((x,i)=>{const l=Math.round((lg[i]||0)/60);c+=l;drive+=l;const ws=winStart(x.win||'');if(ws!=null&&c<ws){wait+=ws-c;c=ws}eta[x.id]=c;const sv=svcMin(x);stay+=sv;c+=sv;c=brkAdd(c,bs,brk,i+1)});
@@ -1758,7 +1770,7 @@ const brkTxt=(brk,home)=>{const b=brk.find(x=>x.k==='Frühstück'),l=brk.find(x=
 const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
 function planCandidates(day){
-  return S.orders.filter(orderOpen).map(o=>{const f=o.from||day,t=o.to||o.from||day;return {o,must:t<=day,ok:f<=day&&t>=day,late:false}}).filter(x=>x.ok).sort((a,b)=>(b.must-a.must)||((a.o.to||a.o.from||'')<(b.o.to||b.o.from||'')?-1:1));
+  return S.orders.filter(o=>orderOpen(o)&&!orderPickup(o)).map(o=>{const f=o.from||day,t=o.to||o.from||day;return {o,must:t<=day,ok:f<=day&&t>=day,late:false}}).filter(x=>x.ok).sort((a,b)=>(b.must-a.must)||((a.o.to||a.o.from||'')<(b.o.to||b.o.from||'')?-1:1));
 }
 function initPlan(){
   const td=todayStr(),open=S.orders.filter(orderOpen),days=open.map(o=>o.from||o.to).filter(Boolean).filter(d=>d>=td).sort(),
@@ -1885,6 +1897,7 @@ function planBox(){
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
+    ${(()=>{const pk=S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,pd.date));return pk.length?`<div class="card pad" style="margin:8px 0"><div class="n">Abholungen auf dem Hof (${pk.length})</div><div class="hint" style="margin:2px 0 6px">Werden nicht ausgeliefert, aber gepackt, bereitgelegt und etikettiert.</div>${pk.map(o=>`<div class="kv"><span>${esc(o.name)}${winTxt(o.window)?' · '+winTxt(o.window):''}</span><span class="p">${orderTreeInfo(o)}</span></div>`).join('')}<button class="btn sec" data-pl="pickplan" style="margin:8px 0 0">In Abholungen übernehmen</button></div>`:''})()}
     <label class="f">Aufträge für diesen Tag (${nSel} von ${cands.length} gewählt)</label>
     <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
@@ -2007,7 +2020,7 @@ function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank"
 const depot=()=>(S.hofInfo&&S.hofInfo.depot)||'Im Gattberg 19, 49191 Belm';
 const fmtMin=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' Std '+(m%60?m%60+' Min':''):m+' Min'};
 const stopTrees=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>a+(+l.q||0),0);
-const svcMin=x=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x);return base+Math.min(30,c.tree*Math.max(0,tr-1))};
+const svcMin=x=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x);return base+Math.min(15,Math.round(c.tree*2*Math.sqrt(Math.max(0,tr-1))))};
 function etaTimes(t){
   const st=tourStops(t),legs=t.legs||[],out={};if(!t.startedAt||!legs.length)return out;
   let cur=t.startedAt+(t.pausedMs||0);const bs={};
@@ -2058,7 +2071,7 @@ function pickCard(t,plan){
   return `<div class="tour"><div class="n" style="font-size:17px">Abholungen auf dem Hof</div>
     <div class="p">${st.length} ${st.length===1?'Abholung':'Abholungen'} · ${done} abgeholt</div>
     ${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}
-    <div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Abholungen.</span></div>'}</div></div>`;
+    <div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Abholungen.</span></div>'}</div>${(()=>{const it=st.flatMap(s=>labelItems(s).map(l=>({...l,nm:s.name})));return it.length?`<details data-det="pklab-${t.id}"><summary>Etiketten schreiben (${it.length})</summary><div class="card pad">${it.map(l=>`<div class="kv"><span><b>${esc(l.text)}</b></span></div>`).join('')}</div></details>`:''})()}</div>`;
 }
 const packStatus=t=>{if(t.packed)return ['Gepackt ✓','var(--green)'];const u=packUnits(t);if(!u.length)return null;const pk=t.pack||{},d=u.filter(x=>pk[x.id]&&pk[x.id].a).length,any=u.some(x=>pk[x.id]&&(pk[x.id].a||pk[x.id].l||pk[x.id].b));return d===u.length?['Gepackt','var(--green)']:any?['In Arbeit','var(--orange)']:['Offen','var(--mut)']};
 function tsel(t,f,lab,list){const cur0=t[f]||'',l=list.includes(cur0)||!cur0?list:[cur0,...list];return `<select class="t" data-tset="${t.id}|${f}" style="min-width:0"><option value="">${lab}</option>${l.map(v=>`<option ${v===cur0?'selected':''}>${esc(v)}</option>`).join('')}</select>`}
@@ -2370,8 +2383,8 @@ function vDaten(){
   <input class="t" id="hof-svcDrop" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcDrop)||''))}" placeholder="5">
   <label class="f">Aufenthalt je Stopp in Minuten: abladen und aufstellen (Standard 10)</label>
   <input class="t" id="hof-svcSet" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcSet)||''))}" placeholder="10">
-  <label class="f">Aufenthalt: zusätzliche Minuten je weiterem Baum (Standard 3)</label>
-  <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="3">
+  <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Standard 1, mehrere Bäume zählen abnehmend, höchstens 15 Min)</label>
+  <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="1">
   <label class="f">MwSt-Satz in Prozent (Standard 7,8)</label>
   <input class="t" id="hof-vat" inputmode="decimal" value="${esc(String((S.hofInfo&&S.hofInfo.vat)||''))}" placeholder="7,8">
   <label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>

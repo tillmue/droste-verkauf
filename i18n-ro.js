@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Aufenthalt: Zuschlag je weiterem Baum (Standard 1, mehrere Bäume zählen abnehmend, höchstens 15 Min)": "Durata: supliment pentru fiecare brad în plus (standard 1, mai mulți brazi contează descrescător, maxim 15 min)",
+"Werden nicht ausgeliefert, aber gepackt, bereitgelegt und etikettiert.": "Nu se livrează, dar se împachetează, se pregătesc și se etichetează.",
+"In Abholungen übernehmen": "Preia în ridicări",
+"Abholung auf dem Hof": "Ridicare de la fermă",
 "Abfahrt ist standardmäßig 8:15 Uhr. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet, die Zeiten sind auf 5 Minuten aufgerundet. Lieber wenige längere Touren als viele kurze (bis ca. 6 Std plus Pausen).": "Plecarea este în mod standard la 8:15. Micul dejun (15 min) și prânzul (30 min) sunt incluse în ore, orele sunt rotunjite în sus la 5 minute. Mai bine puține ture lungi decât multe scurte (până la aprox. 6 ore plus pauze).",
 "Aufenthalt: zusätzliche Minuten je weiterem Baum (Standard 3)": "Durata: minute suplimentare pentru fiecare brad în plus (standard 3)",
 "Aufenthalt je Stopp in Minuten: abladen und aufstellen (Standard 10)": "Durata la oprire în minute: descărcare și montare (standard 10)",
@@ -1020,6 +1024,9 @@ window.RO_PATTERNS=[
  [/^Frühstück am Hof · Mittag am Hof$/,()=>`Mic dejun la fermă · Prânz la fermă`],
  [/^Ankunft ca\. (.+) · Aufenthalt (\d+) Min$/,(m,a,b)=>`Sosire aprox. ${a} · Oprire ${b} min`],
  [/^(.+) · Aufenthalt (\d+) Min$/,(m,a,b)=>`${a} · Oprire ${b} min`],
+ [/^Abholungen auf dem Hof \((\d+)\)$/,(m,n)=>`Ridicări de la fermă (${n})`],
+ [/^Etiketten schreiben \((\d+)\)$/,(m,n)=>`Scrie etichetele (${n})`],
+ [/^(\d+) (Abholung|Abholungen) übernommen$/,(m,n)=>`${n} ridicări preluate`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
