@@ -1,4 +1,6 @@
 window.RO_DICT={
+"kein fester Stand": "fără stand fix",
+"Steht am Stand": "Este la standul",
 "Mittag unterwegs": "Prânz în drum",
 "Frühstück unterwegs": "Mic dejun în drum",
 "Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen eine halbe Minute je Baum, höchstens 60 Min). Eine Person braucht 40 % länger, drei Personen (große Bäume) 20 % länger als zwei.": "Durata: supliment pentru fiecare brad în plus (factor, standard 1; primii brazi contează descrescător, de la 11 brazi o jumătate de minut per brad, maxim 60 min). O persoană are nevoie de 40 % mai mult, trei persoane (brazi mari) de 20 % mai mult decât două.",
@@ -1049,6 +1051,7 @@ window.RO_PATTERNS=[
  [/^Mit (\d+) Fahrern sind nicht alle Touren so besetzbar, wie sie es bräuchten \(.+\)\.$/,(m,n)=>`Cu ${n} șoferi nu toate turele pot fi echipate cum ar trebui (brazi mari sau mulți brazi la o oprire necesită 2 până la 3 persoane).`],
  [/^Bei (\d+) (Stopp|Stopps) wird das Zeitfenster überschritten\.$/,(m,n)=>`La ${n} opriri intervalul orar este depășit.`],
  [/^Mit (\d+) Fahrern sind die Touren erst ca\. (.+) fertig\.$/,(m,n,x)=>`Cu ${n} șoferi turele sunt gata abia pe la ${x}.`],
+ [/^Nicht angetroffen: (.+)$/,(m,x)=>`Client absent: ${x}`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],

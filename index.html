@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 t';
+const APP_VERSION='2026-10-21 u';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -406,6 +406,7 @@ function backupWarn(){
 }
 const standChips=()=>`<div class="chips">${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>`;
 function render(){
+  {const ps=S.pstand&&S.pstand[S.me];if(ps&&cur.standAssigned!==ps&&S.stands.some(s=>s.id===ps)){cur.stand=ps;cur.standAssigned=ps}}
   document.body.classList.remove('authed');document.body.classList.remove('run');
   if(CLOUD){
     const c=cur.cloud||{status:'loading'};
@@ -720,6 +721,12 @@ function vProfil(){
 /* ---------- Wetter (Bright Sky, Daten des Deutschen Wetterdienstes) ---------- */
 const WX={lat:52.2799,lon:8.0472,ort:'Osnabrück'};
 let wxData=null,wxBusy=null;
+const wxLoc=()=>{const s=S.stands.find(x=>x.id===cur.stand);return s&&s.lat&&s.lng?{lat:s.lat,lon:s.lng,ort:s.name,key:s.id}:{...WX,key:'hof'}};
+async function ensureStandCoords(){
+  if(cur.sgeo||!isAdmin()||!window.cloud||!window.cloud.geocode)return;cur.sgeo=true;
+  const need=S.stands.filter(s=>s.address&&!(s.lat&&s.lng));if(!need.length)return;
+  try{const r=await window.cloud.geocode({addresses:need.map(s=>s.address)});need.forEach((s,i)=>{if(r.coords[i]){s.lat=r.coords[i].lat;s.lng=r.coords[i].lng}});save()}catch(e){}
+}
 function wxAgg(list,start){
   const days={};
   list.forEach(h=>{const d=h.timestamp.slice(0,10);(days[d]=days[d]||[]).push(h)});
@@ -742,22 +749,24 @@ function wxAgg(list,start){
   });
 }
 async function loadWx(force){
-  const today=todayStr();let c=null;
-  try{c=JSON.parse(localStorage.getItem(KEY+'-wx'))}catch(e){}
+  ensureStandCoords();
+  const today=todayStr(),loc=wxLoc();let c=null;
+  try{c=JSON.parse(localStorage.getItem(KEY+'-wx-'+loc.key))}catch(e){}
   if(c&&c.start===today&&!force&&Date.now()-c.at<30*60e3){wxData=c;return}
   if(wxBusy)return wxBusy;
   wxBusy=(async()=>{
     try{
-      const r=await fetch(`https://api.brightsky.dev/weather?lat=${WX.lat}&lon=${WX.lon}&date=${today}&last_date=${shiftDate(today,3)}&tz=Europe/Berlin`);
+      const r=await fetch(`https://api.brightsky.dev/weather?lat=${loc.lat}&lon=${loc.lon}&date=${today}&last_date=${shiftDate(today,3)}&tz=Europe/Berlin`);
       if(!r.ok)throw new Error('HTTP '+r.status);
-      const j=await r.json();wxData={at:Date.now(),start:today,days:wxAgg(j.weather||[],today)};
-      try{localStorage.setItem(KEY+'-wx',JSON.stringify(wxData))}catch(e){}
+      const j=await r.json();wxData={at:Date.now(),start:today,key:loc.key,ort:loc.ort,days:wxAgg(j.weather||[],today)};
+      try{localStorage.setItem(KEY+'-wx-'+loc.key,JSON.stringify(wxData))}catch(e){}
     }catch(e){wxData=c?{...c,stale:true}:{fail:true}}
     wxBusy=null;
   })();
   return wxBusy;
 }
 function wxHtml(){
+  if(wxData&&wxData.key&&wxData.key!==wxLoc().key){wxData=null;loadWx().then(()=>softRender())}
   if(!wxData)return '<div class="hint">Wetter wird geladen …</div>';
   if(wxData.fail)return '<div class="hint">Wetter gerade nicht verfügbar.</div>';
   const today=todayStr(),lab={[today]:'Heute',[shiftDate(today,1)]:'Morgen',[shiftDate(today,2)]:'Übermorgen'};
@@ -768,7 +777,7 @@ function wxHtml(){
   return `<div class="wxrow">${days.map(x=>`<div class="wxd"><small>${lab[x.d]}</small><div class="ic">${x.ic}</div><b>${x.tmin}° / ${x.tmax}°</b>
     <small>${x.txt}</small><small>${x.rain>=0.1?x.rain.toFixed(1).replace('.',',')+' mm':'trocken'}${x.pp?' · '+x.pp+' %':''}</small><small>Böen ${x.gust} km/h</small></div>`).join('')}</div>
     ${storm.length?`<div class="warn" style="margin-top:8px">Starker Wind: ${storm.map(x=>lab[x.d]+' bis '+x.gust+' km/h').join(', ')}. Planen, Schilder und Ständer sichern.</div>`:''}
-    <div class="hint" style="margin:6px 2px 0">${WX.ort} · Deutscher Wetterdienst via Bright Sky · Stand ${at}${wxData.stale?' (offline, alte Daten)':''}</div>`;
+    <div class="hint" style="margin:6px 2px 0">${wxData.ort||WX.ort} · Deutscher Wetterdienst via Bright Sky · Stand ${at}${wxData.stale?' (offline, alte Daten)':''}</div>`;
 }
 /* ---------- Ich: Dashboard ---------- */
 function vIch(){
@@ -955,7 +964,7 @@ function handOver(id){
     else if(x.dataset.no||x===d)d.remove()});
   document.body.appendChild(d);
 }
-const RCAT=[['fahrzeug','Fahrzeug'],['maschine','Maschine'],['hof','Hof'],['stand','Stand'],['feld','Feld']];
+const RCAT=[['fahrzeug','Fahrzeug'],['maschine','Maschine'],['hof','Hof'],['stand','Stand'],['lieferung','Lieferung'],['feld','Feld']];
 const DEF_MACH=['Kettensäge','Netzmaschine (Trecker)','Netzmaschine (Hof)','Palettiermaschine','Akkuschrauber Rot','Akkuschrauber Weiß','Akkuschrauber Gelb','Akkuschrauber Grün','Akkuschrauber Blau','Ameise Reinhard','Ameise Rolf','Hubwagen','Akkuschere','Radlader','Gabelstapler','Case Trecker','Schlumpf (New Holland)','John Deere','Steiger'].join('\n');
 const machinesList=()=>((S.hofInfo&&S.hofInfo.machines)||DEF_MACH).split('\n').map(x=>x.trim()).filter(Boolean);
 const RST={neu:'Neu',arbeit:'In Arbeit',erledigt:'Erledigt'};
@@ -1357,7 +1366,7 @@ document.addEventListener('click',ev=>{
   if(a==='sdeliv'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     return askConfirm(`„${x.name||x.address}“ als geliefert markieren?`,'Ja, geliefert',()=>{x.done=true;x.outcome='geliefert';x.doneBy=S.me;x.doneAt=Date.now();const nt=(cur.dn[sid]||'').trim();if(nt)x.drvNote=nt;delete cur.dn[sid];save();render()})}
   if(a==='snone'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
-    return askConfirm(`„${x.name||x.address}“ nicht angetroffen?`,'Ja, nicht angetroffen',()=>{x.done=true;x.outcome='nicht';x.doneBy=S.me;x.doneAt=Date.now();const nt=(cur.dn[sid]||'').trim();if(nt)x.drvNote=nt;delete cur.dn[sid];save();render()})}
+    return askConfirm(`„${x.name||x.address}“ nicht angetroffen?`,'Ja, nicht angetroffen',()=>{x.done=true;x.outcome='nicht';x.doneBy=S.me;x.doneAt=Date.now();const nt=(cur.dn[sid]||'').trim();if(nt)x.drvNote=nt;delete cur.dn[sid];S.reports.push({id:uid(),cat:'lieferung',obj:x.name||'',text:'Nicht angetroffen: '+(x.name||'')+(x.address?' ('+x.address+')':'')+(nt?'. '+nt:''),urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});save();render()})}
   if(a==='stopnew'){cur.stop=newStop(v);cur.stopOpen=true;cur.tourOpen=false;return render()}
   if(a==='stopedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     cur.stop={id:sid,tourId:tid,name:x.name||'',address:x.address||'',time:x.time||'',phone:x.phone||'',items:x.items||'',note:x.note||'',callBefore:x.callBefore||'',standId:x.standId||'',toTour:tid};cur.stopOpen=true;cur.tourOpen=false;render();window.scrollTo(0,document.body.scrollHeight);return}
@@ -1970,13 +1979,13 @@ function nacharbeit(){
   S.orders.filter(orderOpen).forEach(o=>{const d=o.to||o.from;if(d&&d<td){out.push({o,why:'Nicht in einer Tour geplant',day:d});seen.add(o.id)}});
   S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&(t.date<td||t.status==='beendet')).forEach(t=>tourStops(t).forEach(s=>{
     const o=s.orderId&&S.orders.find(x=>x.id===s.orderId&&!x.deleted);if(!o||o.status==='erledigt'||o.tourId!==t.id||seen.has(o.id))return;
-    if(s.outcome==='nicht'||!s.done){out.push({o,why:s.outcome==='nicht'?'Nicht angetroffen':'Nicht geliefert',day:t.date});seen.add(o.id)}}));
+    if(s.outcome==='nicht'||!s.done){out.push({o,why:s.outcome==='nicht'?'Nicht angetroffen':'Nicht geliefert',day:t.date,note:s.drvNote||''});seen.add(o.id)}}));
   return out;
 }
 function nachBox(){
   const L=nacharbeit();if(!L.length)return '';
   return `<div class="card pad"><div class="ihead"><b>Nacharbeit (${L.length})</b>${infoBtn('nach')}</div>${infoBox('nach','Aufträge, die nicht geliefert wurden: nicht angetroffen, in keiner Tour geplant oder nicht abgehakt. Über die drei Punkte rechts markierst du sie als geliefert oder verlegst sie auf einen anderen Tag.')}
-    <div class="card">${L.map(x=>`<div class="row" style="align-items:flex-start"><div style="min-width:0;flex:1"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div><div class="p">${esc(orderAddr(x.o))}</div><div class="p" style="color:var(--orange)">${x.why} · ${wdD(x.day)}</div></div><button class="dots" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Mehr">⋯</button></div>`).join('')}</div></div>`;
+    <div class="card">${L.map(x=>`<div class="row" style="align-items:flex-start"><div style="min-width:0;flex:1"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div><div class="p">${esc(orderAddr(x.o))}</div><div class="p" style="color:var(--orange)">${x.why} · ${wdD(x.day)}</div>${x.note?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.note)}</div>`:''}</div><button class="dots" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Mehr">⋯</button></div>`).join('')}</div></div>`;
 }
 function orderDone(o){
   const t=S.tours.find(x=>x.id===o.tourId),s=t&&t.stops&&t.stops[o.stopId];
@@ -2412,7 +2421,7 @@ function vDaten(){
   ${freigaben()}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
@@ -2549,7 +2558,7 @@ document.addEventListener('change',ev=>{
     (async()=>{try{toast('Bild wird hochgeladen …');const blob=await shrinkImage(f0,2400),path='schonungen/'+feldSlug(n)+'.jpg';await window.cloud.uploadImage(path,blob);
       S.hofInfo={...S.hofInfo,schonungen:{...((S.hofInfo||{}).schonungen||{}),[n]:{...schon(n),img:path}}};delete IMG[path];save();toast('Bild gespeichert');render()}catch(e){alert('Das Bild konnte nicht hochgeladen werden. '+((e&&(e.code||e.message))||''))}})()}
   if(t.dataset.sx){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sx]=t.value.trim();save()}
-  if(t.dataset.sa){S.stands.find(s=>s.id===t.dataset.sa).address=t.value.trim();save()}
+  if(t.dataset.sa){const s0=S.stands.find(s=>s.id===t.dataset.sa);s0.address=t.value.trim();delete s0.lat;delete s0.lng;save();cur.sgeo=false;ensureStandCoords()}
   if(t.dataset.sc){S.stands.find(s=>s.id===t.dataset.sid)[t.dataset.sc]=pf(t.value);save()}
 });
 
@@ -2574,6 +2583,7 @@ document.addEventListener('change',ev=>{
       S.notes.forEach(n=>{if(n.owner===old)n.owner=nw});if(S.me===old)S.me=nw;save();render();
     }
   }
+  if(t.dataset.pstand!=null){const n=S.people[+t.dataset.pstand];S.pstand=S.pstand||{};if(t.value)S.pstand[n]=t.value;else delete S.pstand[n];if(window.cloud&&window.cloud.setStand)window.cloud.setStand(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));render();return}
   if(t.dataset.role!=null){
     const n=S.people[+t.dataset.role];
     if(CLOUD){window.cloud.setRole(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
