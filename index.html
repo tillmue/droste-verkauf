@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 e';
+const APP_VERSION='2026-10-21 f';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -685,6 +685,7 @@ function loginScreen(){
     ${reg?'<div class="hint">Nach dem Anlegen muss der Admin dich freigeben.</div>':'<button class="btn sec" id="authReset">Passwort vergessen</button>'}`;
 }
 let pushOk=null;
+function trackBlock(){const on=trackPref()==='1';return `<div class="kv"><span>Standort teilen</span><span>${on?'an':'aus'}</span></div><button class="btn sec" id="trackTog">${on?'Standort teilen ausschalten':'Standort teilen einschalten'}</button><div class="hint">Nur bei geöffneter App, nur die letzte Position für die Tourenplanung.</div>`}
 function pushBlock(){
   if(!window.cloud||!window.cloud.pushSupported)return '';
   if(pushOk===null){window.cloud.pushSupported().then(v=>{pushOk=!!v;if(tab==='profil'||document.querySelector('#signOutBtn'))softRender()}).catch(()=>{pushOk=false});return ''}
@@ -699,7 +700,7 @@ function accountBlock(){
   const view=`<label class="f">Darstellung</label><div class="seg"><button data-view="bar" class="${homeMode()?'':'on'}">Leiste</button><button data-view="home" class="${homeMode()?'on':''}">Startbildschirm</button></div>`;
   const lang=`<label class="f">Sprache</label><div class="seg"><button data-lang="de" class="${LANG==='de'?'on':''}">Deutsch</button><button data-lang="ro" class="${LANG==='ro'?'on':''}">Română</button></div>`;
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
-    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${lang}${view}${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
+    return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${lang}${view}${pushBlock()}${trackBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
   return `${lang}${view}<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
 }
 function hofbarUpdate(){}
@@ -919,10 +920,32 @@ function rollTasks(){
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'))){rollTasks()}});
 function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
 function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
-function askConfirm(msg,ok,cb){
+/* ---------- Standort teilen (nur bei geöffneter App, nur letzte Position, Zustimmung nötig) ---------- */
+const trackPref=()=>{try{return localStorage.getItem('droste-track')}catch(e){return null}};
+const trackSet=v=>{try{localStorage.setItem('droste-track',v)}catch(e){}};
+let trkW=null,trkLast=0,trkAsked=false;
+function trackStop(){if(trkW!=null){try{navigator.geolocation.clearWatch(trkW)}catch(e){}trkW=null}}
+function trackStart(){
+  if(!CLOUD||!S.me||!navigator.geolocation||!window.cloud||!window.cloud.setLocation||trkW!=null||document.visibilityState!=='visible')return;
+  if(!cur.cloud||cur.cloud.status!=='in'||roleOf(S.me)==='demo')return;
+  const pf=trackPref();
+  if(pf==='0')return;
+  if(pf===null){if(trkAsked)return;trkAsked=true;
+    return askConfirm('Standort teilen? Solange die App geöffnet ist, sieht die Tourenplanung deine letzte Position (nur die aktuelle, es wird keine Strecke gespeichert). Du kannst das im Profil jederzeit ausschalten.','Ja, teilen',()=>{trackSet('1');trackStart()},()=>trackSet('0'))}
+  trkW=navigator.geolocation.watchPosition(p=>{const n=Date.now();if(n-trkLast<45000)return;trkLast=n;const rt=runningTour();window.cloud.setLocation({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),tour:rt?tourName(rt):''}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:30000});
+}
+setInterval(()=>{document.visibilityState==='visible'?trackStart():trackStop()},5000);
+function locAgo(ts){const m=Math.round((Date.now()-ts)/60000);return m<1?'gerade eben':m<60?`vor ${m} Min`:`vor ${Math.floor(m/60)} Std`}
+function locBox(){
+  if(!has('lieferplanung'))return '';
+  const L=Object.values(cur.locs||{}).filter(l=>l&&l.at&&Date.now()-l.at<12*36e5&&l.uid!==(cur.cloud&&cur.cloud.profile&&cur.cloud.profile.uid)).sort((a,b)=>b.at-a.at);
+  if(!L.length)return `<div class="hint">Unterwegs: niemand teilt gerade den Standort.</div>`;
+  return `<div class="card pad"><h3 style="margin-top:0">Unterwegs</h3>${L.map(l=>`<div class="kv"><span><b>${esc(l.name||'?')}</b>${l.tour?' · '+esc(l.tour):''}<br><span class="p">${locAgo(l.at)}${Date.now()-l.at>10*60000?' (App zuletzt offen)':''}</span></span><a href="https://www.google.com/maps?q=${l.lat},${l.lng}" target="_blank" rel="noopener" class="claim">Karte</a></div>`).join('')}</div>`
+}
+function askConfirm(msg,ok,cb,no){
   const d=document.createElement('div');d.className='cheers';
   d.innerHTML=`<div><p>${esc(msg)}</p><button class="btn green" data-ok="1" style="padding:18px">${esc(ok)}</button><div style="height:26px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
-  d.addEventListener('click',e=>{const t=e.target;if(t.dataset.ok){d.remove();cb()}else if(t.dataset.no||t===d)d.remove()});
+  d.addEventListener('click',e=>{const t=e.target;if(t.dataset.ok){d.remove();cb()}else if(t.dataset.no||t===d){d.remove();if(no)no()}});
   document.body.appendChild(d);
 }
 function handOver(id){
@@ -1782,7 +1805,7 @@ function vAuftraege(kind,fahrer,plan){
   const nOff=all.filter(o=>o.status!=='geplant').length,nPl=all.length-nOff;
   const list=all.filter(o=>st==='alle'||(st==='offen'?o.status!=='geplant':o.status==='geplant')).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
   const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${planBox()}${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge in dieser Ansicht. Lieferscheine kommen über Daten, Import.</div>'}`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${locBox()}${planBox()}${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge in dieser Ansicht. Lieferscheine kommen über Daten, Import.</div>'}`;
 }
 function assignOrder(id){
   const o=S.orders.find(x=>x.id===id);if(!o)return;
@@ -2389,7 +2412,7 @@ function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
 function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{orders:[],days:[],rolesCfg:{},feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
-const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>{const r=pr.role;if(r==='admin'||r==='demo')return true;const ov=pr.perms||{};return ov[k]!==undefined?!!ov[k]:!!presetFor(r)[k]},ready:false,status:'',setCloud(c){cur.cloud=c}};
+const APP={rollTasks,get cur(){return cur},get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>{const r=pr.role;if(r==='admin'||r==='demo')return true;const ov=pr.perms||{};return ov[k]!==undefined?!!ov[k]:!!presetFor(r)[k]},ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
 
 document.addEventListener('click',async ev=>{
@@ -2402,6 +2425,7 @@ document.addEventListener('click',async ev=>{
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
   if(ev.target.closest('#help')){askQuestion();return}
+  if(ev.target.closest('#trackTog')){if(trackPref()==='1'){trackSet('0');trackStop();if(window.cloud&&window.cloud.clearLocation)window.cloud.clearLocation()}else{trackSet('1');trkAsked=true;trackStart()}return softRender()}
   if(ev.target.closest('#refresh')){const b=$('#refresh');b.classList.add('spin');try{if(window.cloud&&window.cloud.resume)await Promise.race([window.cloud.resume(),new Promise(r=>setTimeout(r,2500))])}catch(e){}location.reload();return}
   if(id==='pushOn'){try{await window.cloud.enablePush();toast('Benachrichtigungen sind an')}catch(e){if(e&&e.message==='denied')toast('Benachrichtigungen wurden nicht erlaubt');else alert('Benachrichtigungen konnten nicht eingeschaltet werden.\n\nFehler: '+((e&&(e.code||e.message))||'unbekannt'))}return render()}
   if(id==='pushOff'){try{await window.cloud.disablePush();toast('Benachrichtigungen sind aus')}catch(e){}return render()}
