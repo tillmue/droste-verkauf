@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 q';
+const APP_VERSION='2026-10-21 r';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1650,10 +1650,8 @@ function standRec(len,place){
   const size=len&&len>2.5?'groß':'klein',fix=place==='drinnen'?'Pin':place==='draußen'?'Beton':'Pin oder Beton';
   return {size,fix,text:size+', '+fix};
 }
-function crewHint(t){
-  const L=Math.max(0,...tourStops(t).flatMap(s=>(s.lines||[]).filter(l=>['Baum','Laternenbaum'].includes(l.c)).map(l=>+l.l||0)));
-  return L>3.5?'3 Personen oder mehr':L>2.5?'2 Personen':'1 bis 2 Personen';
-}
+const crewNum=stops=>{const arr=Array.isArray(stops)?stops:Object.values(stops||{});const L=Math.max(0,...arr.flatMap(s=>(s.lines||[]).filter(l=>['Baum','Laternenbaum'].includes(l.c)).map(l=>+l.l||0)));const mx=Math.max(0,...arr.map(s=>(s.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>a+(+l.q||0),0)));return L>3.5?3:(L>2.5||mx>=30)?2:1};
+function crewHint(t){const n=crewNum(tourStops(t));return n>=3?'3 Personen oder mehr':n===2?'2 Personen':'1 bis 2 Personen'}
 function packUnits(t){
   const stops=tourStops(t),out=[];
   stops.forEach((s,si)=>{
@@ -1764,14 +1762,40 @@ const up5=m=>Math.ceil(m/5)*5;
 const hmUp=ts=>{if(!ts)return '';const d=new Date(ts),m=Math.ceil((d.getHours()*60+d.getMinutes())/5)*5;return hmMin(m%1440)};
 const brkAdd=(c,s,rec,idx)=>{if(!s.b&&c>=570){if(rec)rec.push({k:'Frühstück',at:c,len:15,after:idx});c+=15;s.b=1}if(!s.l&&c>=750){if(rec)rec.push({k:'Mittag',at:c,len:30,after:idx});c+=30;s.l=1}return c};
 const SVC=()=>{const h0=S.hofInfo||{},n=(v,d)=>{const x=parseInt(v);return isNaN(x)?d:x};return {drop:n(h0.svcDrop,5),set:n(h0.svcSet,10),tree:n(h0.svcTree,1)}};
+function tourSched(items,back,start,fl){
+  const n=items.length;
+  const run=br=>{let c=start,wait=0;const eta=[];items.forEach((it,i)=>{c+=it.leg;if(it.ws!=null&&c<it.ws){wait+=it.ws-c;c=it.ws}eta.push(c);c+=it.svc;if(br[i])c+=br[i].len});return {eta,end:c,home:c+back,wait}};
+  const br={};let r=run(br);
+  if(!fl.bf&&start<720&&r.home>720){const i=items.findIndex((it,k)=>r.eta[k]+it.svc>=570);if(i>=0&&i<n-1){br[i]={k:'Frühstück',len:15,after:i+1};r=run(br)}}
+  const bfRoad=Object.keys(br).length>0;
+  if(!fl.lu&&(fl.bf||bfRoad||start>=570)&&r.home>810){const i0=bfRoad?Math.max(...Object.keys(br).map(Number))+1:0,i=items.findIndex((it,k)=>k>=i0&&r.eta[k]+it.svc>=750);if(i>=0&&i<n-1){br[i]={k:'Mittag',len:30,after:i+1};r=run(br)}}
+  const road=Object.keys(br).map(k=>({...br[k],at:r.eta[k]+items[k].svc}));
+  return {...r,road,late:items.reduce((a,it,k)=>a+(it.we!=null&&r.eta[k]>it.we?1:0),0)};
+}
+function scheduleDrivers(defs,P){
+  const RELOAD=15,D=[...Array(P)].map((_,i)=>({n:i+1,avail:495,bf:false,lu:false,ev:[]})),res=[];let late=0;
+  defs.slice().sort((a,b)=>(a.urg-b.urg)||(b.dur-a.dur)).forEach(def=>{
+    const need=Math.min(def.crewN,P),pick=D.slice().sort((a,b)=>a.avail-b.avail||a.n-b.n).slice(0,need);
+    const start=Math.max(...pick.map(d=>d.avail)),fl={bf:pick[0].bf,lu:pick[0].lu},r=tourSched(def.items,def.back,start,fl);
+    let t=r.home,bf=fl.bf||r.road.some(x=>x.k==='Frühstück'),lu=fl.lu||r.road.some(x=>x.k==='Mittag');const hof=[];
+    if(!bf&&start<720&&t>=540){hof.push({k:'Frühstück',at:t,len:15});t+=15;bf=true}
+    if(!lu&&t>=720){hof.push({k:'Mittag',at:t,len:30});t+=30;lu=true}
+    pick.forEach(d=>{d.avail=t+RELOAD;d.bf=bf;d.lu=lu;d.ev.push({idx:def.i,start,home:r.home,hof})});
+    res[def.i]={...r,start,bfPre:fl.bf,luPre:fl.lu,slots:pick.map(d=>d.n),capped:def.crewN>P,hof};late+=r.late;
+  });
+  return {res,D,late,makespan:Math.max(...res.map(r=>r.home))};
+}
 function planSim(t){
-  const st=tourStops(t),lg=t.legs||[],bs={},brk=[],eta={},start=t.depart||495;let c=start,drive=0,stay=0,wait=0;
-  st.forEach((x,i)=>{const l=Math.round((lg[i]||0)/60);c+=l;drive+=l;const ws=winStart(x.win||'');if(ws!=null&&c<ws){wait+=ws-c;c=ws}eta[x.id]=c;const sv=svcMin(x);stay+=sv;c+=sv;c=brkAdd(c,bs,brk,i+1)});
-  const back=Math.round((t.backSec||0)/60);drive+=back;
-  return {eta,start,end:c,home:c+back,dur:c+back-start,drive,stay,wait,brk,pb:brk.reduce((a,b)=>a+b.len,0)};
+  const st=tourStops(t),lg=t.legs||[],start=t.depart||495,back=Math.round((t.backSec||0)/60);
+  const items=st.map((x,i)=>({leg:Math.round((lg[i]||0)/60),svc:svcMin(x),ws:winStart(x.win||''),we:winEnd(x.win||'')}));
+  const r=tourSched(items,back,start,{bf:!!t.bfPre,lu:!!t.luPre}),eta={};st.forEach((x,i)=>{eta[x.id]=r.eta[i]});
+  return {eta,start,end:r.end,home:r.home,dur:r.home-start,drive:items.reduce((a,b)=>a+b.leg,0)+back,stay:items.reduce((a,b)=>a+b.svc,0),wait:r.wait,road:r.road,pb:r.road.reduce((a,b)=>a+b.len,0)};
 }
 const tourDur=t=>planSim(t).dur;
-const brkTxt=(brk,home)=>{const b=brk.find(x=>x.k==='Frühstück'),l=brk.find(x=>x.k==='Mittag');return `${b?`Frühstück unterwegs ca. ${hmMin(up5(b.at))} (nach Stopp ${b.after})`:'Frühstück am Hof'} · ${l?`Mittag unterwegs ca. ${hmMin(up5(l.at))} (nach Stopp ${l.after})`:'Mittag am Hof'}`};
+const brkTxt=(road,t,home)=>{const b=road.find(x=>x.k==='Frühstück'),l=road.find(x=>x.k==='Mittag'),p=[];
+  if(b)p.push(`Frühstück unterwegs ca. ${hmMin(up5(b.at))} (nach Stopp ${b.after})`);else if(!t.bfPre&&(t.depart||495)<720)p.push('Frühstück am Hof');
+  if(l)p.push(`Mittag unterwegs ca. ${hmMin(up5(l.at))} (nach Stopp ${l.after})`);else if(!t.luPre&&home>=720)p.push('Mittag am Hof');
+  return p.join(' · ')};
 const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
 function planCandidates(day){
@@ -1803,34 +1827,31 @@ async function runPlan(){
     const located=sel.filter(o=>o.lat&&o.lng),missing=sel.filter(o=>!(o.lat&&o.lng));
     const solo=located.filter(o=>nTrees(o)>=SOLO),rest=located.filter(o=>nTrees(o)<SOLO);
     const groups=[['klein',rest.filter(o=>orderMaxTree(o)<=3.5)],['gross',rest.filter(o=>orderMaxTree(o)>3.5)]].filter(g=>g[1].length);
-    const est=o=>orderSvc(o)+6,kAuto=l=>Math.min(l.length,Math.max(1,Math.ceil((l.reduce((a,o)=>a+est(o),0)+40)/(pd.budget*60))));
-    const ks=groups.map(g=>kAuto(g[1])),P=+pd.P||0;let warn='';
-    if(P){let tot=ks.reduce((a,b)=>a+b,0)+solo.length;while(tot>P&&ks.some(k=>k>1)){ks[ks.indexOf(Math.max(...ks))]--;tot--}
-      if(tot>P)warn=`Mit ${P} Fahrern reichen die Touren nicht: ${tot} Touren nötig.`}
+    const est=o=>orderSvc(o)+6,kAuto=l=>Math.min(l.length,Math.max(1,Math.ceil((l.reduce((a,o)=>a+est(o),0)+40)/(pd.budget*60)))),P=+pd.P||0;
     const tours=[];
-    const sim=(list,lg)=>{let c=timeToMin(pd.start),bad=0,wait=0,stay=0;const out=[],bs={},brk=[];list.forEach((o,i)=>{c+=Math.round((lg[i]||0)/60);const ws=winStart(o.window),we=winEnd(o.window);if(ws!=null&&c<ws){wait+=ws-c;c=ws}if(we!=null&&c>we)bad++;const sv=orderSvc(o);out.push({o,eta:c,svc:sv});stay+=sv;c+=sv;c=brkAdd(c,bs,brk,i+1)});return {out,end:c,bad,wait,stay,brk}};
+    const sim=(list,lg)=>{let c=timeToMin(pd.start),bad=0;const bs={};list.forEach((o,i)=>{c+=Math.round((lg[i]||0)/60);const ws=winStart(o.window),we=winEnd(o.window);if(ws!=null&&c<ws)c=ws;if(we!=null&&c>we)bad++;c+=orderSvc(o);c=brkAdd(c,bs)});return bad};
     const mkTour=async(size,sec,isSolo)=>{
       let ordd,legs;
       if(sec.length===1){const r=await window.cloud.routeLegs({origin:depot(),stops:[orderAddr(sec[0])],roundTrip:true,depart:nextDepart()});ordd=sec;legs=r.legs}
       else{const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),optimize:true,depart:nextDepart()});ordd=r.order.map(i=>sec[i]);legs=r.legs}
       if(ordd.length>1&&ordd.some(o=>winEnd(o.window)!=null)){
         const estSec=(a,b)=>Math.round(havKm(a,b)*1.3/40*3600),estLegs=l=>l.map((o,i)=>estSec(i?l[i-1]:dep,o));
-        let best=ordd.slice(),bb=sim(best,estLegs(best)).bad;
+        let best=ordd.slice(),bb=sim(best,estLegs(best));
         for(let pass=0;pass<12&&bb>0;pass++){
-          const s0=sim(best,estLegs(best)),vi=s0.out.findIndex(x=>winEnd(x.o.window)!=null&&x.eta>winEnd(x.o.window));if(vi<0)break;
+          let c=timeToMin(pd.start),vi=-1;const lg0=estLegs(best),bs={};best.forEach((o,i)=>{c+=Math.round((lg0[i]||0)/60);const ws=winStart(o.window),we=winEnd(o.window);if(ws!=null&&c<ws)c=ws;if(vi<0&&we!=null&&c>we)vi=i;c+=orderSvc(o);c=brkAdd(c,bs)});
+          if(vi<0)break;
           let improved=false;
-          for(let p=0;p<vi&&!improved;p++){const cand=best.slice(),[m]=cand.splice(vi,1);cand.splice(p,0,m);const b2=sim(cand,estLegs(cand)).bad;if(b2<bb){best=cand;bb=b2;improved=true}}
+          for(let p=0;p<vi&&!improved;p++){const cand=best.slice(),[m]=cand.splice(vi,1);cand.splice(p,0,m);const b2=sim(cand,estLegs(cand));if(b2<bb){best=cand;bb=b2;improved=true}}
           if(!improved)break;
         }
         if(best.some((o,i)=>o!==ordd[i])){const r2=await window.cloud.routeLegs({origin:depot(),stops:best.map(orderAddr),roundTrip:true,depart:nextDepart()});ordd=best;legs=r2.legs}
       }
-      const s=sim(ordd,legs);
-      const stopsOut=s.out.map(x=>{const we=winEnd(x.o.window);return {o:x.o,eta:x.eta,svc:x.svc,warn:we!=null&&x.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:''}});
-      const depart=Math.max(timeToMin(pd.start),s.out[0].eta-Math.round((legs[0]||0)/60));
-      const backMin=Math.round((legs[ordd.length]||0)/60),driveMin=legs.slice(0,ordd.length).reduce((a,b)=>a+Math.round(b/60),0)+backMin;
-      return {size,solo:isSolo,stops:stopsOut,legs:legs.slice(0,ordd.length),depart,end:s.end,backMin,drive:driveMin,stay:s.stay,wait:s.wait,brk:s.brk,pb:s.brk.reduce((a,b)=>a+b.len,0),home:s.end+backMin,
-        stand:ordd.reduce((a,o)=>a+(o.positions||[]).filter(p=>p.cat==='Ständer').reduce((x,p)=>x+(+p.qty||0),0),0),bohren:ordd.reduce((a,o)=>a+orderBohren(o),0),
-        crew:crewHint({stops:ordd.map(o=>({lines:orderLines(o).map(p=>({c:p.cat,l:p.len,q:p.qty}))}))})};
+      const backMin=Math.round((legs[ordd.length]||0)/60),lg=legs.slice(0,ordd.length);
+      const items=ordd.map((o,i)=>({leg:Math.round((lg[i]||0)/60),svc:orderSvc(o),ws:winStart(o.window),we:winEnd(o.window)}));
+      const stl=ordd.map(o=>({lines:orderLines(o).map(p=>({c:p.cat,l:p.len,q:p.qty}))}));
+      return {size,solo:isSolo,stops:ordd.map((o,i)=>({o,svc:items[i].svc,eta:0,warn:''})),legs:lg,backMin,items,crewN:crewNum(stl),crew:crewHint({stops:stl}),
+        preDur:tourSched(items,backMin,495,{bf:false,lu:false}).home-495,drive:items.reduce((a,b)=>a+b.leg,0)+backMin,stay:items.reduce((a,b)=>a+b.svc,0),
+        stand:ordd.reduce((a,o)=>a+(o.positions||[]).filter(p=>p.cat==='Ständer').reduce((x,p)=>x+(+p.qty||0),0),0),bohren:ordd.reduce((a,o)=>a+orderBohren(o),0)};
     };
     for(const [gi,[size,list]] of groups.entries()){
       const build=async K=>{
@@ -1847,19 +1868,31 @@ async function runPlan(){
         return out;
       };
       pd.msg=`Touren (${size==='gross'?'große':'kleine'} Bäume) werden geplant …`;render();
-      const lim=pd.budget*60+45,tried={};let K=ks[gi];
+      const lim=pd.budget*60+45,tried={};let K=kAuto(list);
       for(let a=0;a<4;a++){
         tried[K]=tried[K]||await build(K);
-        if(P)break;
-        const durs=tried[K].map(t=>t.end-t.depart+t.backMin),maxD=Math.max(...durs),sum=durs.reduce((x,y)=>x+y,0);
+        const durs=tried[K].map(t=>t.preDur),maxD=Math.max(...durs),sum=durs.reduce((x,y)=>x+y,0);
         let nk=K;if(maxD>lim+30&&K<list.length)nk=K+1;else if(K>1&&sum<=(K-1)*lim*0.9)nk=K-1;
         if(nk===K||tried[nk])break;K=nk;
       }
       tours.push(...tried[K]);
     }
     for(const o of solo){pd.msg=`Einzelfahrt für ${o.name} wird berechnet …`;render();tours.push(await mkTour(orderMaxTree(o)>3.5?'gross':'klein',[o],true))}
-    tours.sort((a,b)=>a.depart-b.depart);
-    pd.res={tours,missing,warn};pd.msg='';
+    // Fahrer einteilen: Touren nacheinander, wenn es weniger Fahrer als Touren gibt
+    pd.msg='Fahrer werden eingeteilt …';render();
+    const defs=tours.map((t,i)=>({i,items:t.items,back:t.backMin,crewN:t.crewN,dur:t.preDur,urg:Math.min(9999,...t.stops.map(s=>{const e=winEnd(s.o.window);return e==null?9999:e}))}));
+    const maxCrew=Math.max(1,...defs.map(d=>d.crewN));let Puse=P,sch;
+    if(!P){let best=null;for(let p=maxCrew;p<=Math.max(maxCrew,Math.min(10,defs.length*maxCrew));p++){const r=scheduleDrivers(defs,p);if(!best||r.late<best.r.late||(r.late===best.r.late&&r.makespan<best.r.makespan))best={p,r};if(r.late===0&&r.makespan<=960){best={p,r};break}}Puse=best.p;sch=best.r}
+    else sch=scheduleDrivers(defs,P);
+    tours.forEach((t,i)=>{const r=sch.res[i];t.depart=r.start;t.end=r.end;t.home=r.home;t.road=r.road;t.bfPre=r.bfPre;t.luPre=r.luPre;t.slots=r.slots;t.wait=r.wait;t.pb=r.road.reduce((a,b)=>a+b.len,0);t.capped=r.capped;
+      t.stops.forEach((s,k)=>{s.eta=r.eta[k];const we=winEnd(s.o.window);s.warn=we!=null&&s.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:''})});
+    const overview=sch.D.map(d=>({n:d.n,ev:d.ev.map(e=>({tour:tours[e.idx],start:e.start,home:e.home,hof:e.hof}))}));
+    tours.sort((a,b)=>a.depart-b.depart||a.slots[0]-b.slots[0]);
+    const w=[];
+    if(tours.some(t=>t.capped))w.push(`Mit ${Puse} Fahrern sind nicht alle Touren so besetzbar, wie sie es bräuchten (große Bäume oder viele Bäume am Stopp brauchen 2 bis 3 Personen).`);
+    if(sch.late>0)w.push(`Bei ${sch.late} ${sch.late===1?'Stopp':'Stopps'} wird das Zeitfenster überschritten.`);
+    if(sch.makespan>990)w.push(`Mit ${Puse} Fahrern sind die Touren erst ca. ${hmMin(up5(sch.makespan))} fertig.`);
+    pd.res={tours,missing,warn:w.join(' '),puse:Puse,auto:!P,overview};pd.msg='';
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
   pd.busy=false;render();
 }
@@ -1868,7 +1901,7 @@ function applyPlan(idx){
   const list=idx==null?pd.res.tours.map((t,i)=>i):[idx];
   list.forEach(i=>{const pt=pd.res.tours[i];if(!pt||pt.applied)return;
     const free=TCOL.find(c=>!S.tours.some(y=>!y.deleted&&y.type!=='abholung'&&y.date===pd.date&&y.color===c[0]));
-    const t={id:uid(),date:pd.date,driver:'',codriver:'',vehicle:'',color:(free||TCOL[0])[0],size:pt.size,note:pt.solo?'Einzelfahrt (große Lieferung)':'',stops:{},legs:pt.legs,backSec:(pt.backMin||0)*60,depart:pt.depart,createdBy:S.me,created:Date.now()};
+    const t={id:uid(),date:pd.date,driver:'',codriver:'',vehicle:'',color:(free||TCOL[0])[0],size:pt.size,note:pt.solo?'Einzelfahrt (große Lieferung)':'',stops:{},legs:pt.legs,backSec:(pt.backMin||0)*60,depart:pt.depart,slots:pt.slots,bfPre:!!pt.bfPre,luPre:!!pt.luPre,crewN:pt.crewN,createdBy:S.me,created:Date.now()};
     pt.stops.forEach((s,k)=>{const lo=S.orders.find(x=>x.id===s.o.id)||s.o,stop=orderToStop(lo,k+1);t.stops[stop.id]=stop;lo.status='geplant';lo.tourId=t.id;lo.stopId=stop.id;lo.plannedFor=pd.date});
     t.legsSig=tourStops(t).map(s=>s.address||'').join('|');
     S.tours.push(t);pt.applied=true;});
@@ -1889,14 +1922,16 @@ const infoBox=(k,t)=>(cur.info&&cur.info[k])?`<div class="hint infobox">${t}</di
 function planBox(){
   if(!cur.pd)initPlan();
   const pd=cur.pd,cands=planCandidates(pd.date),res=pd.res;
-  const tourCard2=(t,i)=>`<div class="card pad"><div class="n"><span class="tdot" style="background:${TCOL[i%TCOL.length][2]}"></span>${t.solo?'Einzelfahrt':'Vorschlag '+(i+1)} · ${t.size==='gross'?'große Bäume':'kleine Bäume'}</div>
+  const slotTxt=t=>t.slots.map(n=>'Fahrer '+n).join(' + ');
+  const tourCard2=(t,i)=>`<div class="card pad"><div class="n"><span class="tdot" style="background:${TCOL[i%TCOL.length][2]}"></span>${t.solo?'Einzelfahrt':'Vorschlag '+(i+1)} · ${t.size==='gross'?'große Bäume':'kleine Bäume'} · ${slotTxt(t)}</div>
     <div class="p">${t.stops.length} Stopps · Abfahrt ca. ${hmMin(up5(t.depart))}, zurück am Hof ca. ${hmMin(up5(t.home))} · ${crewHintTxt(t.crew)}</div>
     <div class="p">Fahrt ${fmtMin(t.drive)} · Aufenthalt ${fmtMin(t.stay)} · Pausen ${t.pb} Min${t.wait?' · Warten '+fmtMin(t.wait):''}</div>
-    <div class="p">${brkTxt(t.brk,t.home)}</div>
+    ${brkTxt(t.road,t,t.home)?`<div class="p">${brkTxt(t.road,t,t.home)}</div>`:''}
     <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Beim Packen bohren: '+t.bohren:''}</div>
     ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(up5(s.eta))}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}${winTxt(s.o.window)?` <span class="p">· ${winTxt(s.o.window)}</span>`:''}</span></div><div class="p">${esc(orderAddr(s.o))} · Aufenthalt ${s.svc} Min</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
     ${t.applied?'<div class="hint">Übernommen.</div>':`<button class="btn" data-pl="planok" data-v="${i}" style="margin:8px 0 0">Diese Tour übernehmen</button>`}</div>`;
-    const nSel=Object.values(pd.sel).filter(Boolean).length;
+  const fplan=res=>`<div class="card pad"><div class="n">Fahrereinteilung (${res.puse} ${res.puse===1?'Fahrer':'Fahrer'}${res.auto?', automatisch gewählt':''})</div>${res.overview.map(d=>`<div class="p" style="color:var(--text)"><b>Fahrer ${d.n}:</b> ${d.ev.length?d.ev.map(e=>`${hmMin(up5(e.start))} ${e.tour.solo?'Einzelfahrt':'Vorschlag '+(res.tours.indexOf(e.tour)+1)} bis ${hmMin(up5(e.home))}${e.hof.map(h=>' · '+h.k+' am Hof').join('')}`).join(' → '):'nicht benötigt'}</div>`).join('')}</div>`;
+  const nSel=Object.values(pd.sel).filter(Boolean).length;
   const allOn=cands.length&&cands.every(x=>pd.sel[x.o.id]);
   return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie sortiert sie nach Gebiet und Baumgröße, beachtet Zeitfenster, legt Touren mit Reihenfolge und Fahrzeit an (Start und Ende am Hof) und gibt sehr große Lieferungen (ab '+SOLO+' Bäumen) eine eigene Fahrt. Abfahrt ist standardmäßig 8:15 Uhr. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet, die Zeiten sind auf 5 Minuten aufgerundet. Lieber wenige längere Touren als viele kurze (bis ca. 6 Std plus Pausen). Danach weist du Fahrer und Fahrzeug zu.')}
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
@@ -1907,7 +1942,7 @@ function planBox(){
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
     <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`${nSel===cands.length?'Alle '+cands.length:nSel} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
     ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
-    ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
+    ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${fplan(res)}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
 }
 const crewHintTxt=c=>c;
 function prepBox(){
@@ -2032,7 +2067,7 @@ function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank"
 const depot=()=>(S.hofInfo&&S.hofInfo.depot)||'Im Gattberg 19, 49191 Belm';
 const fmtMin=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' Std '+(m%60?m%60+' Min':''):m+' Min'};
 const stopTrees=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>a+(+l.q||0),0);
-const svcMin=x=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x);return base+Math.min(15,Math.round(c.tree*2*Math.sqrt(Math.max(0,tr-1))))};
+const svcMin=x=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x);return base+Math.min(60,Math.round(c.tree*2*Math.sqrt(Math.min(Math.max(0,tr-1),10)))+Math.max(0,tr-11)*c.tree)};
 function etaTimes(t){
   const st=tourStops(t),legs=t.legs||[],out={};if(!t.startedAt||!legs.length)return out;
   let cur=t.startedAt+(t.pausedMs||0);const bs={};
@@ -2093,13 +2128,13 @@ function tourCard(t,plan){
   const trees=st.reduce((a,s)=>a+stopTrees(s),0),open=cur.tex&&cur.tex[t.id]!==undefined?!!cur.tex[t.id]:stt==='gestartet';
   const svSum=st.reduce((a,s)=>a+svcMin(s),0);
   const sm=(t.legs&&t.legs.length)?planSim(t):null;
-  const dur=st.length?(sm?`Abfahrt ca. ${hmMin(up5(sm.start))}, zurück am Hof ca. ${hmMin(up5(sm.home))} (${fmtMin(sm.dur)})</div><div class="p">Fahrt ${fmtMin(sm.drive)} · Aufenthalt ${fmtMin(sm.stay)} · Pausen ${sm.pb} Min${sm.wait?' · Warten '+fmtMin(sm.wait):''}</div><div class="p">${brkTxt(sm.brk,sm.home)}`:`Stoppzeiten ca. ${fmtMin(svSum)}, Fahrzeit noch offen`):'';
+  const dur=st.length?(sm?`Abfahrt ca. ${hmMin(up5(sm.start))}, zurück am Hof ca. ${hmMin(up5(sm.home))} (${fmtMin(sm.dur)})</div><div class="p">Fahrt ${fmtMin(sm.drive)} · Aufenthalt ${fmtMin(sm.stay)} · Pausen ${sm.pb} Min${sm.wait?' · Warten '+fmtMin(sm.wait):''}</div><div class="p">${brkTxt(sm.road,t,sm.home)}`:`Stoppzeiten ca. ${fmtMin(svSum)}, Fahrzeit noch offen`):'';
   const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
   const ps=!stt?packStatus(t):null;
-  const orange=v=>`<span style="color:var(--orange);font-weight:600">${v}</span>`;
+  const orange=v=>`<span style="color:var(--orange);font-weight:600">${v}</span>`,sl=t.slots||[];
   const head=`<div class="thead" data-pl="ttog" data-v="${t.id}"><span class="chev">${open?'▴':'▾'}</span><div class="n" style="font-size:18px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
     <div class="p">${st.length} Stopps · ${trees} Bäume${done?' · '+done+' geliefert':''}</div>
-    <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':orange('Fahrer offen')} · ${t.codriver?'Beifahrer: <span class="who">'+esc(t.codriver)+'</span>':'Beifahrer offen'}</div>
+    <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':orange(sl[0]?'Fahrer '+sl[0]+' (noch offen)':'Fahrer offen')} · ${t.codriver?'Beifahrer: <span class="who">'+esc(t.codriver)+'</span>':(sl[1]?'Fahrer '+sl[1]+' als Beifahrer (offen)':'Beifahrer offen')}</div>
     <div class="p">${t.vehicle?'Fahrzeug: <span class="who">'+esc(t.vehicle)+'</span>':orange('Fahrzeug offen')} · ${t.trailer?'Anhänger: <span class="who">'+esc(t.trailer)+'</span>':'Anhänger offen'}</div>
     ${dur?`<div class="p">${dur}</div>`:''}${ps?`<div class="p">Packen: <span class="pbadge" style="color:${ps[1]}">${ps[0]}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>`;
   const assign=plan?`<div class="mini" style="margin-top:8px">${tsel(t,'driver','Fahrer zuweisen',S.people)}${tsel(t,'codriver','Beifahrer zuweisen',S.people)}</div><div class="mini" style="margin-top:8px">${tsel(t,'vehicle','Fahrzeug zuweisen',vlist(t.date))}${tsel(t,'trailer','Anhänger zuweisen',trailersList())}</div>`:'';
@@ -2396,7 +2431,7 @@ function vDaten(){
   <input class="t" id="hof-svcDrop" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcDrop)||''))}" placeholder="5">
   <label class="f">Aufenthalt je Stopp in Minuten: abladen und aufstellen (Standard 10)</label>
   <input class="t" id="hof-svcSet" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcSet)||''))}" placeholder="10">
-  <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Standard 1, mehrere Bäume zählen abnehmend, höchstens 15 Min)</label>
+  <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen 1 Min je Baum, höchstens 60 Min)</label>
   <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="1">
   <label class="f">MwSt-Satz in Prozent (Standard 7,8)</label>
   <input class="t" id="hof-vat" inputmode="decimal" value="${esc(String((S.hofInfo&&S.hofInfo.vat)||''))}" placeholder="7,8">
