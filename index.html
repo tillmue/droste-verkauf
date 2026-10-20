@@ -54,6 +54,7 @@ body.run header,body.run #nav{display:none}
 .vrow{display:flex;gap:8px;align-items:center;margin:8px 0}.vrow label,.vrow .vl{width:64px;text-align:right;color:var(--mut);flex:none}.vrow input{flex:1;min-width:0;text-align:right;font-size:20px}.vrow input.small{flex:none;width:70px}.vrow span{flex:none}
 .rm{width:100%;border-collapse:collapse;font-size:13px}.rm th{padding:4px 2px;color:var(--mut);font-size:12px}.rm td{padding:5px 2px;border-top:1px solid var(--line);text-align:center}.rm td:first-child{text-align:left;padding-right:6px}.rm td.rg{background:var(--fill);font-weight:700;color:var(--link);text-align:left;font-size:12px}.rm input{width:20px;height:20px}
 .pkl{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:14px}.pkrow{margin-top:6px;display:flex;flex-wrap:wrap}
+.tour.compact{background:none;padding:0}.tour.compact>div:first-child,.tour.compact>.barw{display:none!important}
 .btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
 .btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
@@ -230,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-20 e';
+const APP_VERSION='2026-10-20 f';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1305,9 +1306,10 @@ document.addEventListener('click',ev=>{
   }
   if(a==='tload'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid);if(!t)return;t.loaded=t.loaded||{};t.loaded[sid]=!t.loaded[sid];save();return render()}
   if(a==='tstart'){const t=S.tours.find(x=>x.id===v);if(!t)return;const st=tourStops(t),all=st.every(x=>t.loaded&&t.loaded[x.id]);
-    return askConfirm(all?'Tour starten?':'Es ist noch nicht alles als beladen markiert. Trotzdem starten?','Ja, Tour starten',()=>{t.status='gestartet';t.startedAt=Date.now();t.startedBy=S.me;save();render()})}
+    return askConfirm(all?'Tour starten?':'Es ist noch nicht alles als beladen markiert. Trotzdem starten?','Ja, Tour starten',()=>{t.status='gestartet';t.startedAt=Date.now();t.startedBy=S.me;save();render();computeLegs(t,true)})}
   if(a==='tpause'){const t=S.tours.find(x=>x.id===v);if(!t||t.paused)return;t.paused=true;t.pausedAt=Date.now();save();window.scrollTo(0,0);return render()}
   if(a==='tresume'){const t=S.tours.find(x=>x.id===v);if(!t||!t.paused)return;t.pausedMs=(t.pausedMs||0)+(Date.now()-(t.pausedAt||Date.now()));t.paused=false;t.pausedAt=0;save();window.scrollTo(0,0);return render()}
+  if(a==='tlegs'){const t=S.tours.find(x=>x.id===v);if(t){toast('Fahrzeiten werden berechnet …');computeLegs(t,false)}return}
   if(a==='dnchip'){const [sid,...r]=v.split('|'),txt=r.join('|');cur.dn[sid]=(cur.dn[sid]?cur.dn[sid]+'. ':'')+txt;return render()}
   if(a==='dnedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     const d=document.createElement('div');d.className='cheers';
@@ -1721,7 +1723,7 @@ function vTourRun(t){
     <div class="barw" style="margin:12px 0 4px"><i style="width:${st.length?Math.round(done/st.length*100):0}%"></i></div>
     <div class="p" style="text-align:center;margin-bottom:10px">${done} von ${st.length} Stopps erledigt</div>
     ${t.note?`<div class="card pad note"><div>${esc(t.note)}</div></div>`:''}
-    ${tourCard(t,false)}</div>`;
+    ${tourCard(t,false).replace('<div class="tour">','<div class="tour compact">')}</div>`;
 }
 setInterval(()=>{const e=document.getElementById('tmr'),t=runningTour();if(e&&t)e.textContent=fmtDur(tourMs(t))},1000);
 const newTour=d=>({id:null,date:d,driver:'',codriver:'',vehicle:'',color:'',size:'klein',note:''});
@@ -1737,11 +1739,43 @@ const gmapsUrl=a=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&des
 const appleUrl=a=>'https://maps.apple.com/?dirflg=d&daddr='+encodeURIComponent(a);
 function appleRoute(stops){const ad=stops.filter(x=>x.address).map(x=>x.address).slice(0,10);return ad.length?'https://maps.apple.com/?dirflg=d&daddr='+ad.map(encodeURIComponent).join('+to:'):''}
 function routeBtns(g,a){return g?`<a class="btn sec" href="${g}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Google Maps</a><a class="btn sec" href="${a}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Karten</a>`:''}
+const depot=()=>(S.hofInfo&&S.hofInfo.depot)||'Im Gattberg 19, 49191 Belm';
+const fmtMin=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' Std '+(m%60?m%60+' Min':''):m+' Min'};
+const stopTrees=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>a+(+l.q||0),0);
+const svcMin=x=>{const base=/aufstellen/i.test(x.service||'')?10:5,tr=stopTrees(x);return base+Math.min(30,3*Math.max(0,tr-1))};
+function etaTimes(t){
+  const st=tourStops(t),legs=t.legs||[],out={};if(!t.startedAt||!legs.length)return out;
+  let cur=t.startedAt+(t.pausedMs||0);
+  for(let i=0;i<st.length;i++){const s=st[i];if(legs[i]===undefined)break;cur+=legs[i]*1000;out[s.id]=cur;cur=s.doneAt?s.doneAt:cur+svcMin(s)*60000}
+  return out;
+}
+const lineLabel=l=>{const q=+l.q||1,nm=l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);return `${q} × ${nm}${l.l?' '+mFmt(l.l):''}`};
+function nextDepart(){const d=new Date();d.setDate(d.getDate()+1);while([0,6].includes(d.getDay()))d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString()}
+async function computeLegs(t,quiet){
+  const st=tourStops(t);if(!st.length||!window.cloud||!window.cloud.routeLegs)return;
+  const withAddr=st.filter(s=>s.address);if(!withAddr.length)return;
+  try{const r=await window.cloud.routeLegs({origin:depot(),stops:withAddr.map(s=>s.address),depart:nextDepart()});
+    let k=0;t.legs=st.map(s=>s.address?(r.legs[k++]||0):0);t.legsSig=st.map(s=>s.address||'').join('|');save();render()}
+  catch(e){if(!quiet)alert('Fahrzeiten konnten nicht berechnet werden: '+((e&&(e.message||e.code))||''))}
+}
+function runRow(t,x,i,isNext,act,info){
+  const eta=etaTimes(t)[x.id],tm=eta?'ca. '+hm(eta):(x.time||'');
+  const sv=x.service!==undefined?(/aufstellen/i.test(x.service||'')?'Liefern und Aufstellen':'Nur liefern'):'';
+  const trees=(x.lines||[]).filter(l=>l.c!=='Ständer').map(lineLabel).join(', ')||x.items||'';
+  return `<div class="row ${x.done?'dim':''}" style="display:block${isNext?';background:var(--panel);border-radius:10px':''}">
+    <div style="display:flex;gap:8px;align-items:baseline"><b style="font-size:15px;white-space:nowrap;color:var(--link)">${esc(tm)}</b><div class="n ${x.done?'done':''}" style="flex:1;min-width:0">${i+1}. ${esc(x.name)}</div>${x.done?'<span style="color:#7fe0a0;font-weight:700">✓</span>':''}</div>
+    ${x.address||x.phone?`<div style="display:flex;justify-content:space-between;gap:10px;margin-top:2px"><span class="p" style="min-width:0">${x.address?`<a href="${mapUrl(x.address)}" target="_blank" rel="noopener">${esc(x.address)}</a>`:''}</span>${x.phone?`<a class="p" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="white-space:nowrap">${esc(x.phone)}</a>`:''}</div>`:''}
+    ${trees?`<div class="p" style="color:var(--text)">${esc(mTxt(trees))}</div>`:''}
+    ${sv||x.staender?`<div class="p"><b style="color:var(--text)">${sv}</b>${x.staender?(sv?' · ':'')+'Ständer: '+esc(x.staender.replace(/^\d+\s×\s/,'')):''}</div>`:''}
+    ${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}
+    ${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}${info}${act}</div>`;
+}
 function stopRow(t,x,i,n,plan){
   const pk=t.type==='abholung',run=!pk&&t.status==='gestartet'&&canRun(t),nxt=tourStops(t).find(s=>!s.done),isNext=run&&nxt&&nxt.id===x.id;
-  const info=(x.arrivedAt?`<div class="p">Angekommen um ${hm(x.arrivedAt)}</div>`:'')+(x.drvNote?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.drvNote)}</div>`:'')+(x.done&&(run||plan)&&!pk?`<button class="claim" data-pl="dnedit" data-v="${t.id}|${x.id}" style="margin-top:4px">${x.drvNote?'Notiz ändern':'Notiz hinzufügen'}</button>`:'')+(x.outcome==='nicht'?'<div class="p" style="color:var(--orange)"><b>Nicht angetroffen</b></div>':'');
+  const info=(x.arrivedAt&&plan?`<div class="p">Angekommen um ${hm(x.arrivedAt)}</div>`:'')+(x.drvNote?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.drvNote)}</div>`:'')+(x.done&&(run||plan)&&!pk?`<button class="claim" data-pl="dnedit" data-v="${t.id}|${x.id}" style="margin-top:4px">${x.drvNote?'Notiz ändern':'Notiz hinzufügen'}</button>`:'')+(x.outcome==='nicht'?'<div class="p" style="color:var(--orange)"><b>Nicht angetroffen</b></div>':'');
   const noteBlock=`<div class="card pad formc" style="margin:8px 0 0"><label class="f">Notiz zur Lieferung (optional)</label><div class="chips">${DNCHIPS.map(c=>`<button class="chip" data-pl="dnchip" data-v="${x.id}|${c}">${c}</button>`).join('')}</div><textarea class="t" id="dn-${x.id}" rows="2" placeholder="z. B. nur abgelegt, nicht aufgestellt">${esc(cur.dn[x.id]||'')}</textarea></div>`;
   const act=isNext?`<div class="mini" style="margin-top:8px">${x.address?routeBtns(gmapsUrl(x.address),appleUrl(x.address)):''}${x.phone?`<a class="btn sec" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Anrufen</a>`:''}</div>${x.arrivedAt?noteBlock:''}<div class="mini" style="margin-top:8px">${!x.arrivedAt?`<button class="btn" data-pl="sarrive" data-v="${t.id}|${x.id}" style="margin:0">Angekommen</button>`:`<button class="btn green go" data-pl="sdeliv" data-v="${t.id}|${x.id}" style="margin:0">Geliefert</button><button class="btn sec" data-pl="snone" data-v="${t.id}|${x.id}" style="margin:0;color:var(--orange)">Nicht angetroffen</button>`}</div>`:'';
+  if(run&&!pk)return runRow(t,x,i,isNext,act,info);
   return `<div class="row ${x.done?'dim':''}" style="align-items:flex-start${isNext?';background:var(--panel);border-radius:10px':''}"><div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0">
     <button class="chk big ${x.done?'on':''}" ${run&&!pk?'disabled':''} data-pl="${pk?'pickst':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${x.done?'✓':(pk&&x.ready)?'•':''}</button>
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?'':(i+1)+'. '}${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
@@ -1763,12 +1797,14 @@ function tourCard(t,plan){
   if(t.type==='abholung')return pickCard(t,plan);
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
+  const legSum=(t.legs||[]).reduce((a,b)=>a+b,0)/60,svSum=st.reduce((a,s)=>a+svcMin(s),0);
+  const durBox=plan&&st.length?(t.legs&&t.legs.length?`<div class="p">Geschätzte Dauer: ${fmtMin(legSum+svSum)} (Fahrt ${fmtMin(legSum)}, Stopps ${fmtMin(svSum)})</div>`:`<div class="p">Stoppzeiten geschätzt: ${fmtMin(svSum)}</div>`)+`<button class="btn sec" data-pl="tlegs" data-v="${t.id}" style="margin:4px 0">Fahrzeiten berechnen</button>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div>${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}</div></div></div>`).join('')}</div></details>`:'';
   const ctrl=run&&!stt&&st.length?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}${st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:(has('lieferplanung')&&!mineRun(t)?`<button class="btn sec" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden (Admin, mit offenen Stopps)</button>`:`<div class="hint">Noch ${st.length-done} Stopps offen. Beenden geht, sobald jeder Stopp auf Geliefert oder Nicht angetroffen steht.</div>`)}`:'');
   return `<div class="tour"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n" style="font-size:17px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
     <div class="p">${esc(t.vehicle||'Fahrzeug offen')}</div>
     ${plan&&!t.vehicle?`<select class="t" data-tveh="${t.id}" style="margin:4px 0"><option value="">Fahrzeug zuweisen</option>${vlist(t.date).map(v=>`<option>${esc(v)}</option>`).join('')}</select>`:''}
-    <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div>${t.codriver?`<div class="p">Beifahrer: <span class="who">${esc(t.codriver)}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>
+    <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':'<span style="color:var(--orange);font-weight:600">Fahrer offen</span>'} · ${st.length} Stopps · ${done} geliefert</div>${t.codriver?`<div class="p">Beifahrer: <span class="who">${esc(t.codriver)}</span></div>`:''}${stat}${durBox}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>
     ${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}">Tour ändern</button>`:''}</div>
     ${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}
     ${loadBox}<div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Stopps.</span></div>'}</div>
@@ -2062,7 +2098,11 @@ function vDaten(){
   <textarea class="t" id="impText" rows="3" placeholder="… oder den Inhalt der Importdatei hier einfügen" style="margin-top:8px"></textarea>
   <button class="btn sec" id="bImpTxt">Eingefügten Text importieren</button></div>
   <h2>Einstellungen</h2>
-  <div class="card pad"><label class="f">Ersatzständer pro Tour: mindestens</label>
+  <div class="card pad"><label class="f">Startpunkt für Routen (Hof)</label>
+  <input class="t" id="hof-depot" value="${esc((S.hofInfo&&S.hofInfo.depot)||'')}" placeholder="Im Gattberg 19, 49191 Belm">
+  <label class="f">Google-Maps-Schlüssel für Fahrzeiten ${S.hofInfo&&S.hofInfo.mapsSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
+  <input class="t" id="hof-mapskey" type="password" autocomplete="off" placeholder="Schlüssel einfügen und bestätigen">
+  <label class="f">Ersatzständer pro Tour: mindestens</label>
   <input class="t" id="hof-resmin" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveMin)||''))}" placeholder="2">
   <label class="f">Ersatzständer pro Tour: ein Ersatz je so viele Ständer</label>
   <input class="t" id="hof-resevery" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveEvery)||''))}" placeholder="5">
@@ -2284,6 +2324,8 @@ document.addEventListener('input',ev=>{
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
+  if(t.id==='hof-depot'){S.hofInfo={...S.hofInfo,depot:t.value.trim()};save()}
+  if(t.id==='hof-mapskey'&&t.value.trim()&&window.cloud&&window.cloud.setSecret){const kv=t.value.trim();t.value='';window.cloud.setSecret('maps',kv).then(()=>{S.hofInfo={...S.hofInfo,mapsSet:true};save();toast('Schlüssel gespeichert');render()}).catch(e=>alert('Schlüssel konnte nicht gespeichert werden: '+(e.code||e.message)))}
   if(t.id==='hof-resmin'){S.hofInfo={...S.hofInfo,reserveMin:t.value.trim()};save()}
   if(t.id==='hof-resevery'){S.hofInfo={...S.hofInfo,reserveEvery:t.value.trim()};save()}
   if(t.id==='hof-vat'){S.hofInfo={...S.hofInfo,vat:t.value.trim()};save()}

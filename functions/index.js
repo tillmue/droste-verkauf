@@ -6,6 +6,7 @@
 const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -169,6 +170,28 @@ exports.taskStats = onDocumentWritten('tasks/{id}', async event => {
   const all = {}, week = {}, since = Date.now() - 7 * 864e5;
   snap.forEach(d => { const t = d.data(); if (t.deleted || !t.doneBy) return; all[t.doneBy] = (all[t.doneBy] || 0) + 1; if ((t.doneAt || 0) > since) week[t.doneBy] = (week[t.doneBy] || 0) + 1; });
   await db.collection('stats').doc('ranking').set({ all, week, at: Date.now() });
+});
+
+/* Fahrzeiten entlang einer Tour (Google Routes API, Schlüssel liegt nur in secrets/maps) */
+exports.routeLegs = onCall(async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
+  const u = await db.collection('users').doc(req.auth.uid).get();
+  if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const k = await db.doc('secrets/maps').get();
+  if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Google-Maps-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
+  const { origin, stops, depart } = req.data || {};
+  if (!origin || !Array.isArray(stops) || !stops.length || stops.length > 25) throw new HttpsError('invalid-argument', 'Start und 1 bis 25 Adressen nötig');
+  const body = { origin: { address: origin }, destination: { address: stops[stops.length - 1] }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'de-DE', regionCode: 'DE' };
+  if (stops.length > 1) body.intermediates = stops.slice(0, -1).map(a => ({ address: a }));
+  if (depart && new Date(depart) > new Date()) body.departureTime = depart;
+  const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.legs.duration,routes.legs.distanceMeters' },
+    body: JSON.stringify(body)
+  });
+  const j = await res.json();
+  if (!res.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', (j.error && j.error.message) || 'Keine Route gefunden');
+  return { legs: j.routes[0].legs.map(l => parseInt(String(l.duration || '0s').replace('s', ''), 10) || 0) };
 });
 
 /* Fragen zur App: Nachricht an den Admin */

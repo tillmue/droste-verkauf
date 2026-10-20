@@ -5,10 +5,10 @@
 const V = '10.14.1', BASE = 'https://www.gstatic.com/firebasejs/' + V + '/';
 
 async function loadFB() {
-  const [a, au, fs, ms, st] = await Promise.all([
+  const [a, au, fs, ms, st, fn] = await Promise.all([
     import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js'), import(BASE + 'firebase-firestore.js'),
-    import(BASE + 'firebase-messaging.js').catch(() => ({})), import(BASE + 'firebase-storage.js').catch(() => ({}))]);
-  return { ...a, ...au, ...fs, ...ms, ...st };
+    import(BASE + 'firebase-messaging.js').catch(() => ({})), import(BASE + 'firebase-storage.js').catch(() => ({})), import(BASE + 'firebase-functions.js').catch(() => ({}))]);
+  return { ...a, ...au, ...fs, ...ms, ...st, ...fn };
 }
 
 const clean = o => JSON.parse(JSON.stringify(o));
@@ -37,10 +37,10 @@ function initCloud(FB) {
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
     settings: { get: () => { const h = T.S.hofInfo || {}, out = [];
-                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || h.machines || h.vat || h.reserveMin || h.reserveEvery || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
+                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || h.machines || h.vat || h.reserveMin || h.reserveEvery || h.depot || h.mapsSet || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
                   if (T.S.rolesCfg && Object.keys(T.S.rolesCfg).length) out.push(['roles', T.S.rolesCfg]);
                   return out; },
-                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', reserveMin: h.reserveMin || '', reserveEvery: h.reserveEvery || '', schonungen: h.schonungen || {} };
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', reserveMin: h.reserveMin || '', reserveEvery: h.reserveEvery || '', depot: h.depot || '', mapsSet: !!h.mapsSet, schonungen: h.schonungen || {} };
                             const rc = m.roles || {}; const changed = JSON.stringify(rc) !== JSON.stringify(T.S.rolesCfg || {}); T.S.rolesCfg = rc; if (changed && T.rolesChanged) setTimeout(() => T.rolesChanged(), 0); }, del: true },
     packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
     feld:     { get: () => T.S.feld.map(x => [x.id, x]), put: m => { T.S.feld = Object.values(m); }, del: false, maps: ['bal'] },
@@ -281,6 +281,8 @@ function initCloud(FB) {
       if (tok) await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayRemove(tok) }).catch(() => {});
       try { await FB.deleteToken(FB.getMessaging(app)); } catch (e) {}
     },
+    async routeLegs(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeLegs')(p); return r.data; },
+    setSecret: (name, key) => FB.setDoc(FB.doc(db, 'secrets', name), { key, at: Date.now() }),
     imageUrl: path => FB.getDownloadURL(FB.ref(FB.getStorage(app), path)),
     async uploadImage(path, blob) { await FB.uploadBytes(FB.ref(FB.getStorage(app), path), blob, { contentType: 'image/jpeg' }); return path; },
     resendVerification: () => FB.sendEmailVerification(auth.currentUser),
