@@ -1,4 +1,6 @@
 window.RO_DICT={
+"Nein, ohne Strafbierkiste": "Nu, fără lada de bere",
+"Ja, mit Strafbierkiste": "Da, cu lada de bere",
 "(hat schon eine)": "(are deja una)",
 "Grund „Einstand in die App“. Haken weg bei allen, die keine bekommen sollen.": "Motiv „Bun venit în aplicație”. Debifează persoanele care nu primesc.",
 "Einstand-Strafbierkiste vergeben": "Atribuie lada de bere de intrare",
@@ -1123,6 +1125,8 @@ window.RO_DICT={
 };
 
 window.RO_PATTERNS=[
+ [/^(.+) freigeben$/,(m,n)=>`Aprobă ${n}`],
+ [/^Soll (.+) eine Einstand-Strafbierkiste bekommen\?$/,(m,n)=>`Să primească ${n} o ladă de bere de intrare?`],
  [/^Strafbierkiste von (.+) \(„(.+)“\) löschen\?$/,(m,a,b)=>`Ștergi lada de bere a lui ${a} („${b}”)?`],
  [/^(\d+) Strafbierkisten? vergeben$/,(m,n)=>`${n} lăzi de bere atribuite`],
  [/^(\d+) Artikel ausgewählt\. Preise inklusive MwSt, für Privatkunden und Firmen\.$/,(m,n)=>`${n} articole selectate. Prețuri cu TVA inclus, pentru persoane fizice și firme.`],

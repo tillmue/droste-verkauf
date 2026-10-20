@@ -312,7 +312,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 G';
+const APP_VERSION='2026-10-22 H';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -943,6 +943,12 @@ function wxHtml(){
     ${wxData.stale?'<div class="hint" style="margin:6px 2px 0">Offline, alte Wetterdaten</div>':''}`;
 }
 /* ---------- Ich: Dashboard ---------- */
+function approveAsk(n,cb){
+  const d=document.createElement('div');d.className='cheers';
+  d.innerHTML=`<div><p><b>${esc(n)} freigeben</b></p><p>Soll ${esc(n)} eine Einstand-Strafbierkiste bekommen?</p><button class="btn green" data-k="1" style="padding:18px">Ja, mit Strafbierkiste</button><div style="height:14px"></div><button class="btn sec" data-k="0" style="padding:18px">Nein, ohne Strafbierkiste</button><div style="height:14px"></div><button class="btn no" data-k="x" style="padding:18px">Abbrechen</button></div>`;
+  d.addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k==null&&e.target!==d)return;d.remove();if(k==='1')cb(true);else if(k==='0')cb(false)});
+  document.body.appendChild(d);
+}
 function einstSheet(){
   const L=S.people.filter(p=>S.approved[p]!==false),has0=p=>S.penalties.some(x=>!x.deleted&&x.person===p&&x.reason==='Einstand in die App');
   return `<div class="n" style="font-size:21px;margin:0 0 4px">Einstand-Strafbierkiste</div><div class="hint" style="margin:0 0 10px">Grund „Einstand in die App“. Haken weg bei allen, die keine bekommen sollen.</div>${L.map(p=>`<label class="chkrow" style="padding:8px 0"><input type="checkbox" data-ein="${esc(p)}" ${has0(p)?'disabled':(cur.einstOff.has(p)?'':'checked')}> ${esc(p)}${has0(p)?' <span class="p">(hat schon eine)</span>':''}</label>`).join('')}<div class="mini" style="margin-top:14px"><button class="btn sec" data-pl="einstcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="einstgo" style="margin:0">Vergeben</button></div>`;
@@ -1540,9 +1546,9 @@ document.addEventListener('click',ev=>{
     const n=ev.target.dataset.appr;
     if(CLOUD){
       if(S.people.filter(x=>x===n).length>1)return alert('Dieser Name ist schon vergeben. Bitte lehne die Anfrage ab und bitte die Person, sich mit einem anderen Namen zu registrieren.');
-      window.cloud.approve(n).then(()=>einstand(n)).catch(e=>alert('Freigabe fehlgeschlagen: '+(e.code||e.message)));return;
+      return approveAsk(n,k=>window.cloud.approve(n).then(()=>{if(k)einstand(n)}).catch(e=>alert('Freigabe fehlgeschlagen: '+(e.code||e.message))));
     }
-    S.approved[n]=true;einstand(n);save();return render();
+    return approveAsk(n,k=>{S.approved[n]=true;if(k)einstand(n);save();render()});
   }
   if(ev.target.dataset.deny){
     const n=ev.target.dataset.deny;
