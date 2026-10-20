@@ -295,13 +295,13 @@ nav button.on{background:var(--blue);color:#fff}
 .est button{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:12px;padding:12px 2px;font:inherit;font-size:15px;font-weight:700}
 .est button.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .linkb{background:none;border:0;color:var(--link);font:inherit;font-size:15px;padding:10px 12px;text-decoration:underline;text-underline-offset:3px}
-#who{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;background:none;border:0;color:var(--text);padding:0 0 0 2px;margin:0;text-align:left;font:inherit}
+#who{flex:0 1 auto;min-width:0;max-width:92px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;background:none;border:0;color:var(--text);padding:0 0 0 2px;margin:0;text-align:left;font:inherit}
 #who b{display:block;font-size:14px;line-height:1.15;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #who small{display:block;font-size:11px;color:var(--mut);line-height:1.2;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
-<header><img src="logo.svg" alt="Hof Droste"><button id="guide" aria-label="Anleitung" title="Anleitung"></button><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="prof" aria-label="Einstellungen"><span id="av"></span></button><button id="who" aria-label="Einstellungen"><b id="pname"></b><small id="hstat"></small></button></header>
+<header><img src="logo.svg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="guide" aria-label="Anleitung" title="Anleitung"></button><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Einstellungen"><span id="av"></span></button><button id="who" aria-label="Einstellungen"><b id="pname"></b><small id="hstat"></small></button></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -314,7 +314,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 I';
+const APP_VERSION='2026-10-22 J';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
