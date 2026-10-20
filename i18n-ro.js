@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Nach dem Registrieren muss der Admin dich freigeben.": "După înregistrare, administratorul trebuie să te aprobe.",
+"Registrieren (ich bin neu hier)": "Înregistrare (sunt nou aici)",
+"Anmelden (ich habe schon einen Account)": "Autentificare (am deja un cont)",
+"Registrieren": "Înregistrează-te",
 "Heute erledigt": "Terminate azi",
 "Einstand in die App": "Bun venit în aplicație (bere de intrare)",
 "Preise inklusive MwSt, für Privatkunden und Firmen.": "Prețuri cu TVA inclus, pentru persoane fizice și firme.",

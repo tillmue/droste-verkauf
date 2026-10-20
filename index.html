@@ -295,6 +295,7 @@ nav button.on{background:var(--blue);color:#fff}
 .est{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .est button{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:12px;padding:12px 2px;font:inherit;font-size:15px;font-weight:700}
 .est button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.linkb{background:none;border:0;color:var(--link);font:inherit;font-size:15px;padding:10px 12px;text-decoration:underline;text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -311,7 +312,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 E';
+const APP_VERSION='2026-10-22 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -834,17 +835,18 @@ const AUTH_ERR={'auth/invalid-credential':'E-Mail oder Passwort stimmt nicht.','
   'auth/operation-not-allowed':'E-Mail/Passwort ist in Firebase noch nicht aktiviert.','auth/invalid-api-key':'Firebase-Schlüssel ungültig. Bitte Till Bescheid geben.','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'Firebase-Schlüssel ungültig. Bitte Till Bescheid geben.'};
 const authErr=e=>AUTH_ERR[e&&e.code]||('Fehler: '+((e&&(e.code||e.message))||'unbekannt'));
 function loginScreen(){
-  const a=cur.auth||(cur.auth={mode:'login',err:'',info:'',mail:''}),reg=a.mode==='reg';
+  const a=cur.auth||(cur.auth={mode:'reg',err:'',info:'',mail:''}),reg=a.mode==='reg';
   $('#nav').style.display='none';$('#pname').textContent='';$('#av').textContent='';$('#hstat').textContent='';
-  $('#app').innerHTML=`<h2 style="margin-top:20px">${reg?'Konto anlegen':'Anmelden'}</h2>
+  $('#app').innerHTML=`<h2 style="margin-top:20px">${reg?'Registrieren':'Anmelden'}</h2>
     <div class="card pad">
     ${reg?'<input class="t" id="au-name" placeholder="Benutzername (z. B. Vorname)" autocapitalize="words" autocomplete="nickname" style="margin-bottom:8px">':''}
     <input class="t" id="au-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" placeholder="E-Mail" value="${esc(a.mail||'')}" style="margin-bottom:8px">
     <input class="t" id="au-pw" type="password" autocomplete="${reg?'new-password':'current-password'}" placeholder="Passwort (mindestens 6 Zeichen)">
     ${a.err?`<div class="warn" style="margin-top:10px">${esc(a.err)}</div>`:''}${a.info?`<div class="hint">${esc(a.info)}</div>`:''}
-    <button class="btn" id="authGo">${reg?'Konto anlegen':'Anmelden'}</button></div>
-    <button class="btn sec" data-authmode="${reg?'login':'reg'}">${reg?'Ich habe schon ein Konto':'Neu hier? Konto anlegen'}</button>
-    ${reg?'<div class="hint">Nach dem Anlegen muss der Admin dich freigeben.</div>':'<button class="btn sec" id="authReset">Passwort vergessen</button>'}`;
+    <button class="btn green" id="authGo" style="padding:20px;font-size:20px">${reg?'Registrieren':'Anmelden'}</button></div>
+    ${reg?'<div class="hint">Nach dem Registrieren muss der Admin dich freigeben.</div>':''}
+    <div style="text-align:center;margin:6px 0 4px"><button class="linkb" data-authmode="${reg?'login':'reg'}">${reg?'Anmelden (ich habe schon einen Account)':'Registrieren (ich bin neu hier)'}</button></div>
+    ${reg?'':'<div style="text-align:center"><button class="linkb" id="authReset">Passwort vergessen</button></div>'}`;
 }
 let pushOk=null;
 function pushBlock(){
@@ -3156,7 +3158,7 @@ document.addEventListener('click',async ev=>{
   if(id==='verResend'){try{await window.cloud.resendVerification();toast('Mail gesendet')}catch(e){toast(authErr(e))}return}
   if(id==='verCheck'){try{await window.cloud.refreshVerified()}catch(e){toast(authErr(e))}return}
   if(id!=='authGo'&&id!=='authReset')return;
-  const a=cur.auth||(cur.auth={mode:'login'});
+  const a=cur.auth||(cur.auth={mode:'reg'});
   const mail=($('#au-mail').value||'').trim(),pw=$('#au-pw').value||'',nm=a.mode==='reg'?($('#au-name').value||'').trim().replace(/\s+/g,' '):'';
   a.mail=mail;a.err='';a.info='';
   if(!window.cloud){a.err='Verbindung wird aufgebaut, bitte einen Moment warten und noch einmal tippen.';return render()}
