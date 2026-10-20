@@ -1,4 +1,6 @@
 window.RO_DICT={
+"nichts offen": "nimic deschis",
+"Meine Aufgaben": "Sarcinile mele",
 "Notiz oder Zahlen (optional)": "Notiță sau cifre (opțional)",
 "Bitte ein Foto der Strichliste anhängen.": "Atașează o fotografie a listei cu liniuțe.",
 "Tagsüber auf Papier mit der Strichliste zählen. Abends hier ein Foto davon abschicken, die Zahlen werden dann eingetragen.": "Ziua numără pe hârtie cu lista cu liniuțe. Seara trimite aici o fotografie, cifrele vor fi introduse apoi.",
@@ -1094,6 +1096,7 @@ window.RO_DICT={
 };
 
 window.RO_PATTERNS=[
+ [/^(\d+) offen$/,(m,n)=>`${n} deschise`],
  [/^(\d+) Stk\. davon automatisch aus Logistik \(geliefert\)\. Hier nur zusätzliche Lieferungen oder Retouren eintragen\.$/,(m,n)=>`${n} buc. din care automat din logistică (livrate). Aici se introduc doar livrări suplimentare sau retururi.`],
  [/^Stand (.+) abends$/,(m,d)=>`Situația ${d}, seara`],
  [/^Strichliste vom (.+)$/,(m,d)=>`Listă cu liniuțe din ${d}`],
