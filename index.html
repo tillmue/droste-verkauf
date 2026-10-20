@@ -258,6 +258,17 @@ nav button.on{background:var(--green);color:#fff}
 .sheetbox .mini{gap:10px}
 .sheetbox .rtile{padding:18px 6px;font-size:16px}
 .sheettop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sheettop b{font-size:19px}
+/* Farbkonzept: Gruen = bestaetigen und hinzufuegen, Rot = abbrechen und loeschen, Blau = Navigation und neutral, Orange = Achtung */
+.btn{background:var(--green)}
+.btn.sec{background:rgba(124,192,255,.14);color:var(--link);border:1px solid rgba(124,192,255,.4)}
+.btn.add{background:transparent;border:2px dashed rgba(124,192,255,.65);color:var(--link)}
+.btn.green{background:var(--green);border:0;color:#fff}
+.btn.red{background:var(--red);color:#fff}
+.btn[data-pl$="cancel"]{background:transparent;border:2px solid var(--red);color:#ff8a7a}
+nav button.on{background:var(--blue);color:#fff}
+.tbanner{background:rgba(255,174,66,.15);color:var(--orange)}
+.qtile.g{border-color:rgba(46,158,79,.75)}.qtile.g b{color:#7fe0a0}
+.qtile.o{border-color:rgba(255,174,66,.85)}.qtile.o b{color:var(--orange)}
 </style>
 </head>
 <body>
@@ -274,7 +285,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 P';
+const APP_VERSION='2026-10-21 Q';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -858,7 +869,7 @@ function vIch(){
   const myTours=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.status!=='beendet'&&t.date>=td&&t.date<=shiftDate(td,7)&&(t.driver===me||t.codriver===me)).sort((a,b)=>a.date<b.date?-1:1).slice(0,3);
   $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>
   <div id="wx" style="margin:8px 0 14px">${wxHtml()}</div>
-  <div class="mini" style="margin-bottom:14px"><button class="qtile" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile" data-pl="drep"><b>!</b>Meldung machen</button></div>
+  <div class="mini" style="margin-bottom:14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
   ${blk('Meine Aufgaben heute',`${today.map(t=>taskRow(t,true,true)).join('')||'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>'}
@@ -1197,7 +1208,7 @@ function taskForm(inSheet){
     <div class="mini" style="margin-top:8px"><select class="t" id="tf-person"><option value="">Offen (jeder kann übernehmen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>
     <select class="t" id="tf-stand"><option value="">Hof (Standard)</option>${S.stands.map(x=>`<option value="${x.id}" ${sel(x.id,f.stand)}>${esc(x.name)}</option>`).join('')}</select></div>
     <textarea class="t" id="tf-note" rows="2" placeholder="Notiz zur Aufgabe (optional)" style="margin-top:8px">${esc(f.note||'')}</textarea>
-    <div class="mini" style="margin-top:8px"><button class="btn" data-pl="tsave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${inSheet?'<button class="btn sec" data-pl="tcancel" style="margin:0">Fertig</button>':(f.id||cur.tfOpen)?'<button class="btn sec" data-pl="tcancel" style="margin:0">Abbrechen</button>':''}</div>
+    <div class="mini" style="margin-top:8px"><button class="btn" data-pl="tsave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button>${(inSheet||f.id||cur.tfOpen)?'<button class="btn sec" data-pl="tcancel" style="margin:0">Abbrechen</button>':''}</div>
     ${canDel?'<button class="btn red" data-pl="tdel">Löschen</button>':''}</div>`;
 }
 function evLabel(e){return e.end&&e.end!==e.date?wdD(e.date)+' bis '+wdD(e.end):wdD(e.date)}
@@ -1593,7 +1604,7 @@ document.addEventListener('click',ev=>{
     if(f.id){const x0=S.tasks.find(x=>x.id===f.id);if(x0.date!==f.date)delete x0.movedFrom;if(f.person&&x0.person!==f.person)base.assignedBy=S.me;Object.assign(x0,base)}
     else{const task={id:uid(),...base,assignedBy:S.me,done:false,created:Date.now(),createdBy:S.me};S.tasks.push(task);
       if(f.noteId){const n=S.notes.find(n=>n.id===f.noteId);if(n){n.status='zugeordnet';n.taskId=task.id;delete n.suggest}}}
-    const inSheet=cur.sheet==='task'&&!f.id;reset();save();if(inSheet){cur.tf=newTf(todayStr());cur.tf.person=S.me;toast('Aufgabe hinzugefügt')}else if(cur.sheet==='task')cur.sheet='';return render();
+    const wasSheet=cur.sheet==='task'&&!f.id;reset();save();if(cur.sheet==='task')cur.sheet='';if(wasSheet)toast('Aufgabe hinzugefügt');return render();
   }
   if(a==='eedit'&&!canCal())return;
   if(a==='eedit'){const e=S.events.find(x=>x.id===v);cur.ef={...e};return render()}
