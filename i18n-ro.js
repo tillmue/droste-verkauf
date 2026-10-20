@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Straße, Hausnummer, PLZ": "Stradă, număr, cod poștal",
 "Die Adresse wurde nur ungefähr gefunden. Bitte mit Postleitzahl und Ort eingeben.": "Adresa a fost găsită doar aproximativ. Introdu-o cu cod poștal și localitate.",
 "Die Lieferung kostet mehr als die Hälfte vom Warenwert. Besser einen Pauschalpreis absprechen.": "Livrarea costă mai mult de jumătate din valoarea mărfii. Mai bine stabiliți un preț forfetar.",
 "Lieferpreis": "Preț livrare",

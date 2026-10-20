@@ -244,7 +244,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 J';
+const APP_VERSION='2026-10-21 K';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -922,6 +922,20 @@ function vAnleitung(){
 }
 const DELIV={belm:10,base:15,k1:30,r1:1.5,k2:60,r2:1,r3:.5};
 const delivPrice=(km,belm)=>{if(belm)return DELIV.belm;let p;if(km<=10)p=DELIV.base;else if(km<=DELIV.k1)p=Math.max(DELIV.base,DELIV.r1*km);else{const a=DELIV.r1*DELIV.k1;p=km<=DELIV.k2?a+DELIV.r2*(km-DELIV.k1):a+DELIV.r2*(DELIV.k2-DELIV.k1)+DELIV.r3*(km-DELIV.k2)}return Math.round(p*2)/2};
+function dlRun(){
+  const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''});
+  if(!(d.addr||'').trim()){d.err='Bitte eine Adresse eingeben.';d.res=null;return render()}
+  if(!window.cloud||!window.cloud.driveKm){d.err='Die Verbindung steht noch nicht, bitte gleich noch einmal versuchen.';return render()}
+  d.busy=true;d.err='';d.res=null;d.sug=[];render();
+  window.cloud.driveKm({address:d.addr.trim(),place:d.pick?{lat:d.pick.lat,lng:d.pick.lng,addr:d.pick.addr,plz:d.pick.plz}:null}).then(r=>{d.res=r;d.busy=false;render()}).catch(e=>{d.busy=false;d.err=(e&&e.message)||'Die Strecke konnte nicht berechnet werden.';render()});
+}
+function dlSuggest(v){
+  clearTimeout(window.__dls);const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''});d.pick=null;
+  const box=()=>document.getElementById('dl-sug');
+  if(v.trim().length<6){d.sug=[];if(box()){box().innerHTML='';box().style.display='none'}return}
+  window.__dls=setTimeout(()=>{if(!window.cloud||!window.cloud.addrSuggest)return;
+    window.cloud.addrSuggest({input:v.trim()}).then(r=>{d.sug=(r&&r.items)||[];const b=box();if(b){b.innerHTML=d.sug.map((x,i)=>`<div class="row" data-pl="dlpick" data-v="${i}" style="cursor:pointer"><div class="n" style="min-width:0">${esc(x.addr)}</div></div>`).join('');b.style.display=d.sug.length?'':'none'}}).catch(()=>{})},600);
+}
 function delivBox(){
   const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''}),r=d.res;
   let out='';
@@ -934,7 +948,8 @@ function delivBox(){
       <div class="p">Netto ${eur(netto)} (bei ${pct(vr)} MwSt)</div>
       ${val>0&&p>val*0.5?'<div class="p" style="color:var(--orange)">Die Lieferung kostet mehr als die Hälfte vom Warenwert. Besser einen Pauschalpreis absprechen.</div>':''}`;
   }
-  return `<h3>Lieferrechner</h3><div class="card pad formc"><input class="t" id="dl-addr" placeholder="Lieferadresse (Straße, PLZ Ort)" value="${esc(d.addr)}" autocomplete="street-address"><input class="t" id="dl-val" inputmode="decimal" placeholder="Warenwert in € (optional)" value="${esc(d.val)}" style="margin-top:8px"><button class="btn" data-pl="dlcalc" style="margin-top:8px" ${d.busy?'disabled':''}>Berechnen</button>${out}
+  const sug=(d.sug||[]).map((x,i)=>`<div class="row" data-pl="dlpick" data-v="${i}" style="cursor:pointer"><div class="n" style="min-width:0">${esc(x.addr)}</div></div>`).join('');
+  return `<h3>Lieferrechner</h3><div class="card pad formc"><input class="t" id="dl-addr" placeholder="Straße, Hausnummer, PLZ" value="${esc(d.addr)}" autocomplete="off"><div id="dl-sug" class="card" style="margin:6px 0 0;${sug?'':'display:none'}">${sug}</div><input class="t" id="dl-val" inputmode="decimal" placeholder="Warenwert in € (optional)" value="${esc(d.val)}" style="margin-top:8px"><button class="btn" data-pl="dlcalc" style="margin-top:8px" ${d.busy?'disabled':''}>Berechnen</button>${out}
     <div class="hint">Staffel (Preis inkl. MwSt): bis 10 km ${eur(DELIV.base)}, von 10 bis ${DELIV.k1} km ${eur(DELIV.r1)} je km, von ${DELIV.k1} bis ${DELIV.k2} km zusätzlich ${eur(DELIV.r2)} je km, ab ${DELIV.k2} km zusätzlich ${eur(DELIV.r3)} je km, Gemeinde Belm ${eur(DELIV.belm)}. Die Kilometer sind die gefahrene Strecke von Google Maps ab Hof, einfache Fahrt.</div></div>`;
 }
 function vPreise(){
@@ -1407,9 +1422,8 @@ document.addEventListener('click',ev=>{
   if(a==='plall'){const c=planCandidates(cur.pd.date),all=c.length&&c.every(x=>cur.pd.sel[x.o.id]);c.forEach(x=>cur.pd.sel[x.o.id]=!all);return render()}
   if(a==='pdday'){cur.pd.date=v;cur.pd.sel={};planCandidates(v).forEach(x=>{cur.pd.sel[x.o.id]=true});cur.pd.res=null;return render()}
   if(a==='ordmenu'){orderMenu(v);return}
-  if(a==='dlcalc'){const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''});if(!(d.addr||'').trim()){d.err='Bitte eine Adresse eingeben.';d.res=null;return render()}
-    if(!window.cloud||!window.cloud.driveKm){d.err='Die Verbindung steht noch nicht, bitte gleich noch einmal versuchen.';return render()}
-    d.busy=true;d.err='';d.res=null;render();window.cloud.driveKm({address:d.addr.trim()}).then(r=>{d.res=r;d.busy=false;render()}).catch(e=>{d.busy=false;d.err=(e&&e.message)||'Die Strecke konnte nicht berechnet werden.';render()});return}
+  if(a==='dlcalc'){dlRun();return}
+  if(a==='dlpick'){const d=cur.dl,x=(d.sug||[])[+v];if(!x)return;d.addr=x.addr;d.pick=x;d.sug=[];dlRun();return}
   if(a==='splan'){const [sid,typ]=v.split('|'),d=document.createElement('div');d.className='planview';let w=100;
     d.innerHTML='<div class="bar"><button data-x="-">Kleiner</button><button data-x="+">Größer</button><button data-x="c">Schließen</button></div><div class="pvs"><img alt=""></div>';
     const im=d.querySelector('img');im.style.width='100%';
@@ -1541,7 +1555,7 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.id==='rp-qty')cur.rf.qty=t.value;
-  if(t.id==='dl-addr'){cur.dl=cur.dl||{};cur.dl.addr=t.value}
+  if(t.id==='dl-addr'){cur.dl=cur.dl||{};cur.dl.addr=t.value;if(ev.type==='input')dlSuggest(t.value)}
   if(t.id==='dl-val'){cur.dl=cur.dl||{};cur.dl.val=t.value}
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='pk-note')cur.pknote=t.value;
@@ -1568,7 +1582,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='sp-standId'){const s0=S.stands.find(x=>x.id===t.value);cur.stop.standId=t.value;if(s0){cur.stop.name=s0.name;if(s0.address)cur.stop.address=s0.address}render()}
   if(t.id==='rp-obj')cur.rf.obj=t.value;
   if(t.id==='rp-qty')cur.rf.qty=t.value;
-  if(t.id==='dl-addr'){cur.dl=cur.dl||{};cur.dl.addr=t.value}
+  if(t.id==='dl-addr'){cur.dl=cur.dl||{};cur.dl.addr=t.value;if(ev.type==='input')dlSuggest(t.value)}
   if(t.id==='dl-val'){cur.dl=cur.dl||{};cur.dl.val=t.value}
   if(t.id==='rp-text')cur.rf.text=t.value;
   if(t.id==='rp-urgent')cur.rf.urgent=t.checked;

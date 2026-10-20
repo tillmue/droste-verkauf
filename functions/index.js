@@ -283,25 +283,51 @@ exports.driveKm = onCall(async req => {
   }
   const k = await db.doc('secrets/maps').get();
   if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Routing-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
-  // Adresse erst eindeutig machen (Suche bevorzugt die Gegend um den Hof), damit "Im Gattberg 1" nicht irgendwo in Deutschland landet
-  const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
-  if (gr.status === 'REQUEST_DENIED') throw new HttpsError('failed-precondition', 'Geocoding API nicht erlaubt: ' + (gr.error_message || ''));
-  const g0 = gr.results && gr.results[0];
-  if (!g0) throw new HttpsError('not-found', 'Adresse nicht gefunden');
-  const comp = t => ((g0.address_components || []).find(c => c.types.includes(t)) || {}).long_name || '';
-  const plz = comp('postal_code'), ort = comp('locality'), partial = !!g0.partial_match;
-  const dest = { location: { latLng: { latitude: g0.geometry.location.lat, longitude: g0.geometry.location.lng } } };
-  const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration' },
-    body: JSON.stringify({ origin: { address: origin }, destination: dest, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', computeAlternativeRoutes: true, languageCode: 'de-DE', regionCode: 'DE' })
-  });
-  const j = await res.json();
-  if (!res.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', (j.error && j.error.message) || 'Keine Route gefunden');
-  // kürzeste der angebotenen Routen (nach Strecke, nicht nach Zeit)
-  const best = j.routes.filter(r => r.distanceMeters).sort((a, b) => a.distanceMeters - b.distanceMeters)[0] || j.routes[0];
-  return { km: Math.round((best.distanceMeters || 0) / 100) / 10, min: Math.round((parseInt(String(best.duration || '0s').replace('s', ''), 10) || 0) / 60), addr: g0.formatted_address, plz, ort, belm: plz === '49191', partial };
+  // Adresse eindeutig machen: entweder aus dem Vorschlag der App oder per Suche (bevorzugt Umgebung des Hof)
+  const pl = req.data && req.data.place;
+  let dest, plz, ort = '', partial = false, addrTxt;
+  if (pl && typeof pl.lat === 'number' && typeof pl.lng === 'number') {
+    dest = { location: { latLng: { latitude: pl.lat, longitude: pl.lng } } }; plz = String(pl.plz || ''); addrTxt = String(pl.addr || address);
+  } else {
+    const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
+    if (gr.status === 'REQUEST_DENIED') throw new HttpsError('failed-precondition', 'Geocoding API nicht erlaubt: ' + (gr.error_message || ''));
+    const g0 = gr.results && gr.results[0];
+    if (!g0) throw new HttpsError('not-found', 'Adresse nicht gefunden');
+    const comp = t => ((g0.address_components || []).find(c => c.types.includes(t)) || {}).long_name || '';
+    plz = comp('postal_code'); ort = comp('locality'); partial = !!g0.partial_match; addrTxt = g0.formatted_address;
+    dest = { location: { latLng: { latitude: g0.geometry.location.lat, longitude: g0.geometry.location.lng } } };
+  }
+  // Kürzeste Strecke: normale Routen und Routen ohne Autobahn mit Alternativen, davon die kleinste Strecke
+  const ask = async mods => {
+    const r = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration' },
+      body: JSON.stringify({ origin: { address: origin }, destination: dest, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', computeAlternativeRoutes: true, routeModifiers: mods, languageCode: 'de-DE', regionCode: 'DE' })
+    });
+    const jj = await r.json();
+    if (!r.ok) throw new HttpsError('unavailable', (jj.error && jj.error.message) || 'Keine Route gefunden');
+    return jj.routes || [];
+  };
+  const all = (await Promise.all([ask({}), ask({ avoidHighways: true }).catch(() => [])])).flat().filter(r => r.distanceMeters);
+  if (!all.length) throw new HttpsError('unavailable', 'Keine Route gefunden');
+  const best = all.sort((a, b) => a.distanceMeters - b.distanceMeters)[0];
+  return { km: Math.round(best.distanceMeters / 100) / 10, min: Math.round((parseInt(String(best.duration || '0s').replace('s', ''), 10) || 0) / 60), addr: addrTxt, plz, ort, belm: plz === '49191', partial };
 });
+
+/* Adressvorschläge für den Lieferrechner (Geocoding, bevorzugt Umgebung des Hofs) */
+exports.addrSuggest = onCall(async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
+  const u = await db.collection('users').doc(req.auth.uid).get();
+  if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const input = String((req.data && req.data.input) || '').trim().slice(0, 150);
+  if (input.length < 5) return { items: [] };
+  const k = await db.doc('secrets/maps').get();
+  if (!k.exists || !k.data().key) return { items: [] };
+  const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(input)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
+  const items = (gr.results || []).slice(0, 5).map(g => ({ addr: g.formatted_address.replace(/, Deutschland$/, ''), lat: g.geometry.location.lat, lng: g.geometry.location.lng, plz: ((g.address_components || []).find(c => c.types.includes('postal_code')) || {}).long_name || '', partial: !!g.partial_match }));
+  return { items };
+});
+
 
 /* Fragen zur App: Nachricht an den Admin */
 exports.questionCreated = onDocumentCreated('questions/{id}', async event => {
