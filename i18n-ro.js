@@ -938,6 +938,8 @@ window.RO_PATTERNS=[
  [/^Ankunft vor Zeitfenster \(ab (.+)\)$/,(m,x)=>`Sosire înainte de interval (de la ${x})`],
  [/^vor (\d+) Min( \(App zuletzt offen\))?$/,(m,n,x)=>`acum ${n} min${x?" (aplicația a fost deschisă ultima dată)":""}`],
  [/^vor (\d+) Std( \(App zuletzt offen\))?$/,(m,n,x)=>`acum ${n} h${x?" (aplicația a fost deschisă ultima dată)":""}`],
+ [/^Alle (\d+) Aufträge automatisch planen und übernehmen$/,(m,n)=>`Planifică automat toate cele ${n} comenzi și preia-le`],
+ [/^Beim Packen bohren: (\d+)$/,(m,n)=>`Găurire la împachetare: ${n}`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],

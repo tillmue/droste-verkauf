@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 h';
+const APP_VERSION='2026-10-21 i';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1333,6 +1333,7 @@ document.addEventListener('click',ev=>{
   if(a==='plsel'){cur.pd.sel[v]=!cur.pd.sel[v];return render()}
   if(a==='plall'){planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);return render()}
   if(a==='plrun'){runPlan();return}
+  if(a==='planauto'){(async()=>{planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
   if(a==='planok'){applyPlan(v==='all'?null:+v);return}
   if(a==='topt'){const t=S.tours.find(x=>x.id===v);if(t){toast('Reihenfolge wird optimiert …');optimizeTour(t)}return}
   if(a==='tlegs'){const t=S.tours.find(x=>x.id===v);if(t){toast('Fahrzeiten werden berechnet …');computeLegs(t,false)}return}
@@ -1783,7 +1784,7 @@ function planBox(){
   const pd=cur.pd,cands=planCandidates(pd.date);
   const tourCard2=(t,i)=>`<div class="card pad"><div class="n"><span class="tdot" style="background:${TCOL[i%TCOL.length][2]}"></span>Vorschlag ${i+1} · ${t.size==='gross'?'große Bäume':'kleine Bäume'}</div>
     <div class="p">${t.stops.length} Stopps · ${hmMin(timeToMin(pd.start))} bis ${hmMin(t.end)} (+ ${t.backMin} Min zurück) · ${crewHintTxt(t.crew)}</div>
-    <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Bäume bohren: '+t.bohren:''}</div>
+    <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Beim Packen bohren: '+t.bohren:''}</div>
     ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(s.eta)}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}</span></div><div class="p">${esc(orderAddr(s.o))}</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
     ${t.applied?'<div class="hint">Übernommen.</div>':`<button class="btn" data-pl="planok" data-v="${i}" style="margin:8px 0 0">Diese Tour übernehmen</button>`}</div>`;
   const res=pd.res;
@@ -1793,6 +1794,7 @@ function planBox(){
     <select class="t" id="pd-b"><option value="3.5" ${pd.budget==3.5?'selected':''}>Dauer je Tour 3,5 Std</option><option value="4.5" ${pd.budget==4.5?'selected':''}>Dauer je Tour 4,5 Std</option><option value="6" ${pd.budget==6?'selected':''}>Dauer je Tour 6 Std</option></select></div>
     <label class="f">Aufträge für diesen Tag (${Object.values(pd.sel).filter(Boolean).length} gewählt)</label>
     <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}${x.late?' · überfällig':x.must?'':' · flexibel'}</div></div></div><span class="p">${mFmt(orderMaxTree(x.o))}</span></div>`).join('')||'<div class="row"><span class="p">Keine passenden Aufträge für diesen Tag.</span></div>'}</div>
+    <button class="btn green go" data-pl="planauto" style="margin:0 0 8px" ${pd.busy?'disabled':''}>Alle ${cands.length} Aufträge automatisch planen und übernehmen</button>
     <div class="mini"><button class="btn sec" data-pl="plall" style="margin:0">Alle wählen</button><button class="btn" data-pl="plrun" style="margin:0" ${pd.busy?'disabled':''}>${pd.busy?'Rechnet …':'Vorschlag berechnen'}</button></div>
     ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
     ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
@@ -1898,7 +1900,7 @@ function runRow(t,x,i,isNext,act,info){
     ${x.address||x.phone?`<div style="display:flex;justify-content:space-between;gap:10px;margin-top:2px"><span class="p" style="min-width:0">${x.address?`<a href="${mapUrl(x.address)}" target="_blank" rel="noopener">${esc(x.address)}</a>`:''}</span>${x.phone?`<a class="p" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="white-space:nowrap">${esc(x.phone)}</a>`:''}</div>`:''}
     ${trees?`<div class="p" style="color:var(--text)">${esc(mTxt(trees))}</div>`:''}
     ${sv||x.staender?`<div class="p"><b style="color:var(--text)">${sv}</b>${x.staender?(sv?' · ':'')+'Ständer: '+esc(x.staender.replace(/^\d+\s×\s/,'')):''}</div>`:''}
-    ${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}
+    ${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}
     ${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}${info}${act}</div>`;
 }
 function stopRow(t,x,i,n,plan){
@@ -1912,7 +1914,7 @@ function stopRow(t,x,i,n,plan){
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?'':(i+1)+'. '}${x.time?esc(x.time)+' · ':''}${esc(x.name)}</div>
     ${pk?`<div class="p"><b style="color:${x.done?'var(--green,#27AE60)':x.ready?'var(--orange)':'var(--mut)'}">${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</b></div>`:''}
     ${x.address?`<div class="p"><a href="${mapUrl(x.address)}" target="_blank" rel="noopener">${esc(x.address)}</a></div>`:''}
-    ${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}${x.items?`<div class="p">${esc(mTxt(x.items))}</div>`:''}${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}
+    ${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}${x.items?`<div class="p">${esc(mTxt(x.items))}</div>`:''}${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}
     ${x.phone?`<div class="p"><a href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}">${esc(x.phone)}</a></div>`:''}
     ${info}${act}
     ${plan?`<div style="display:flex;gap:8px;margin-top:8px">${pk?'':`<button data-pl="stopup" data-v="${t.id}|${x.id}" ${i===0?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▲</button><button data-pl="stopdown" data-v="${t.id}|${x.id}" ${i===n-1?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▼</button>`}<button class="claim" data-pl="stopedit" data-v="${t.id}|${x.id}">Ändern</button></div>`:''}</div></div></div>`;
