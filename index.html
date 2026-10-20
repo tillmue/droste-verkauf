@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 f';
+const APP_VERSION='2026-10-21 g';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -685,7 +685,7 @@ function loginScreen(){
     ${reg?'<div class="hint">Nach dem Anlegen muss der Admin dich freigeben.</div>':'<button class="btn sec" id="authReset">Passwort vergessen</button>'}`;
 }
 let pushOk=null;
-function trackBlock(){const on=trackPref()==='1';return `<div class="kv"><span>Standort teilen</span><span>${on?'an':'aus'}</span></div><button class="btn sec" id="trackTog">${on?'Standort teilen ausschalten':'Standort teilen einschalten'}</button><div class="hint">Nur bei geöffneter App, nur die letzte Position für die Tourenplanung.</div>`}
+function trackBlock(){const on=trackPref()!=='0';return `<div class="kv"><span>Standort teilen</span><span>${on?'an':'aus'}</span></div><button class="btn sec" id="trackTog">${on?'Standort teilen ausschalten':'Standort teilen einschalten'}</button><div class="hint">Nur bei geöffneter App, nur die letzte Position für die Tourenplanung.</div>`}
 function pushBlock(){
   if(!window.cloud||!window.cloud.pushSupported)return '';
   if(pushOk===null){window.cloud.pushSupported().then(v=>{pushOk=!!v;if(tab==='profil'||document.querySelector('#signOutBtn'))softRender()}).catch(()=>{pushOk=false});return ''}
@@ -930,8 +930,6 @@ function trackStart(){
   if(!cur.cloud||cur.cloud.status!=='in'||roleOf(S.me)==='demo')return;
   const pf=trackPref();
   if(pf==='0')return;
-  if(pf===null){if(trkAsked)return;trkAsked=true;
-    return askConfirm('Standort teilen? Solange die App geöffnet ist, sieht die Tourenplanung deine letzte Position (nur die aktuelle, es wird keine Strecke gespeichert). Du kannst das im Profil jederzeit ausschalten.','Ja, teilen',()=>{trackSet('1');trackStart()},()=>trackSet('0'))}
   trkW=navigator.geolocation.watchPosition(p=>{const n=Date.now();if(n-trkLast<45000)return;trkLast=n;const rt=runningTour();window.cloud.setLocation({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),tour:rt?tourName(rt):''}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:30000});
 }
 setInterval(()=>{document.visibilityState==='visible'?trackStart():trackStop()},5000);
@@ -2425,7 +2423,7 @@ document.addEventListener('click',async ev=>{
   const id=ev.target.id;
   if(id==='retryBtn')return location.reload();
   if(ev.target.closest('#help')){askQuestion();return}
-  if(ev.target.closest('#trackTog')){if(trackPref()==='1'){trackSet('0');trackStop();if(window.cloud&&window.cloud.clearLocation)window.cloud.clearLocation()}else{trackSet('1');trkAsked=true;trackStart()}return softRender()}
+  if(ev.target.closest('#trackTog')){if(trackPref()!=='0'){trackSet('0');trackStop();if(window.cloud&&window.cloud.clearLocation)window.cloud.clearLocation()}else{trackSet('1');trkAsked=true;trackStart()}return softRender()}
   if(ev.target.closest('#refresh')){const b=$('#refresh');b.classList.add('spin');try{if(window.cloud&&window.cloud.resume)await Promise.race([window.cloud.resume(),new Promise(r=>setTimeout(r,2500))])}catch(e){}location.reload();return}
   if(id==='pushOn'){try{await window.cloud.enablePush();toast('Benachrichtigungen sind an')}catch(e){if(e&&e.message==='denied')toast('Benachrichtigungen wurden nicht erlaubt');else alert('Benachrichtigungen konnten nicht eingeschaltet werden.\n\nFehler: '+((e&&(e.code||e.message))||'unbekannt'))}return render()}
   if(id==='pushOff'){try{await window.cloud.disablePush();toast('Benachrichtigungen sind aus')}catch(e){}return render()}
