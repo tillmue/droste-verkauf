@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 u';
+const APP_VERSION='2026-10-21 v';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -271,7 +271,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -1345,6 +1345,19 @@ document.addEventListener('click',ev=>{
   if(a==='plall'){const c=planCandidates(cur.pd.date),all=c.length&&c.every(x=>cur.pd.sel[x.o.id]);c.forEach(x=>cur.pd.sel[x.o.id]=!all);return render()}
   if(a==='pdday'){cur.pd.date=v;cur.pd.sel={};planCandidates(v).forEach(x=>{cur.pd.sel[x.o.id]=true});cur.pd.res=null;return render()}
   if(a==='ordmenu'){orderMenu(v);return}
+  if(a==='bfnew'){cur.bf=bfNew();cur.bOpen=true;window.scrollTo(0,0);return render()}
+  if(a==='bfedit'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.bf=JSON.parse(JSON.stringify(b));cur.bOpen=true;window.scrollTo(0,0);return render()}
+  if(a==='bfcancel'){cur.bOpen=false;cur.bf=null;return render()}
+  if(a==='bfset'){const [k,x]=v.split('|');cur.bf[k]=cur.bf[k]===x?'':x;return render()}
+  if(a==='bfl'){const [k,fl,x]=v.split('|');cur.bf.leist[k][fl]=cur.bf.leist[k][fl]===x?'':x;return render()}
+  if(a==='bfrg'){cur.bf.rgleich=!cur.bf.rgleich;return render()}
+  if(a==='bfpos'){if(cur.bf.pos.length<BPOS)cur.bf.pos.push({sorte:'',anzahl:'',groesse:'',preis:''});return render()}
+  if(a==='bfsave'){const f=cur.bf;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
+    if(f.id){const b=S.bestellungen.find(x=>x.id===f.id);if(b)Object.assign(b,f,{name:f.name.trim()})}
+    else S.bestellungen.push({...f,id:uid(),name:f.name.trim(),status:'aufgenommen',by:S.me,created:Date.now()});
+    cur.bOpen=false;cur.bf=null;save();toast('Bestellung gespeichert');return render()}
+  if(a==='bfdel'){const b=S.bestellungen.find(x=>x.id===cur.bf.id);if(b&&confirm('Bestellung ins Archiv verschieben?')){softDel(b);cur.bOpen=false;cur.bf=null;save();render()}return}
+  if(a==='bfplan'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;return askConfirm('Bestellung als Auftrag in die Planung übernehmen?','Ja, übernehmen',()=>{const o=bestToOrder(b);S.orders.push(o);b.status='uebernommen';b.orderId=o.id;save();cur.lkind='auf';toast('Als Auftrag übernommen');render()})}
   if(a==='resettest'){return askConfirm('Alle Touren (auch gestartete) ins Archiv, alle Aufträge zurück auf offen und Beispielaufträge auf heute setzen?','Ja, zurücksetzen',()=>{const td0=todayStr();S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(softDel);S.orders.filter(o=>!o.deleted).forEach(o=>{o.status='offen';o.tourId='';o.stopId='';delete o.plannedFor;if(o.demo){o.from=td0;o.to=td0}});cur.pd=null;cur.packTour='';cur.tex={};cur.lkind='auf';save();toast('Zurückgesetzt');render()})}
   if(a==='ttog'){cur.tex=cur.tex||{};const t0=S.tours.find(x=>x.id===v),cur0=cur.tex[v]!==undefined?!!cur.tex[v]:!!(t0&&t0.status==='gestartet');cur.tex[v]=!cur0;return render()}
   if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
@@ -1723,7 +1736,7 @@ function vPacken(t){
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}
     ${fin}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Plan']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Plan']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
@@ -1974,6 +1987,72 @@ function vAuftraege(kind,fahrer,plan){
   const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
   $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${locBox()}${nachBox()}${planBox()}<h3 style="margin-bottom:2px">Aufträge am ${wdD(day)}</h3>${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge für diesen Tag in dieser Ansicht.</div>'}${prepBox()}`;
 }
+/* ---------- Bestellungen (Bestellschein) ---------- */
+const BPOS=5;
+const bfNew=()=>({id:null,name:'',email:'',phone:'',contact:'',art:'',liefer:'',rechnung:'',rgleich:false,datum:'',tageszeit:'',zeitwunsch:'',
+  pos:[...Array(3)].map(()=>({sorte:'',anzahl:'',groesse:'',preis:''})),
+  leist:{sk:{jn:'',anz:'',preis:''},sg:{jn:'',anz:'',preis:''},auf:{jn:'',ort:'',preis:''},lie:{jn:'',preis:''},abh:{jn:'',preis:''}},
+  sonst:'',gesamt:'',zahlung:'',bezahlt:'',kassiert:''});
+cur.bf=null;cur.bOpen=false;
+const numOf=v=>{const x=parseFloat(String(v||'').replace(',','.'));return isNaN(x)?0:x};
+function bestToOrder(b){
+  const lines=(b.liefer||'').split('\n').map(x=>x.trim()).filter(Boolean);
+  let street=lines.length>1?lines.slice(0,-1).join(', '):(lines[0]||''),zip=lines.length>1?lines[lines.length-1]:'';
+  const m=(lines[0]||'').match(/^(.*?),\s*(\d{5}\s.+)$/);if(lines.length===1&&m){street=m[1];zip=m[2]}
+  const lenOf=g=>{const mm=String(g||'').match(/(\d+[.,]?\d*)\s*(m|cm)?/i);if(!mm)return null;let v=parseFloat(mm[1].replace(',','.'));if(/cm/i.test(mm[2]||'')||v>20)v=v/100;return v};
+  const positions=[];let n=0;
+  b.pos.filter(p=>p.sorte||p.anzahl||p.groesse).forEach(p=>{n++;const cat=/deko/i.test(p.sorte)?'Deko':/schnittgr|^grün/i.test(p.sorte)?'Grün':'Baum';positions.push({pos:n,text:p.sorte||'Baum',detail:p.groesse||'',qty:numOf(p.anzahl)||1,unit:'Stck.',cat,species:p.sorte||'',len:cat==='Grün'?null:lenOf(p.groesse)})});
+  const L=b.leist,add=(text,cat,qty)=>{n++;positions.push({pos:n,text,detail:'',qty:qty||1,unit:'Stck.',cat})};
+  if(L.sk.jn==='ja')add('Leihgebühr Tannenbaumständer klein','Ständer',numOf(L.sk.anz));
+  if(L.sg.jn==='ja')add('Leihgebühr Tannenbaumständer groß','Ständer',numOf(L.sg.anz));
+  if(L.auf.jn==='ja')add('Aufstellen','Service');
+  if(L.lie.jn==='ja')add('Lieferung','Service');
+  if(L.abh.jn==='ja')add('Abholung','Service');
+  const d=b.datum||todayStr();
+  return {id:'bs-'+b.id,ls:'Bestellung',custNo:'',name:b.name,contact:b.contact||'',street,zipcity:zip,phone:b.phone||'',billing:b.rgleich?'':(b.rechnung||''),date:todayStr(),from:d,to:d,
+    window:b.zeitwunsch||(b.tageszeit==='vormittags'?'bis 12:00':b.tageszeit==='nachmittags'?'ab 12:00':''),hints:[b.sonst].filter(Boolean),positions,status:'offen',tourId:'',stopId:'',
+    place:L.auf.ort==='draussen'?'draußen':L.auf.ort==='drinnen'?'drinnen':'',fromBestellung:b.id};
+}
+function bestCard(b){
+  const tr=b.pos.reduce((a,p)=>a+(numOf(p.anzahl)||0),0),srv=[['sk','Ständer klein'],['sg','Ständer groß'],['auf','Aufstellen'],['lie','Lieferung'],['abh','Abholung']].filter(([k])=>b.leist[k].jn==='ja').map(x=>x[1]);
+  return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.status==='uebernommen'?'<b style="color:var(--green)">In Planung</b>':'Aufgenommen'}</span></div>
+    <div class="p">${b.datum?wdD(b.datum):'Termin offen'}${b.zeitwunsch?' · '+esc(b.zeitwunsch):b.tageszeit?' · '+esc(b.tageszeit):''}${b.phone?' · '+esc(b.phone):''}</div>
+    <div class="p">${tr?tr+' Bäume':'Keine Bäume'}${srv.length?' · '+srv.join(', '):''}${b.gesamt?' · '+esc(b.gesamt):''}</div>
+    <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="bfedit" data-v="${b.id}" style="margin:0">Bearbeiten</button>${b.status==='uebernommen'?'':`<button class="btn" data-pl="bfplan" data-v="${b.id}" style="margin:0">In Planung übernehmen</button>`}</div></div>`;
+}
+function bestForm(){
+  const f=cur.bf,ch=(k,v,l)=>`<button class="chip ${f[k]===v?'on':''}" data-pl="bfset" data-v="${k}|${v}">${l}</button>`,
+    yn=(k,withOrt)=>`<div class="chips" style="margin:0 0 6px"><button class="chip ${f.leist[k].jn==='ja'?'on':''}" data-pl="bfl" data-v="${k}|jn|ja">ja</button><button class="chip ${f.leist[k].jn==='nein'?'on':''}" data-pl="bfl" data-v="${k}|jn|nein">nein</button>${withOrt?`<button class="chip ${f.leist[k].ort==='draussen'?'on':''}" data-pl="bfl" data-v="${k}|ort|draussen">draußen</button><button class="chip ${f.leist[k].ort==='drinnen'?'on':''}" data-pl="bfl" data-v="${k}|ort|drinnen">drinnen</button>`:''}</div>`;
+  return `<div class="card pad formc"><label class="f">${f.id?'Bestellung bearbeiten':'Neue Bestellung'}</label>
+    <input class="t" id="bf-name" placeholder="Name / Firma" value="${esc(f.name)}">
+    <div class="chips" style="margin-top:6px">${ch('art','privat','Privat')}${ch('art','firma','Firma')}</div>
+    <div class="mini" style="margin-top:6px"><input class="t" id="bf-phone" inputmode="tel" placeholder="Telefon" value="${esc(f.phone)}" style="min-width:0"><input class="t" id="bf-contact" placeholder="Ansprechperson" value="${esc(f.contact)}" style="min-width:0"></div>
+    <input class="t" id="bf-email" type="email" placeholder="E-Mail" value="${esc(f.email)}" style="margin-top:8px">
+    <label class="f">Lieferanschrift</label><textarea class="t" id="bf-liefer" rows="2" placeholder="Straße, PLZ, Ort">${esc(f.liefer)}</textarea>
+    <label class="f">Rechnungsanschrift</label><div class="chips" style="margin:0 0 6px"><button class="chip ${f.rgleich?'on':''}" data-pl="bfrg">wie Lieferanschrift</button></div>${f.rgleich?'':`<textarea class="t" id="bf-rechnung" rows="2">${esc(f.rechnung)}</textarea>`}
+    <label class="f">Liefer- oder Abholdatum</label><div class="mini"><input class="t" type="date" id="bf-datum" value="${esc(f.datum)}" style="min-width:0"><input class="t" id="bf-zeitwunsch" placeholder="Zeitwunsch (z. B. 9 bis 12 Uhr)" value="${esc(f.zeitwunsch)}" style="min-width:0"></div>
+    <div class="chips" style="margin-top:6px">${ch('tageszeit','vormittags','vormittags')}${ch('tageszeit','nachmittags','nachmittags')}</div>
+    <label class="f">Bäume und Ware</label>
+    ${f.pos.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><div class="mini"><input class="t" id="bf-p${i}-sorte" list="bf-sorten" placeholder="Sorte" value="${esc(p.sorte)}" style="min-width:0"><input class="t" id="bf-p${i}-anzahl" inputmode="numeric" placeholder="Anzahl" value="${esc(p.anzahl)}" style="max-width:90px"></div><div class="mini" style="margin-top:6px"><input class="t" id="bf-p${i}-groesse" placeholder="Größe / Bemerkung" value="${esc(p.groesse)}" style="min-width:0"><input class="t" id="bf-p${i}-preis" placeholder="Preis" value="${esc(p.preis)}" style="max-width:110px"></div></div>`).join('')}
+    <datalist id="bf-sorten"><option value="Nordmanntanne"><option value="Blaufichte"><option value="Nobilis"><option value="Dekobaum"><option value="Schnittgrün"></datalist>
+    ${f.pos.length<BPOS?'<button class="btn sec" data-pl="bfpos" style="margin:0 0 8px">+ Position</button>':''}
+    <label class="f">Leistungen</label>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Ständer klein</div>${yn('sk')}<div class="mini"><input class="t" id="bf-l-sk-anz" inputmode="numeric" placeholder="Anzahl" value="${esc(f.leist.sk.anz)}" style="min-width:0"><input class="t" id="bf-l-sk-preis" placeholder="Preis" value="${esc(f.leist.sk.preis)}" style="min-width:0"></div></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Ständer groß</div>${yn('sg')}<div class="mini"><input class="t" id="bf-l-sg-anz" inputmode="numeric" placeholder="Anzahl" value="${esc(f.leist.sg.anz)}" style="min-width:0"><input class="t" id="bf-l-sg-preis" placeholder="Preis" value="${esc(f.leist.sg.preis)}" style="min-width:0"></div></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Aufstellen <span class="p">4 €/m</span></div>${yn('auf',true)}<input class="t" id="bf-l-auf-preis" placeholder="Preis" value="${esc(f.leist.auf.preis)}"></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Lieferung <span class="p">bis 10 km 15 €, ab 10 km 1,5 €/km (Gemeinde Belm 10 €)</span></div>${yn('lie')}<input class="t" id="bf-l-lie-preis" placeholder="Preis" value="${esc(f.leist.lie.preis)}"></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Abholung <span class="p">Rücknahme im Januar, Preis wie Lieferung</span></div>${yn('abh')}<input class="t" id="bf-l-abh-preis" placeholder="Preis" value="${esc(f.leist.abh.preis)}"></div>
+    <label class="f">Sonstiges</label><textarea class="t" id="bf-sonst" rows="2">${esc(f.sonst)}</textarea>
+    <div class="mini" style="margin-top:8px"><input class="t" id="bf-gesamt" placeholder="Gesamt" value="${esc(f.gesamt)}" style="min-width:0"><div class="chips" style="margin:0;align-self:center">${ch('zahlung','bar','Bar')}${ch('zahlung','rechnung','Rechnung')}</div></div>
+    <div class="mini" style="margin-top:8px"><input class="t" id="bf-bezahlt" placeholder="Bezahlt am" value="${esc(f.bezahlt)}" style="min-width:0"><input class="t" id="bf-kassiert" placeholder="Dankend erhalten (Kürzel)" value="${esc(f.kassiert)}" style="min-width:0"></div>
+    <div class="mini" style="margin-top:10px"><button class="btn" data-pl="bfsave" style="margin:0">Speichern</button><button class="btn sec" data-pl="bfcancel" style="margin:0">Abbrechen</button></div>
+    ${f.id?'<button class="btn red" data-pl="bfdel">Bestellung ins Archiv</button>':''}</div>`;
+}
+function vBestellungen(kind,fahrer,plan){
+  if(cur.bOpen&&cur.bf){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${bestForm()}`;return}
+  const L=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>(b.created||0)-(a.created||0));
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Noch keine Bestellungen aufgenommen.</div>'}`;
+}
 function nacharbeit(){
   const td=todayStr(),out=[],seen=new Set();
   S.orders.filter(orderOpen).forEach(o=>{const d=o.to||o.from;if(d&&d<td){out.push({o,why:'Nicht in einer Tour geplant',day:d});seen.add(o.id)}});
@@ -2189,10 +2268,11 @@ function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
   if(cur.packTour){const pt=S.tours.find(x=>x.id===cur.packTour&&!x.deleted);if(pt&&(plan||canRun(pt))){vPacken(pt);return}cur.packTour=''}
   const fahrer=!has('toursAll')&&!has('lieferplanung');
-  const kinds=['lief','abh','ges'].concat(plan?['auf']:[]);
+  const kinds=['lief','abh','ges'].concat(plan?['auf','best']:[]);
   const kind=fahrer?'lief':kinds.includes(cur.lkind)?cur.lkind:(plan?'auf':'lief');
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
   syncPickups();
+  if(kind==='best'){vBestellungen(kind,fahrer,plan);return}
   if(kind==='auf'){vAuftraege(kind,fahrer,plan);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));
@@ -2619,7 +2699,7 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{orders:[],days:[],rolesCfg:{},feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{orders:[],bestellungen:[],days:[],rolesCfg:{},feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
 const APP={rollTasks,get cur(){return cur},get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>{const r=pr.role;if(r==='admin'||r==='demo')return true;const ov=pr.perms||{};return ov[k]!==undefined?!!ov[k]:!!presetFor(r)[k]},ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
@@ -2663,6 +2743,7 @@ document.addEventListener('input',ev=>{
   if(t.id==='sh-text')cur.shtext=t.value;
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
+  if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else cur.bf[k]=t.value}
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
 });
 document.addEventListener('change',ev=>{
@@ -2686,6 +2767,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
+  if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else cur.bf[k]=t.value}
 });
 
 /* ---------- Sprache: Übersetzung der Oberfläche (Deutsch / Rumänisch) ---------- */

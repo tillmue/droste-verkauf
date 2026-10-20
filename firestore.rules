@@ -83,6 +83,12 @@ service cloud.firestore {
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
+    // Bestellungen (Bestellschein): nur wer Touren planen darf
+    match /bestellungen/{id} {
+      allow read, create, update: if perm('lieferplanung');
+      allow delete: if false;
+    }
+
     // Aufträge (Lieferscheine): nur wer Touren planen darf
     match /orders/{id} {
       allow read, create, update: if perm('lieferplanung');
