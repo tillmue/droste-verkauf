@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 w';
+const APP_VERSION='2026-10-21 x';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -853,13 +853,37 @@ function vatSync(src){
   cur.vLast=src==='gross'?'gross':'net';
   set('vat-tax',(cur.vN===''&&cur.vG==='')?'':f2(gross-net));
 }
+/* ---------- Preislisten 2026 (Fotos der Hof-Listen, Stand 20.10.2026) ---------- */
+const PCOL={rot:'#e5484d',lila:'#a855f7',gelb:'#f5c518',weiss:'#ffffff',blau:'#3b82f6',gruen:'#2e9e4f',orange:'#f97316'};
+const plCol=n=>{const cs=[...new Set(String(n||'').toLowerCase().replace('ß','ss').replace('weiß','weiss').replace('grün','gruen').split(/[\/ ]+/).map(w=>PCOL[w]).filter(Boolean))];return !cs.length?'':cs.length===1?cs[0]:`linear-gradient(90deg,${cs[0]} 50%,${cs[1]} 50%)`};
+const mkPl=(pre,list)=>{let n=0;return list.map(([grp,name,spec,price,note,col])=>({id:pre+(++n),pl:true,grp,name:name+(spec?' · '+spec:''),price,note:/^(rot|lila|gelb|blau|gr[üu]n|orange|wei[ßs])([\/ ](rot|lila|gelb|blau|gr[üu]n|orange|wei[ßs]|schmal|breit))?$/i.test(note||'')?'':(note||''),color:col===undefined?plCol(note||name):col}))};
+const PL_PRIV=mkPl('pp',[
+ ['Nordmanngrün','Handbunde','700 g',3],['Nordmanngrün','Nordmann Bund','2,5 kg',7],['Nordmanngrün','Nordmann Bund','2,5 kg',6,'Gelb Abdeckgrün'],['Nordmanngrün','Nordmann Bund','5 kg',10],['Nordmanngrün','Nordmann Bund','10 kg',15,'Lila 2. Wahl'],
+ ['Nobilisgrün','Handbunde','700 g',3],['Nobilisgrün','Nobilis Bund','2,5 kg',7],['Nobilisgrün','Nobilis Bund','5 kg',12],['Nobilisgrün','Nobilis Bund','10 kg',10,'Grün Abdeck'],['Nobilisgrün','Nobilis Vase','10 kg',17,'Rot Mix'],['Nobilisgrün','Sackware','1 kg',3],
+ ['Kiefergrün','Handbunde','700 g',4],['Kiefergrün','Kiefer Bund','5 kg',12],
+ ['Topfbäume und Ständer','Topfbaum Nordmann','60 bis 80 cm',20,'Rot'],['Topfbäume und Ständer','Topfbaum Nordmann','80 bis 100 cm',25,'Grün'],['Topfbäume und Ständer','Topfbaum Nordmann','100 bis 140 cm',35,'Gelb'],['Topfbäume und Ständer','Mini/Holzscheibe','60 bis 80 cm',20,'Lila'],
+ ['Topfbäume und Ständer','Ständer klein','',30,'',''],['Topfbäume und Ständer','Ständer groß','',45,'',''],
+ ['Lieferung und Service','Lieferung','bis 10 km',15,'',''],['Lieferung und Service','Abholung','bis 10 km',15,'',''],['Lieferung und Service','Aufstellen','pro Meter',4,'','']]);
+const PL_HAND=mkPl('ph',[
+ ['Nordmann 1. Wahl','Rot','120/150',14.5],['Nordmann 1. Wahl','Lila','170/210',27],['Nordmann 1. Wahl','Gelb','210/250',36],['Nordmann 1. Wahl','Rot/Weiß','250/300',43],['Nordmann 1. Wahl','Lila/Weiß','300/350',49],
+ ['Mix','Blau/Weiß','140/170',17],['Mix','Blau/schmal','170/210',23.5,'Blau'],['Mix','Grün/schmal','220/260',29,'Grün'],['Mix','Lila/Gelb','280/320',39],
+ ['Nordmann 2. Wahl','Blau/breit','100/150',10,'Blau'],['Nordmann 2. Wahl','Gelb/breit','140/170',14.5,'Gelb'],['Nordmann 2. Wahl','Orange/breit','170/210',20,'Orange'],['Nordmann 2. Wahl','Grün/breit','210/250',26,'Grün'],['Nordmann 2. Wahl','Lila/Gelb schmal','260/300',33,'Lila/Gelb'],['Nordmann 2. und 3. Wahl','Rot/Kaufland','160/210',17.5,'Rot'],
+ ['Aktion','Weiß','100/150',8.5],['Aktion','Rot/breit','150/220',16,'Rot'],['Aktion','Rot/breit','220/300',19,'Rot'],
+ ['Deko und Laterne','Rot/Weiß','150/250',10],['Deko und Laterne','Gelb/Weiß','250/350',17],
+ ['Blaufichte','Blaufichte','160/210',13,'',''],['Blaufichte','Blaufichte','200/250',17,'',''],
+ ['Nordmann Meterware (Preis je Meter)','Nordmann 1. Wahl','400/500',30,'',''],['Nordmann Meterware (Preis je Meter)','Nordmann 1. Wahl','600/700',35,'',''],['Nordmann Meterware (Preis je Meter)','Nordmann 2. Wahl','400/500',20,'',''],['Nordmann Meterware (Preis je Meter)','Nordmann 2. Wahl','600/700',25,'',''],['Nordmann Meterware (Preis je Meter)','Nordmann ab 8 m','',0,'Preis auf Anfrage',''],
+ ['Schnittgrün Nordmann','Handbunde','700 g',1.5],['Schnittgrün Nordmann','Nordmann Bund','2,5 kg',3.8],['Schnittgrün Nordmann','Nordmann Bund','2,5 kg',3.5,'Gelb Abdeckgrün'],['Schnittgrün Nordmann','Nordmann Bund','5 kg',7.5],['Schnittgrün Nordmann','Nordmann Bund','10 kg',10,'Lila 2. Wahl'],['Schnittgrün Nordmann','Sackware','1 kg',3],
+ ['Schnittgrün Nobilis','Handbunde','700 g',1.6],['Schnittgrün Nobilis','Nobilis Bund','2,5 kg',4.8],['Schnittgrün Nobilis','Nobilis Bund','5 kg',9],['Schnittgrün Nobilis','Nobilis Bund','10 kg',9,'Grün Abdeck'],['Schnittgrün Nobilis','Nobilis Vase','10 kg',15,'Rot Mix'],['Schnittgrün Nobilis','Sackware','1 kg',3],
+ ['Schnittgrün Kiefer','Handbunde','700 g',1.7],['Schnittgrün Kiefer','Kiefer Bund','5 kg',9],
+ ['Topfbäume (nur auf Bestellung)','Topfbaum Nordmann','60 bis 80 cm',15,'Rot'],['Topfbäume (nur auf Bestellung)','Topfbaum Nordmann','80 bis 100 cm',20,'Grün'],['Topfbäume (nur auf Bestellung)','Topfbaum Nordmann','100 bis 140 cm',27,'Gelb'],['Topfbäume (nur auf Bestellung)','Mini/Holzscheibe','60 bis 80 cm',14.5,'Lila']]);
+const plGroups=list=>{const g=[];list.forEach(p=>{let x=g.find(y=>y[0]===p.grp);if(!x){x=[p.grp,[]];g.push(x)}x[1].push(p)});return g};
 function vPreise(){
   const tabN=cur.prtab==='haendler'?'haendler':cur.prtab==='rechner'?'rechner':'privat',r=vatRate();
-  const ps=S.products.filter(p=>!p.free),hp=p=>p.priceH?p.priceH:(p.price?Math.round(p.price/(1+r/100)*100)/100:0);
+  const SUP=['p1','p2','p4','p5','p6','p7'],ps=S.products.filter(p=>!p.free&&!SUP.includes(p.id)),hp=p=>p.priceH?p.priceH:(p.price?Math.round(p.price/(1+r/100)*100)/100:0);
   const cart=tabN==='haendler'?cur.cartH:cur.cartP,ck=tabN==='haendler'?'H':'P';
-  const unit=p=>tabN==='haendler'?hp(p):p.price;
+  const unit=p=>p.pl?p.price:(tabN==='haendler'?hp(p):p.price);
   const row=p=>{const v=unit(p),q=cart[p.id]||0;
-    return `<div class="row"><div class="n" style="flex:1;min-width:0">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}</div><b style="margin-right:8px">${v?eur(v):'auf Anfrage'}</b>${v?`<div class="ctr">${q?`<button class="fb" data-pl="cart" data-v="${ck}|${p.id}|-1">−</button><b class="fn">${q}</b>`:''}<button class="plus fb" data-pl="cart" data-v="${ck}|${p.id}|1">+</button></div>`:''}</div>`};
+    return `<div class="row"><div class="n" style="flex:1;min-width:0">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}${p.note?` <span class="p">· ${esc(p.note)}</span>`:''}</div><b style="margin-right:8px">${v?eur(v):'auf Anfrage'}</b>${v?`<div class="ctr">${q?`<button class="fb" data-pl="cart" data-v="${ck}|${p.id}|-1">−</button><b class="fn">${q}</b>`:''}<button class="plus fb" data-pl="cart" data-v="${ck}|${p.id}|1">+</button></div>`:''}</div>`};
   const sum=ps.reduce((a,p)=>a+(cart[p.id]||0)*(unit(p)||0),0),cnt=Object.values(cart).reduce((a,b)=>a+b,0);
   const seg=`<div class="seg">${[['privat','Privat'],['haendler','Händler'],['rechner','MwSt-Rechner']].map(([k,l])=>`<button class="${tabN===k?'on':''}" data-pl="prtab" data-v="${k}">${l}</button>`).join('')}</div>`;
   let body='';
@@ -873,24 +897,24 @@ function vPreise(){
   }else if(tabN==='privat'){
     body=`<div class="card pad formc"><div class="kv"><span>Summe (inklusive MwSt)</span><b style="font-size:24px">${eur(sum)}</b></div><div class="hint" style="margin:4px 0 8px">${cnt} ${cnt===1?'Artikel':'Artikel'} ausgewählt</div><button class="btn sec" data-pl="cartclear" data-v="P" style="margin:0">Löschen</button></div>
       <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
-      <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>`;
+      <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>${plGroups(PL_PRIV).map(([g,l])=>`<h3>${g}</h3><div class="card">${l.map(row).join('')}</div>`).join('')}`;
   }else{
     const tax=sum*r/100;
     body=`<div class="card pad formc"><div class="vrow"><label>Netto</label><b style="flex:1;text-align:right;font-size:22px">${eur(sum)}</b></div>
       <div class="vrow"><span class="vl" style="width:auto;font-size:18px">+</span><span style="font-size:16px">${pct(r)} MwSt</span><b style="flex:1;text-align:right;font-size:18px">${eur(tax)}</b></div>
       <hr style="border:0;border-top:2px solid var(--line);margin:8px 0">
       <div class="vrow"><label>Brutto</label><b style="flex:1;text-align:right;font-size:22px">${eur(sum+tax)}</b></div>
-      <div class="hint" style="margin:4px 0 8px">${cnt} Artikel ausgewählt. Händlerpreise netto, wo noch keiner hinterlegt ist, steht der berechnete Nettopreis.</div>
+      <div class="hint" style="margin:4px 0 8px">${cnt} Artikel ausgewählt. Händlerpreise netto laut Händler-Preisliste 2026.</div>
       <button class="btn sec" data-pl="cartclear" data-v="H" style="margin:0">Löschen</button></div>
-      <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
-      <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>`;
+      <div class="hint">Alle Preise netto zzgl. MwSt, ab Hof. Lieferung zzgl.</div>${plGroups(PL_HAND).map(([g,l])=>`<h3>${g}</h3><div class="card">${l.map(row).join('')}</div>`).join('')}`;
   }
+  const qu=imgUrl('paypal/qr.png'),qfail=!!IMGERR['paypal/qr.png'];
   $('#app').innerHTML=`<h2 style="margin-top:4px">Preise</h2>${seg}${body}
     <h3>Bezahlen per PayPal</h3>
-    <div class="card pad" style="text-align:center"><div id="qr" style="display:inline-block;background:#fff;padding:14px;border-radius:14px;min-width:120px;min-height:120px"></div>
-    <div class="hint">${(S.hofInfo&&S.hofInfo.paypal)?'QR-Code scannen und direkt per PayPal bezahlen.':'Beispiel-Code. Später ersetzt der PayPal-Code des Hofs diesen Platzhalter.'}</div></div>`;
+    <div class="card pad" style="text-align:center">${qu?`<img src="${qu}" alt="PayPal" style="width:100%;max-width:300px;border-radius:14px;background:#fff">`:qfail?'<div id="qr" style="display:inline-block;background:#fff;padding:14px;border-radius:14px;min-width:120px;min-height:120px"></div>':'<div class="hint">QR-Code wird geladen …</div>'}
+    <div class="hint">${qu||(S.hofInfo&&S.hofInfo.paypal)?'QR-Code scannen und direkt per PayPal bezahlen.':'Beispiel-Code. Später ersetzt der PayPal-Code des Hofs diesen Platzhalter.'}</div></div>`;
   if(tabN==='rechner')vatSync(cur.vLast);
-  loadQr((S.hofInfo&&S.hofInfo.paypal)||'https://www.paypal.com/paypalme/BeispielHofDroste');
+  if(!qu&&qfail)loadQr((S.hofInfo&&S.hofInfo.paypal)||'https://www.paypal.com/paypalme/BeispielHofDroste');
 }
 function loadQr(text){
   const draw=()=>{const el=$('#qr');if(!el||!window.qrcode)return;const q=window.qrcode(0,'M');q.addData(text);q.make();el.innerHTML=q.createSvgTag(6,0);const sv=el.querySelector('svg');if(sv){sv.style.width='180px';sv.style.height='180px';sv.style.display='block'}};
