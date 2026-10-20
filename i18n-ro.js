@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Ort": "Loc",
+"Uhrzeit": "Ora",
+"Zuständig": "Responsabil",
+"Eintrag nicht gefunden.": "Intrarea nu a fost găsită.",
 "nichts offen": "nimic deschis",
 "Meine Aufgaben": "Sarcinile mele",
 "Notiz oder Zahlen (optional)": "Notiță sau cifre (opțional)",

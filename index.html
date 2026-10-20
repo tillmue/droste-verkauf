@@ -300,7 +300,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 Z';
+const APP_VERSION='2026-10-22 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -916,7 +916,7 @@ function vIch(){
   <div class="mini" style="margin-bottom:14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
-  ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b></span></div>`,{pill:pill(evs.length+(today.length?1:0))}):''}
+  ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(t.title)}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
   ${blk('Meine Aufgaben heute',`${today.map(t=>taskRow(t,true,true)).join('')||'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>'}
     ${free?`<div class="tbanner o" data-pl="gopen" style="margin:10px 0 6px">${free} offene Aufgabe${free>1?'n':''} ohne Zuständigen, such dir eine aus →</div>`:''}
     <button class="btn sec" data-pl="goarch" style="margin:10px 0 6px">Aufgabenarchiv</button>`,{pill:pill(today.length,today.length?'o':'g')})}
@@ -1253,9 +1253,17 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():'';
+  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='evview'?evView():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
+}
+function evView(){
+  const e=S.events.find(x=>x.id===cur.evv);if(!e)return '<div class="hint">Eintrag nicht gefunden.</div>';
+  return `<div class="n" style="font-size:21px">${esc(e.title)}</div>
+    <div class="p" style="margin:6px 0 12px">${esc(({saison:'Saison',lieferung:'Lieferung',insta:'Instagram'})[e.cal]||'')}</div>
+    <div class="kv"><span>Datum</span><span>${esc(evLabel(e))}</span></div>${e.time?`<div class="kv"><span>Uhrzeit</span><span>${esc(e.time)}</span></div>`:''}${e.place?`<div class="kv"><span>Ort</span><span>${esc(e.place)}</span></div>`:''}${e.person?`<div class="kv"><span>Zuständig</span><span>${esc(e.person)}</span></div>`:''}
+    ${e.note?`<div style="white-space:pre-wrap;font-size:16px;line-height:1.45;background:var(--fill);border-radius:14px;padding:12px 14px;margin-top:12px">${esc(e.note)}</div>`:''}
+    <button class="btn sec" data-pl="sselclose" style="margin:16px 0 0">Schließen</button>`;
 }
 function besSheet(){
   const pk=S.packs.find(x=>x.id===cur.pstand),g=pk&&pk.groups.find(x=>x.key==='besonderheiten'),its=g?g.items:[];
@@ -1351,8 +1359,7 @@ function planKal(){
   const empty=t=>`<div class="row"><span class="p">${t}</span></div>`;
   const its=calItems(ct,cur.cday);
   const addBtn=ct==='hof'?'':ct==='meine'?`<button class="btn add" data-pl="dtaskd" style="margin:4px 0 14px">+ Aufgabe für diesen Tag</button>`:canCal()?`<button class="btn add" data-pl="enew" style="margin:4px 0 14px">${ct==='insta'?'+ Beitrag':'+ Termin'} für diesen Tag</button>`:'<div class="hint">Dieser Kalender wird vom Chef und vom Admin gepflegt.</div>';
-  const head=`<section class="blk" style="padding-bottom:14px"><div class="calhead" style="margin-top:2px"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>${monGrid()}
-    <button class="btn sec" data-pl="ctoday" style="margin:12px 0 0">Heute</button></section>`;
+  const head=`<section class="blk" style="padding-bottom:14px"><div class="calhead" style="margin-top:2px"><button data-pl="cmon" data-v="-1">‹</button><b>${mname}</b><button data-pl="cmon" data-v="1">›</button></div>${monGrid()}</section>`;
   const day=blk(wdD(cur.cday),calDay(ct,cur.cday)||empty(ct==='meine'?'Nichts für dich an diesem Tag.':ct==='hof'?'Keine Touren oder Abholungen an diesem Tag.':'Für diesen Tag ist nichts eingetragen.'),{pill:its.length?pill(its.length):''});
   return chips+head+day+addBtn;
 }
@@ -1524,8 +1531,8 @@ document.addEventListener('click',ev=>{
   if(a==='vatclear'){cur.vN='';cur.vG='';return render()}
   if(a==='qdone'){const q=S.questions.find(x=>x.id===v);if(q){q.done=true;q.doneAt=Date.now();save();render()}return}
   if(a==='gopen'){tab='plan';cur.ptab='aufg';cur.pf='@open';window.scrollTo(0,0);return render()}
-  if(a==='gomine'){tab='plan';cur.ptab='kal';cur.ctab='meine';cur.cday=todayStr();cur.cal=cur.cday.slice(0,7);window.scrollTo(0,0);return render()}
-  if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){tab='plan';cur.ptab='kal';cur.ctab=calOf(e.cal);cur.cday=e.date;cur.cal=e.date.slice(0,7);cur.ef={...e};cur.sheet=canCal()?'event':'';window.scrollTo(0,0);render()}return}
+  if(a==='gomine'){cur.mineOpen=!cur.mineOpen;return render()}
+  if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){cur.ef={...e};cur.evv=e.id;cur.sheet=canCal()?'event':'evview';render()}return}
   if(a==='penadd'){const per=cur.pen.person||S.people[0];if(!(cur.pen.reason||'').trim())return alert('Bitte einen Grund eintragen.');S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
   if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
   if(a==='fs'){cur.fs=v;cur.fg='';cur.frest=false;return render()}
