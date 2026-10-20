@@ -142,20 +142,6 @@ service cloud.firestore {
     // Geheimnisse (z. B. Google-Maps-Schlüssel): nur Admin schreibt, niemand liest, nur Cloud Functions
     match /secrets/{id} { allow write: if isAdmin(); allow read: if false; }
 
-    // Standort der Fahrer (nur letzte Position, jede Person nur ihr eigenes Dokument)
-    match /locations/{id} {
-      allow read: if isAdmin() || perm('lieferplanung');
-      allow create, update: if isMember() && id == request.auth.uid && request.resource.data.uid == request.auth.uid;
-      allow delete: if isMember() && id == request.auth.uid;
-    }
-
-    // Standortverlauf (alle gesendeten Positionen): nur Admin liest, Einträge sind unveränderlich
-    match /track/{id} {
-      allow read, delete: if isAdmin();
-      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
-      allow update: if false;
-    }
-
     // Ranglisten (von Cloud Functions geschrieben)
     match /stats/{id} {
       allow read: if isMember();

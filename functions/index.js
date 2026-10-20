@@ -114,9 +114,9 @@ exports.syncClaims = onDocumentWritten('users/{uid}', async event => {
 });
 
 /* 1c. Meldungen: neue Meldung an Admin und Chef, Statuswechsel an den Melder */
-const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'], lieferung: ['Lieferung', 'Livrare'], feld: ['Feld', 'Câmp'] };
+const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'], nachschub: ['Nachschub', 'Aprovizionare'], lieferung: ['Lieferung', 'Livrare'], feld: ['Feld', 'Câmp'] };
 async function repObjName(r) {
-  if (r.cat !== 'stand' || !r.obj) return r.obj || '';
+  if ((r.cat !== 'stand' && r.cat !== 'nachschub') || !r.obj) return r.obj || '';
   const d = await db.collection('stands').doc(r.obj).get();
   return d.exists ? d.data().name : r.obj;
 }
@@ -261,6 +261,36 @@ exports.geocode = onCall(async req => {
     out.push(...part);
   }
   return { coords: out };
+});
+
+/* Strecke vom Hof zu einer Adresse in Kilometern (gefahren, einfache Fahrt) fuer den Lieferrechner */
+exports.driveKm = onCall(async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
+  const u = await db.collection('users').doc(req.auth.uid).get();
+  if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const address = String((req.data && req.data.address) || '').trim().slice(0, 200);
+  if (!address) throw new HttpsError('invalid-argument', 'Bitte eine Adresse eingeben');
+  const hof = await db.doc('settings/hof').get();
+  const origin = (hof.exists && hof.data().depot) || 'Im Gattberg 19, 49191 Belm';
+  const ok = await orsKey();
+  if (ok) {
+    const pts = await orsGeocodeMany(ok, [origin, address]);
+    if (!pts[0] || !pts[1]) throw new HttpsError('not-found', 'Adresse nicht gefunden');
+    const r = await fetch(`${ORS}/v2/directions/driving-car`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: ok }, body: JSON.stringify({ coordinates: pts.map(p => [p.lng, p.lat]) }) });
+    const j = await r.json();
+    if (!r.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', 'Keine Route gefunden');
+    return { km: Math.round(j.routes[0].summary.distance / 100) / 10, min: Math.round(j.routes[0].summary.duration / 60) };
+  }
+  const k = await db.doc('secrets/maps').get();
+  if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Routing-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
+  const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration' },
+    body: JSON.stringify({ origin: { address: origin }, destination: { address }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', languageCode: 'de-DE', regionCode: 'DE' })
+  });
+  const j = await res.json();
+  if (!res.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', (j.error && j.error.message) || 'Keine Route gefunden');
+  return { km: Math.round((j.routes[0].distanceMeters || 0) / 100) / 10, min: Math.round((parseInt(String(j.routes[0].duration || '0s').replace('s', ''), 10) || 0) / 60) };
 });
 
 /* Fragen zur App: Nachricht an den Admin */

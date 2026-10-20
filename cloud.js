@@ -192,7 +192,6 @@ function initCloud(FB) {
     if (T.permFor(p, 'verkauf') || T.permFor(p, 'zahlen')) ['moves', 'sales'].forEach(listen);
     if (T.permFor(p, 'lieferungen') || T.permFor(p, 'lieferplanung')) { listen('tours'); listen('days'); }
     if (T.permFor(p, 'lieferplanung')) { listen('orders'); listen('bestellungen'); }
-    if (T.permFor(p, 'lieferplanung')) unsubs.push(FB.onSnapshot(FB.collection(db, 'locations'), snap => { const m = {}; snap.forEach(ds => { m[ds.id] = ds.data(); }); T.cur.locs = m; T.softRender(); }, err => console.error('locations', err)));
     if (T.permFor(p, 'einkauf')) listen('shopping');
     if (T.permFor(p, 'feld')) listen('feld');
   }
@@ -284,13 +283,8 @@ function initCloud(FB) {
       try { await FB.deleteToken(FB.getMessaging(app)); } catch (e) {}
     },
     async routeLegs(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeLegs')(p); return r.data; },
+    async driveKm(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'driveKm')(p); return r.data; },
     async geocode(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'geocode')(p); return r.data; },
-    setLocation: p => {
-      const rec = { uid, name: profile.name, lat: p.lat, lng: p.lng, acc: p.acc || 0, tour: p.tour || '', at: Date.now() };
-      FB.addDoc(FB.collection(db, 'track'), { ...rec, tourId: p.tourId || '' }).catch(() => {});
-      return FB.setDoc(FB.doc(db, 'locations', uid), rec);
-    },
-    clearLocation: () => FB.deleteDoc(FB.doc(db, 'locations', uid)).catch(() => {}),
     setSecret: (name, key) => FB.setDoc(FB.doc(db, 'secrets', name), { key, at: Date.now() }),
     imageUrl: path => FB.getDownloadURL(FB.ref(FB.getStorage(app), path)),
     async uploadImage(path, blob) { await FB.uploadBytes(FB.ref(FB.getStorage(app), path), blob, { contentType: 'image/jpeg' }); return path; },
