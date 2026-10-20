@@ -1135,6 +1135,7 @@ window.RO_PATTERNS=[
  [/^Verschoben von (.+)$/,(m,d)=>`Mutat de la ${d}`],
  [/^Abgegeben von (.+)$/,(m,d)=>`Predat de ${d}`],
  [/^Besonderheiten \((\d+)\)$/,(m,n)=>`Particularități (${n})`],
+ [/^Besonderheiten \((\d+)\)$/,(m,n)=>`Particularități (${n})`],
  [/^Von (.+)$/,(m,n)=>`De la ${n}`],
  [/^Zugewiesen von (.+?) an (.+)$/,(m,a,b)=>`Atribuit de ${a} lui ${b}`],
  [/^Gestartet um (.+)$/,(m,x)=>`Pornit la ${x}`],
