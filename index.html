@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 g';
+const APP_VERSION='2026-10-21 h';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -930,7 +930,7 @@ function trackStart(){
   if(!cur.cloud||cur.cloud.status!=='in'||roleOf(S.me)==='demo')return;
   const pf=trackPref();
   if(pf==='0')return;
-  trkW=navigator.geolocation.watchPosition(p=>{const n=Date.now();if(n-trkLast<45000)return;trkLast=n;const rt=runningTour();window.cloud.setLocation({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),tour:rt?tourName(rt):''}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:30000});
+  trkW=navigator.geolocation.watchPosition(p=>{const n=Date.now();if(n-trkLast<45000)return;trkLast=n;const rt=runningTour();window.cloud.setLocation({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0),tour:rt?tourName(rt):'',tourId:rt?rt.id:''}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:30000});
 }
 setInterval(()=>{document.visibilityState==='visible'?trackStart():trackStop()},5000);
 function locAgo(ts){const m=Math.round((Date.now()-ts)/60000);return m<1?'gerade eben':m<60?`vor ${m} Min`:`vor ${Math.floor(m/60)} Std`}

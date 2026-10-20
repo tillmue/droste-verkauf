@@ -284,7 +284,11 @@ function initCloud(FB) {
     },
     async routeLegs(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeLegs')(p); return r.data; },
     async geocode(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'geocode')(p); return r.data; },
-    setLocation: p => FB.setDoc(FB.doc(db, 'locations', uid), { uid, name: profile.name, lat: p.lat, lng: p.lng, acc: p.acc || 0, tour: p.tour || '', at: Date.now() }),
+    setLocation: p => {
+      const rec = { uid, name: profile.name, lat: p.lat, lng: p.lng, acc: p.acc || 0, tour: p.tour || '', at: Date.now() };
+      FB.addDoc(FB.collection(db, 'track'), { ...rec, tourId: p.tourId || '' }).catch(() => {});
+      return FB.setDoc(FB.doc(db, 'locations', uid), rec);
+    },
     clearLocation: () => FB.deleteDoc(FB.doc(db, 'locations', uid)).catch(() => {}),
     setSecret: (name, key) => FB.setDoc(FB.doc(db, 'secrets', name), { key, at: Date.now() }),
     imageUrl: path => FB.getDownloadURL(FB.ref(FB.getStorage(app), path)),

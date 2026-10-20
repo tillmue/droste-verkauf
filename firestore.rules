@@ -143,6 +143,13 @@ service cloud.firestore {
       allow delete: if isMember() && id == request.auth.uid;
     }
 
+    // Standortverlauf (alle gesendeten Positionen): nur Admin liest, Einträge sind unveränderlich
+    match /track/{id} {
+      allow read, delete: if isAdmin();
+      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
     // Ranglisten (von Cloud Functions geschrieben)
     match /stats/{id} {
       allow read: if isMember();
