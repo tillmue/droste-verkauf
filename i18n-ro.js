@@ -1,4 +1,9 @@
 window.RO_DICT={
+"Heute erledigt": "Terminate azi",
+"Einstand in die App": "Bun venit în aplicație (bere de intrare)",
+"Preise inklusive MwSt, für Privatkunden und Firmen.": "Prețuri cu TVA inclus, pentru persoane fizice și firme.",
+"Aufbau/Abbau": "Montare/Demontare",
+"Privat/Firmen": "Persoane fizice/Firme",
 "Tippe auf die Karte zum Vergrößern. Dann mit zwei Fingern zoomen.": "Atinge harta pentru a o mări. Apoi mărește cu două degete.",
 "Orte mit Bäumen": "Locuri cu arbori",
 "liegt": "se află",
@@ -1110,6 +1115,9 @@ window.RO_DICT={
 };
 
 window.RO_PATTERNS=[
+ [/^(\d+) Artikel ausgewählt\. Preise inklusive MwSt, für Privatkunden und Firmen\.$/,(m,n)=>`${n} articole selectate. Prețuri cu TVA inclus, pentru persoane fizice și firme.`],
+ [/^Heute erledigt \((\d+)\), zum Zurückholen antippen$/,(m,n)=>`Terminate azi (${n}), atinge pentru a redeschide`],
+ [/^„(.+)“ in „(.+)“ umbenennen\? Aufgaben, Meldungen, Strafbierkisten und Touren werden mit umgestellt\.$/,(m,a,b)=>`Redenumești „${a}” în „${b}”? Sarcinile, rapoartele, lăzile de bere și turele se actualizează.`],
  [/^ca\. (\d+) liegen noch$/,(m,n)=>`aprox. ${n} mai sunt`],
  [/^ca\. (\d+)$/,(m,n)=>`aprox. ${n}`],
  [/^(\d+) liegen$/,(m,n)=>`${n} se află`],

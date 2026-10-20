@@ -301,6 +301,7 @@ function initCloud(FB) {
     },
     signOut: () => FB.signOut(auth),
     setRole: (name, role) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { role, perms: {} }),
+    setName: (name, newName) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { name: newName }),
     setStand: (name, stand) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { stand: stand || '' }),
     setPerms: (name, perms) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { perms }),
     approve: name => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { approved: true }),

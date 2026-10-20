@@ -311,7 +311,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 D';
+const APP_VERSION='2026-10-22 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -486,8 +486,14 @@ function backupWarn(){
   return '';
 }
 function standPick(kind){
-  const label=kind==='p'?(standNm(cur.pstand)||'Stand wählen'):(standNm(cur.stand)||'Stand wählen');
-  return `<button class="standpick" data-pl="sselopen" data-v="${kind}"><span><small>Stand</small><b>${esc(label)}</b></span><i>Wechseln ›</i></button>`;
+  const id=kind==='p'?cur.pstand:cur.stand,label=standNm(id)||'Stand wählen';
+  let info='';
+  if(kind!=='z'){
+    const st=S.stands.find(s=>s.id===id),pn=String(id).startsWith('p:')?partnersList().find(x=>'p:'+x.n===id):null,addr=st?st.address:(pn?pn.a:'');
+    const kv=(l,v)=>v?`<div class="kv"><span>${l}</span><span>${esc(v)}</span></div>`:'';
+    info=`${addr?`<div class="n" style="margin-top:10px">${esc(addr)}</div><div class="mini" style="margin:8px 0 4px">${routeBtns(gmapsUrl(addr),appleUrl(addr))}</div>`:''}${st?kv('Ansprechpartner',st.contact)+kv('Öffnungszeiten',st.hours)+kv('Starkstrom',st.power)+kv('Aufbau am',st.buildDate?wdD(st.buildDate):'')+kv('Abbau am',st.teardownDate?wdD(st.teardownDate):''):''}`;
+  }
+  return `<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Stand</small><h3 style="font-size:22px">${esc(label)}</h3></div><button class="claim" data-pl="sselopen" data-v="${kind}">Wechseln ›</button></div>${info}</section>`;
 }
 function standSel(){
   const k=cur.ssk||'p',pn=partnersList(),sel=k==='p'?cur.pstand:cur.stand;
@@ -935,6 +941,22 @@ function wxHtml(){
     ${wxData.stale?'<div class="hint" style="margin:6px 2px 0">Offline, alte Wetterdaten</div>':''}`;
 }
 /* ---------- Ich: Dashboard ---------- */
+function einstand(n){
+  if(S.penalties.some(p=>p.person===n&&p.reason==='Einstand in die App'))return;
+  S.penalties.push({id:uid(),person:n,reason:'Einstand in die App',qty:1,by:S.me,at:Date.now(),paid:false});save();render();
+}
+function renamePerson(old,nw){
+  const sw=(o,ks)=>ks.forEach(k=>{if(o[k]===old)o[k]=nw});
+  S.tasks.forEach(o=>sw(o,['person','createdBy','assignedBy','doneBy','handedFrom','reportBy','deletedBy']));
+  S.penalties.forEach(o=>sw(o,['person','by','paidBy']));
+  S.reports.forEach(o=>sw(o,['by','assignedTo','assignedBy','doneBy']));
+  S.tours.forEach(t=>{sw(t,['driver','codriver','startedBy','packedBy','createdBy']);Object.values(t.stops||{}).forEach(s=>sw(s,['doneBy']))});
+  S.events.forEach(o=>sw(o,['person','createdBy']));
+  S.shopping.forEach(o=>sw(o,['by','doneBy']));
+  S.questions.forEach(o=>sw(o,['by']));
+  S.notes.forEach(o=>sw(o,['owner']));
+  if(S.me===old)S.me=nw;
+}
 function beerStat(){
   const me=S.me,td=todayStr(),ns=new Date().toDateString(),live=S.tasks.filter(t=>!t.deleted);
   const open=live.filter(t=>!t.done&&t.person===me&&t.date&&t.date<=td).length;
@@ -945,11 +967,12 @@ function beerBlock(){
   const b=beerStat();if(!b.total)return '';const ok=b.pct>=0.8,p=Math.round(b.pct*100);
   return `<section class="blk" style="padding-bottom:12px"><div class="blk-h"><h3>Feierabendbier 🍺</h3>${pill(p+' %',ok?'g':'')}</div>
     <div class="barw" style="margin:6px 0 8px;position:relative"><i style="width:${p}%"></i><u style="position:absolute;left:80%;top:0;bottom:0;width:2px;background:var(--text);opacity:.45"></u></div>
-    <div class="hint" style="margin:0">${ok?'Feierabendbier verdient':b.done+' von '+b.total+' Aufgaben erledigt. Ab 80 Prozent ('+b.need+' Aufgaben) ist das Feierabendbier verdient.'}</div></section>`;
+    ${ok?'<div class="hint" style="margin:0"><b style="color:#7fe0a0">Feierabendbier verdient</b></div>':''}</section>`;
 }
 function vIch(){
   const td=todayStr(),me=S.me,now=new Date(),nowS=now.toDateString();
   const live=S.tasks.filter(t=>!t.deleted);
+  const doneTodayL=live.filter(t=>t.done&&t.doneAt&&(t.doneBy===me||t.person===me)&&new Date(t.doneAt).toDateString()===nowS).sort((a,b)=>(a.doneAt||0)-(b.doneAt||0));
   const today=live.filter(t=>t.person===me&&!t.done&&t.date&&t.date<=td).sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?-1:1);
   const free=live.filter(t=>!t.person&&!t.done).length;
   const doneBy=live.filter(t=>t.done&&t.doneBy===me&&t.doneAt);
@@ -985,6 +1008,7 @@ function vIch(){
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
   ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(t.title)}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
   ${blk('Meine Aufgaben heute',`${today.map(t=>taskRow(t,true,true)).join('')||'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>'}
+    ${doneTodayL.length?`<div class="p" style="margin:12px 0 2px;font-weight:600">Heute erledigt (${doneTodayL.length}), zum Zurückholen antippen</div>${doneTodayL.map(t=>taskRow(t,true,true)).join('')}`:''}
     ${free?`<div class="tbanner o" data-pl="gopen" style="margin:10px 0 6px">${free} offene Aufgabe${free>1?'n':''} ohne Zuständigen, such dir eine aus →</div>`:''}
     <button class="btn sec" data-pl="goarch" style="margin:10px 0 6px">Aufgabenarchiv</button>`,{pill:pill(today.length,today.length?'o':'g')})}
   ${myTours.length?blk('Meine Tour',myTours.map(t=>{const st=tourStops(t);return `<div class="row" data-pl="goliefer" data-v="${t.date}|lief" style="cursor:pointer;display:block"><div class="n"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div><div class="p">${wdD(t.date)} · ${esc(t.vehicle||'')}</div><div class="p"><b>${t.driver===me?'Fahrer':'Beifahrer'}</b> · ${st.length} Stopps${t.status==='gestartet'?' · <b style="color:var(--orange)">läuft</b>':''}</div></div>`}).join(''),{pill:pill(myTours.length)}):''}
@@ -1116,7 +1140,7 @@ function vPreise(){
   const row=p=>{const v=unit(p),q=cart[p.id]||0;
     return `<div class="row"><div class="n" style="flex:1;min-width:0">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}${p.note?` <span class="p">· ${esc(p.note)}</span>`:''}</div><b style="margin-right:8px">${v?eur(v):'auf Anfrage'}</b>${v?`<div class="ctr">${q?`<button class="fb" data-pl="cart" data-v="${ck}|${p.id}|-1">−</button><b class="fn">${q}</b>`:''}<button class="plus fb" data-pl="cart" data-v="${ck}|${p.id}|1">+</button></div>`:''}</div>`};
   const sum=cartTotal(ck),cnt=Object.values(cart).reduce((a,b)=>a+b,0);
-  const seg=`<div class="seg">${[['privat','Privat'],['haendler','Händler'],['rechner','Rechner']].map(([k,l])=>`<button class="${tabN===k?'on':''}" data-pl="prtab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="seg">${[['privat','Privat/Firmen'],['haendler','Händler'],['rechner','Rechner']].map(([k,l])=>`<button class="${tabN===k?'on':''}" data-pl="prtab" data-v="${k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(tabN==='rechner'){
     const rr=cur.vR==null?String(vatRate()).replace('.',','):cur.vR;
@@ -1126,7 +1150,11 @@ function vPreise(){
       <div class="vrow"><label>Brutto</label><input class="t" id="vat-gross" inputmode="decimal" placeholder="0,00" value="${esc(cur.vG)}"><span>€</span></div>
       <button class="btn sec" data-pl="vatclear" style="margin:6px 0 0">Löschen</button></div>${delivBox()}`;
   }else if(tabN==='privat'){
-    body=`<div class="card pad formc"><div class="kv"><span>Summe (inklusive MwSt)</span><b style="font-size:24px">${eur(sum)}</b></div><div class="hint" style="margin:4px 0 8px">${cnt} ${cnt===1?'Artikel':'Artikel'} ausgewählt</div><button class="btn sec" data-pl="cartclear" data-v="P" style="margin:0">Löschen</button></div>
+    const pnet=sum/(1+r/100);
+    body=`<div class="card pad formc"><div class="vrow"><label>Netto</label><b style="flex:1;text-align:right;font-size:20px">${eur(pnet)}</b></div>
+      <div class="vrow"><span class="vl" style="width:auto;font-size:18px">+</span><span style="font-size:16px">${pct(r)} MwSt</span><b style="flex:1;text-align:right;font-size:18px">${eur(sum-pnet)}</b></div>
+      <hr style="border:0;border-top:2px solid var(--line);margin:8px 0">
+      <div class="vrow"><label>Brutto</label><b style="flex:1;text-align:right;font-size:24px">${eur(sum)}</b></div><div class="hint" style="margin:4px 0 8px">${cnt} Artikel ausgewählt. Preise inklusive MwSt, für Privatkunden und Firmen.</div><button class="btn sec" data-pl="cartclear" data-v="P" style="margin:0">Löschen</button></div>
       <h3>Nordmann nach Etikett</h3><div class="card">${ps.filter(p=>p.color).map(row).join('')}</div>
       <h3>Weitere</h3><div class="card">${ps.filter(p=>!p.color).map(row).join('')}</div>${plGroups(PL_PRIV).map(([g,l])=>`<h3>${g}</h3><div class="card">${l.map(row).join('')}</div>`).join('')}`;
   }else{
@@ -1272,7 +1300,7 @@ function completeTask(id){
     x.doneBy=S.me;x.doneAt=Date.now();
     S.cheered=S.cheered||{};
     if(beerStat().pct>=0.8&&S.cheered[S.me]!==td){S.cheered[S.me]=td;save();render();return showCheers()}
-  }else{delete x.doneBy;delete x.doneAt}
+  }else{delete x.doneBy;delete x.doneAt;S.cheered=S.cheered||{};if(beerStat().pct<0.8)delete S.cheered[S.me]}
   save();render();
 }
 function showCheers(){
@@ -1506,9 +1534,9 @@ document.addEventListener('click',ev=>{
     const n=ev.target.dataset.appr;
     if(CLOUD){
       if(S.people.filter(x=>x===n).length>1)return alert('Dieser Name ist schon vergeben. Bitte lehne die Anfrage ab und bitte die Person, sich mit einem anderen Namen zu registrieren.');
-      window.cloud.approve(n).catch(e=>alert('Freigabe fehlgeschlagen: '+(e.code||e.message)));return;
+      window.cloud.approve(n).then(()=>einstand(n)).catch(e=>alert('Freigabe fehlgeschlagen: '+(e.code||e.message)));return;
     }
-    S.approved[n]=true;save();return render();
+    S.approved[n]=true;einstand(n);save();return render();
   }
   if(ev.target.dataset.deny){
     const n=ev.target.dataset.deny;
@@ -1927,7 +1955,7 @@ const PMODE={p:'Packen',a:'Aufbau',z:'Abbau'};
 const PLAN_IDS=['porta','media','schmidt','kallmeyer','hasbergen','quick','duetmann'];
 const PORDER=['stand','wichtig','avobox','huette','werkzeug'];
 const standSeg=()=>{
-  let c=[['staende','Packliste'],has('verkauf')?['erfassen','Verkauf']:null,has('zahlen')?['zahlen','Zahlen']:null].filter(Boolean);
+  let c=[['staende','Aufbau/Abbau'],has('verkauf')?['erfassen','Verkauf']:null,has('zahlen')?['zahlen','Zahlen']:null].filter(Boolean);
   if(salesStarted())c=c.slice(1).concat([c[0]]);
   if(c.length<2)return '';
   return `<div class="seg">${c.map(([k,l])=>`<button class="${tab===k?'on':''}" data-pl="stab" data-v="${k}">${l}</button>`).join('')}</div>`;
@@ -1948,13 +1976,13 @@ function vStaende(){
   const addrBox=(stN.address||stN.contact||stN.hours||stN.power||stN.buildDate||stN.teardownDate)?`<section class="blk"><div class="blk-h"><h3>Adresse und Infos</h3></div>${stN.address?`<div class="n">${esc(stN.address)}</div><div class="mini" style="margin:8px 0">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div>`:''}${kv('Ansprechpartner',stN.contact)}${kv('Öffnungszeiten',stN.hours)}${kv('Starkstrom',stN.power)}${kv('Aufbau am',stN.buildDate?wdD(stN.buildDate):'')}${kv('Abbau am',stN.teardownDate?wdD(stN.teardownDate):'')}</section>`:'';
   const planB=(PLAN_IDS.includes(sid)&&mode!=='z')?`<div class="mini" style="margin:0 0 14px"><button class="btn sec" data-pl="splan" data-v="${sid}|aufbau" style="margin:0">Aufbauplan</button>${mode==='a'?`<button class="btn sec" data-pl="splan" data-v="${sid}|lage" style="margin:0">Lageplan</button>`:''}</div>`:'';
   const seg=`<div class="seg">${['p','a','z'].map(m=>`<button class="${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
-  if(!pk){$('#app').innerHTML=chips+(has('zahlen')?nowBlock(sid):'')+addrBox+delivBlock({id:sid,n:stN.name})+planB+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
+  if(!pk){$('#app').innerHTML=chips+planB+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
   const chk=pk.checks||{},on=i=>!!(chk[i.id]&&chk[i.id][mode]);
   const gOf=k=>pk.groups.find(g=>g.key===k);
   const rest=pk.groups.filter(g=>!PORDER.includes(g.key)&&!['besonderheiten','schluss'].includes(g.key));
   const ordered=[...PORDER.map(gOf).filter(Boolean),...rest];
   const bes=gOf('besonderheiten');
-  const notes=bes&&bes.items.length?`<button class="qtile o" data-pl="besopen" style="width:100%;flex-direction:row;justify-content:center;gap:10px;margin:0 0 14px"><b>!</b>Besonderheiten (${bes.items.length})</button>`:'';
+  const notes=bes&&bes.items.length?blk('Besonderheiten',`<ul class="bul" style="margin:2px 0 8px;padding-left:20px">${bes.items.map(i=>`<li style="font-size:17px;line-height:1.4;margin:8px 0">${esc(i.text)}</li>`).join('')}</ul>`,{tone:'o',pill:pill(bes.items.length,'o')}):'';
   const row=i=>`<div class="row pk"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`;
   const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key,all=g.items.length&&dn===g.items.length;
     const master=g.key==='avobox'?`<div class="row pk" style="background:var(--panel);border-radius:10px;padding:8px"><div style="display:flex;gap:10px;align-items:center;flex:1"><button class="chk ${all?'on':''}" data-pl="packall" data-v="${g.key}">${all?'✓':''}</button><div class="n"><b>Avobox komplett (alles drin)</b></div></div></div>`:'';
@@ -1972,7 +2000,7 @@ function vStaende(){
     body=`${blk(mode==='p'?'Gepackt':'Aufgebaut',`<div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin-bottom:6px">${done} von ${all.length} ${mode==='p'?'gepackt':'aufgebaut'}</div>`,{tone:fin?'g':'',pill:pill(done+'/'+all.length,fin?'g':'')})}
       ${mode==='a'?counterBox('auf','Zählerstand beim Aufbau'):''}${ordered.map(sec).join('')}`;
   }
-  $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${has('zahlen')?nowBlock(sid):''}${seg}${planB}${notes}${addrBox}${delivBlock({id:sid,n:stN.name||pk.name})}${body}
+  $('#app').innerHTML=`${chips}${seg}${planB}${notes}${body}
     ${isAdmin()&&mode!=='z'?`<button class="btn no" data-pl="packreset" style="margin-top:14px">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */
@@ -2897,7 +2925,7 @@ function vDaten(){
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
@@ -3056,7 +3084,13 @@ document.addEventListener('click',ev=>{
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.dataset.pe!=null){
-    const i=+t.dataset.pe,old=S.people[i],nw=t.value.trim()||old;
+    const i=+t.dataset.pe,old=S.people[i],nw=t.value.trim().replace(/\s+/g,' ')||old;
+    if(CLOUD){
+      if(nw===old||!isAdmin())return;
+      if(S.people.some(p=>p.toLowerCase()===nw.toLowerCase())){alert('Diesen Namen gibt es schon.');t.value=old;return}
+      if(!confirm(`„${old}“ in „${nw}“ umbenennen? Aufgaben, Meldungen, Strafbierkisten und Touren werden mit umgestellt.`)){t.value=old;return}
+      window.cloud.setName(old,nw).then(()=>{renamePerson(old,nw);save();render()}).catch(e=>{alert('Umbenennen fehlgeschlagen: '+(e.code||e.message));t.value=old});return;
+    }
     if(nw!==old&&!S.people.includes(nw)){
       S.people[i]=nw;S.roles[nw]=S.roles[old];delete S.roles[old];
       S.tasks.forEach(k=>{if(k.person===old)k.person=nw;if(k.createdBy===old)k.createdBy=nw;if(k.doneBy===old)k.doneBy=nw});
