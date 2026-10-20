@@ -1,4 +1,9 @@
 window.RO_DICT={
+"Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/Absendbereit.": "PDF-urile finale sunt pe Mac în Droste/Saison_2026/Bestellungen/Absendbereit.",
+"Kürzel": "Inițiale",
+"Bestellt am und aufgenommen von (Kürzel)": "Comandat la și preluat de (inițiale)",
+"Noch nichts im Archiv.": "Încă nimic în arhivă.",
+"Keine offenen Bestellungen.": "Nicio comandă deschisă.",
 "Bestellung ins Archiv verschieben?": "Muți comanda în arhivă?",
 "Als Auftrag übernommen": "Preluat ca lucrare",
 "Bestellung gespeichert": "Comandă salvată",

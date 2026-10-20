@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 v';
+const APP_VERSION='2026-10-21 w';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1353,8 +1353,8 @@ document.addEventListener('click',ev=>{
   if(a==='bfrg'){cur.bf.rgleich=!cur.bf.rgleich;return render()}
   if(a==='bfpos'){if(cur.bf.pos.length<BPOS)cur.bf.pos.push({sorte:'',anzahl:'',groesse:'',preis:''});return render()}
   if(a==='bfsave'){const f=cur.bf;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
-    if(f.id){const b=S.bestellungen.find(x=>x.id===f.id);if(b)Object.assign(b,f,{name:f.name.trim()})}
-    else S.bestellungen.push({...f,id:uid(),name:f.name.trim(),status:'aufgenommen',by:S.me,created:Date.now()});
+    if(f.id){const b=S.bestellungen.find(x=>x.id===f.id);if(b)Object.assign(b,f,{name:f.name.trim(),updated:Date.now()})}
+    else S.bestellungen.push({...f,id:uid(),name:f.name.trim(),status:'aufgenommen',by:S.me,created:Date.now(),updated:Date.now()});
     cur.bOpen=false;cur.bf=null;save();toast('Bestellung gespeichert');return render()}
   if(a==='bfdel'){const b=S.bestellungen.find(x=>x.id===cur.bf.id);if(b&&confirm('Bestellung ins Archiv verschieben?')){softDel(b);cur.bOpen=false;cur.bf=null;save();render()}return}
   if(a==='bfplan'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;return askConfirm('Bestellung als Auftrag in die Planung übernehmen?','Ja, übernehmen',()=>{const o=bestToOrder(b);S.orders.push(o);b.status='uebernommen';b.orderId=o.id;save();cur.lkind='auf';toast('Als Auftrag übernommen');render()})}
@@ -1992,7 +1992,8 @@ const BPOS=5;
 const bfNew=()=>({id:null,name:'',email:'',phone:'',contact:'',art:'',liefer:'',rechnung:'',rgleich:false,datum:'',tageszeit:'',zeitwunsch:'',
   pos:[...Array(3)].map(()=>({sorte:'',anzahl:'',groesse:'',preis:''})),
   leist:{sk:{jn:'',anz:'',preis:''},sg:{jn:'',anz:'',preis:''},auf:{jn:'',ort:'',preis:''},lie:{jn:'',preis:''},abh:{jn:'',preis:''}},
-  sonst:'',gesamt:'',zahlung:'',bezahlt:'',kassiert:''});
+  sonst:'',gesamt:'',zahlung:'',bezahlt:'',kassiert:'',bestellt:todayStr(),kuerzel:String(S.me||'').split(/\s+/).map(w=>w[0]||'').join('').toUpperCase()});
+const fmtDe=d=>d?String(d).split('-').reverse().join('.'):'';
 cur.bf=null;cur.bOpen=false;
 const numOf=v=>{const x=parseFloat(String(v||'').replace(',','.'));return isNaN(x)?0:x};
 function bestToOrder(b){
@@ -2045,13 +2046,15 @@ function bestForm(){
     <label class="f">Sonstiges</label><textarea class="t" id="bf-sonst" rows="2">${esc(f.sonst)}</textarea>
     <div class="mini" style="margin-top:8px"><input class="t" id="bf-gesamt" placeholder="Gesamt" value="${esc(f.gesamt)}" style="min-width:0"><div class="chips" style="margin:0;align-self:center">${ch('zahlung','bar','Bar')}${ch('zahlung','rechnung','Rechnung')}</div></div>
     <div class="mini" style="margin-top:8px"><input class="t" id="bf-bezahlt" placeholder="Bezahlt am" value="${esc(f.bezahlt)}" style="min-width:0"><input class="t" id="bf-kassiert" placeholder="Dankend erhalten (Kürzel)" value="${esc(f.kassiert)}" style="min-width:0"></div>
+    <label class="f">Bestellt am und aufgenommen von (Kürzel)</label><div class="mini"><input class="t" type="date" id="bf-bestellt" value="${esc(f.bestellt||'')}" style="min-width:0"><input class="t" id="bf-kuerzel" placeholder="Kürzel" value="${esc(f.kuerzel||'')}" style="min-width:0"></div>
     <div class="mini" style="margin-top:10px"><button class="btn" data-pl="bfsave" style="margin:0">Speichern</button><button class="btn sec" data-pl="bfcancel" style="margin:0">Abbrechen</button></div>
     ${f.id?'<button class="btn red" data-pl="bfdel">Bestellung ins Archiv</button>':''}</div>`;
 }
 function vBestellungen(kind,fahrer,plan){
   if(cur.bOpen&&cur.bf){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${bestForm()}`;return}
-  const L=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>(b.created||0)-(a.created||0));
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Noch keine Bestellungen aufgenommen.</div>'}`;
+  const all=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>String(b.bestellt||'').localeCompare(String(a.bestellt||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>b.status!=='uebernommen');
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Keine offenen Bestellungen.</div>'}
+    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/Absendbereit.</div></details>`;
 }
 function nacharbeit(){
   const td=todayStr(),out=[],seen=new Set();
@@ -2470,7 +2473,12 @@ function importCal(txt){
     const d=JSON.parse(txt);let ne=0,nt=0;
     (d.events||[]).forEach(e=>{if(e&&e.id&&e.title&&e.date&&!S.events.some(x=>x.id===e.id)){S.events.push({...e,createdBy:S.me});ne++}});
     (d.tasks||[]).forEach(k=>{if(k&&k.id&&k.title&&!S.tasks.some(x=>x.id===k.id)){S.tasks.push({done:false,created:Date.now(),createdBy:S.me,...k});nt++}});
-    let nor=0;(d.orders||[]).forEach(o=>{if(o&&o.id&&!S.orders.some(x=>x.id===o.id)){S.orders.push({status:'offen',tourId:'',stopId:'',...o});nor++}});
+    let nor=0;(d.orders||[]).forEach(o=>{if(o&&o.id&&!S.orders.some(x=>x.id===o.id)){
+      const key=n=>String(n||'').toLowerCase().replace(/\b(gmbh|ag|ohg|kg|ug|mbh|e\.?\s?v\.?|co)\b/g,'').replace(/[^a-zäöüß0-9]/g,''),k=key(o.name),same=x=>{const kx=key(x.name);return k.length>=5&&kx.length>=5&&(kx.includes(k)||k.includes(kx))};
+      const ex=S.orders.find(x=>!x.deleted&&x.fromBestellung&&x.status!=='erledigt'&&same(x));
+      if(ex){const keep={status:ex.status,tourId:ex.tourId,stopId:ex.stopId,plannedFor:ex.plannedFor,place:ex.place||o.place||'',fromBestellung:ex.fromBestellung,id:ex.id};Object.assign(ex,o,keep);ex.ls=o.ls;nor++;return}
+      const bs=S.bestellungen.find(b=>!b.deleted&&b.status!=='uebernommen'&&same(b));if(bs){bs.status='uebernommen';bs.orderId=o.id}
+      S.orders.push({status:'offen',tourId:'',stopId:'',...o});nor++}});
     let ntr=0;(d.tours||[]).forEach(t=>{if(t&&t.id&&t.date&&!S.tours.some(x=>x.id===t.id)){S.tours.push({stops:{},...t});ntr++}});
     let np=0;
     (d.packs||[]).forEach(pk=>{if(!pk||!pk.id||!pk.groups)return;const ex=S.packs.find(x=>x.id===pk.id);
