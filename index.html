@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-20 g';
+const APP_VERSION='2026-10-21 a';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1309,6 +1309,11 @@ document.addEventListener('click',ev=>{
     return askConfirm(all?'Tour starten?':'Es ist noch nicht alles als beladen markiert. Trotzdem starten?','Ja, Tour starten',()=>{t.status='gestartet';t.startedAt=Date.now();t.startedBy=S.me;save();render();computeLegs(t,true)})}
   if(a==='tpause'){const t=S.tours.find(x=>x.id===v);if(!t||t.paused)return;t.paused=true;t.pausedAt=Date.now();save();window.scrollTo(0,0);return render()}
   if(a==='tresume'){const t=S.tours.find(x=>x.id===v);if(!t||!t.paused)return;t.pausedMs=(t.pausedMs||0)+(Date.now()-(t.pausedAt||Date.now()));t.paused=false;t.pausedAt=0;save();window.scrollTo(0,0);return render()}
+  if(a==='plsel'){cur.pd.sel[v]=!cur.pd.sel[v];return render()}
+  if(a==='plall'){planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);return render()}
+  if(a==='plrun'){runPlan();return}
+  if(a==='planok'){applyPlan(v==='all'?null:+v);return}
+  if(a==='topt'){const t=S.tours.find(x=>x.id===v);if(t){toast('Reihenfolge wird optimiert …');optimizeTour(t)}return}
   if(a==='tlegs'){const t=S.tours.find(x=>x.id===v);if(t){toast('Fahrzeiten werden berechnet …');computeLegs(t,false)}return}
   if(a==='dnchip'){const [sid,...r]=v.split('|'),txt=r.join('|');cur.dn[sid]=(cur.dn[sid]?cur.dn[sid]+'. ':'')+txt;return render()}
   if(a==='dnedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
@@ -1425,6 +1430,10 @@ document.addEventListener('change',ev=>{
   if(t.id&&t.id.startsWith('tf-'))cur.tf[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('ef-'))cur.ef[t.id.slice(3)]=t.value;
   if(t.dataset.oplace){const oo=S.orders.find(x=>x.id===t.dataset.oplace);if(oo){oo.place=t.value;const tt=S.tours.find(x=>x.id===oo.tourId);if(tt&&tt.stops&&tt.stops[oo.stopId])tt.stops[oo.stopId].place=t.value;save();render()}}
+  if(t.id==='pd-date'&&cur.pd){cur.pd.date=t.value;cur.pd.sel={};planCandidates(t.value).forEach(x=>{cur.pd.sel[x.o.id]=x.must});cur.pd.res=null;render()}
+  if(t.id==='pd-start'&&cur.pd)cur.pd.start=t.value||'07:30';
+  if(t.id==='pd-k'&&cur.pd)cur.pd.K=t.value;
+  if(t.id==='pd-b'&&cur.pd)cur.pd.budget=+t.value;
   if(t.dataset.tveh){const tt=S.tours.find(x=>x.id===t.dataset.tveh);if(tt){tt.vehicle=t.value;save();render()}}
   if(t.id==='ef-repeat'||t.id==='ef-remind')render();
   if(t.id==='asrole'){asRole=t.value;try{localStorage.setItem('droste-asrole',asRole)}catch(e){}tab='ich';cur.ptab='aufg';window.scrollTo(0,0);return render()}
@@ -1667,12 +1676,113 @@ function orderCard(o){
     <select class="t" data-oplace="${o.id}" style="margin-top:8px"><option value="" ${!o.place?'selected':''}>Ort der Aufstellung offen</option><option value="drinnen" ${o.place==='drinnen'?'selected':''}>Drinnen</option><option value="draußen" ${o.place==='draußen'?'selected':''}>Draußen</option></select>
     <div class="mini" style="margin-top:8px">${o.status==='geplant'?`<button class="btn sec" data-pl="ordunplan" data-v="${o.id}" style="margin:0">Aus Tour nehmen</button>`:`<button class="btn" data-pl="ordplan" data-v="${o.id}" style="margin:0">In Tour</button>`}</div></div>`;
 }
+const toRad=d=>d*Math.PI/180;
+const havKm=(a,b)=>{const R=6371,dl=toRad(b.lat-a.lat),dg=toRad(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>+p.len||0));
+const orderSvc=o=>svcMin({service:orderService(o),lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat}))});
+const winEnd=w=>{const m=(w||'').match(/(\d{1,2})[:.](\d{2})\s*(?:Uhr)?\s*$/);return m?(+m[1])*60+(+m[2]):null};
+const winStart=w=>{const m=(w||'').match(/^\s*(\d{1,2})[:.](\d{2})\s*-/);return m?(+m[1])*60+(+m[2]):null};
+const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
+function planCandidates(day){
+  return S.orders.filter(o=>!o.deleted&&o.status!=='geplant').map(o=>{const f=o.from||day,t=o.to||o.from||day;return {o,must:t<=day,ok:f<=day,late:t<day}}).filter(x=>x.ok).sort((a,b)=>(b.must-a.must)||((a.o.to||a.o.from||'')<(b.o.to||b.o.from||'')?-1:1));
+}
+function initPlan(){
+  const td=todayStr(),open=S.orders.filter(o=>!o.deleted&&o.status!=='geplant'),first=open.map(o=>o.from).filter(Boolean).sort()[0]||td;
+  const d=first<td?td:first;
+  cur.pd={date:d,sel:{},K:'auto',budget:4.5,start:'07:30',res:null,busy:false,err:'',msg:''};
+  planCandidates(d).forEach(x=>{cur.pd.sel[x.o.id]=x.must});
+}
+async function ensureDepotLL(){
+  const dp=S.hofInfo&&S.hofInfo.depotLL;if(dp&&dp.addr===depot())return dp;
+  const r=await window.cloud.geocode({addresses:[depot()]});if(!r.coords[0])throw new Error('Startpunkt nicht gefunden: '+depot());
+  const v={addr:depot(),lat:r.coords[0].lat,lng:r.coords[0].lng};S.hofInfo={...S.hofInfo,depotLL:v};save();return v;
+}
+async function runPlan(){
+  const pd=cur.pd;pd.busy=true;pd.err='';pd.res=null;pd.msg='Orte werden ermittelt …';render();
+  try{
+    const sel=S.orders.filter(o=>!o.deleted&&o.status!=='geplant'&&pd.sel[o.id]);
+    if(!sel.length)throw new Error('Bitte mindestens einen Auftrag auswählen.');
+    const dep=await ensureDepotLL();
+    const need=sel.filter(o=>!(o.lat&&o.lng)&&orderAddr(o));
+    for(let i=0;i<need.length;i+=40){const part=need.slice(i,i+40),r=await window.cloud.geocode({addresses:part.map(orderAddr)});part.forEach((o,j)=>{if(r.coords[j]){o.lat=r.coords[j].lat;o.lng=r.coords[j].lng}})}
+    if(need.length)save();
+    const located=sel.filter(o=>o.lat&&o.lng),missing=sel.filter(o=>!(o.lat&&o.lng));
+    const groups=[['klein',located.filter(o=>orderMaxTree(o)<=3.5)],['gross',located.filter(o=>orderMaxTree(o)>3.5)]].filter(g=>g[1].length);
+    const tours=[];
+    for(const [size,list] of groups){
+      pd.msg=`Touren (${size==='gross'?'große':'kleine'} Bäume) werden geplant …`;render();
+      const est=o=>orderSvc(o)+6,total=list.reduce((a,o)=>a+est(o),0)+40,K=pd.K==='auto'?Math.max(1,Math.ceil(total/(pd.budget*60))):Math.min(+pd.K,list.length);
+      const ang=o=>Math.atan2(o.lat-dep.lat,o.lng-dep.lng);
+      const sorted=list.slice().sort((a,b)=>ang(a)-ang(b));
+      // groesste Luecke im Winkel als Schnitt, damit Sektoren nicht mitten durch ein Gebiet laufen
+      let gi=0,gm=-1;for(let i=0;i<sorted.length;i++){const a1=ang(sorted[i]),a2=ang(sorted[(i+1)%sorted.length])+(i===sorted.length-1?2*Math.PI:0),g=a2-a1;if(g>gm){gm=g;gi=(i+1)%sorted.length}}
+      const ring=[...sorted.slice(gi),...sorted.slice(0,gi)],per=ring.reduce((a,o)=>a+est(o),0)/K;
+      let sectors=[[]],acc=0;ring.forEach(o=>{if(acc>=per*sectors.length&&sectors.length<K)sectors.push([]);sectors[sectors.length-1].push(o);acc+=est(o)});
+      sectors=sectors.filter(s=>s.length);
+      let n=0;
+      for(const sec of sectors.flatMap(s=>s.length>25?[s.slice(0,Math.ceil(s.length/2)),s.slice(Math.ceil(s.length/2))]:[s])){
+        n++;pd.msg=`Route ${n} wird optimiert …`;render();
+        const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),optimize:true,depart:nextDepart()});
+        const ordd=r.order.map(i=>sec[i]);
+        let cur2=timeToMin(pd.start);const stopsOut=ordd.map((o,i)=>{cur2+=Math.round((r.legs[i]||0)/60);const eta=cur2,svc=orderSvc(o);cur2+=svc;
+          const we=winEnd(o.window),ws=winStart(o.window);
+          return {o,eta,svc,warn:we!=null&&eta>we?`Zeitfenster bis ${hmMin(we)} wird knapp überschritten`:(ws!=null&&eta<ws?`Ankunft vor Zeitfenster (ab ${hmMin(ws)})`:'')}});
+        const back=Math.round((r.legs[ordd.length]||0)/60);
+        tours.push({size,stops:stopsOut,legs:r.legs.slice(0,ordd.length),end:cur2,backMin:back,
+          stand:ordd.reduce((a,o)=>a+(o.positions||[]).filter(p=>p.cat==='Ständer').reduce((x,p)=>x+(+p.qty||0),0),0),bohren:ordd.reduce((a,o)=>a+orderBohren(o),0),
+          crew:crewHint({stops:ordd.map(o=>({lines:orderLines(o).map(p=>({c:p.cat,l:p.len,q:p.qty}))}))})});
+      }
+    }
+    pd.res={tours,missing};pd.msg='';
+  }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
+  pd.busy=false;render();
+}
+function applyPlan(idx){
+  const pd=cur.pd;if(!pd||!pd.res)return;
+  const list=idx==null?pd.res.tours.map((t,i)=>i):[idx];
+  list.forEach(i=>{const pt=pd.res.tours[i];if(!pt||pt.applied)return;
+    const free=TCOL.find(c=>!S.tours.some(y=>!y.deleted&&y.type!=='abholung'&&y.date===pd.date&&y.color===c[0]));
+    const t={id:uid(),date:pd.date,driver:'',codriver:'',vehicle:'',color:(free||TCOL[0])[0],size:pt.size,note:'',stops:{},legs:pt.legs,createdBy:S.me,created:Date.now()};
+    pt.stops.forEach((s,k)=>{const lo=S.orders.find(x=>x.id===s.o.id)||s.o,stop=orderToStop(lo,k+1);t.stops[stop.id]=stop;lo.status='geplant';lo.tourId=t.id;lo.stopId=stop.id;lo.plannedFor=pd.date});
+    t.legsSig=tourStops(t).map(s=>s.address||'').join('|');
+    S.tours.push(t);pt.applied=true;});
+  save();cur.lday=pd.date;cur.lcal=pd.date.slice(0,7);toast('Touren übernommen');render();
+}
+async function optimizeTour(t){
+  const st=tourStops(t),wa=st.filter(s=>s.address);if(wa.length<2||!window.cloud||!window.cloud.routeLegs)return;
+  try{const before=(t.legs||[]).reduce((a,b)=>a+b,0)/60,r=await window.cloud.routeLegs({origin:depot(),stops:wa.map(s=>s.address),optimize:true,depart:nextDepart()});
+    r.order.forEach((idx,pos)=>{wa[idx].order=pos+1});st.filter(s=>!s.address).forEach((s,k)=>{s.order=wa.length+k+1});
+    const nst=tourStops(t);t.legs=nst.map(s=>s.address?(r.legs[r.order.indexOf(wa.indexOf(s))]||0):0);t.legsSig=nst.map(s=>s.address||'').join('|');
+    const after=t.legs.reduce((a,b)=>a+b,0)/60;save();toast(before?`Reihenfolge optimiert (Fahrt ${fmtMin(after)}, vorher ${fmtMin(before)})`:`Reihenfolge optimiert (Fahrt ${fmtMin(after)})`);render()}
+  catch(e){alert('Optimieren nicht möglich: '+((e&&(e.message||e.code))||''))}
+}
+function planBox(){
+  if(!cur.pd)initPlan();
+  const pd=cur.pd,cands=planCandidates(pd.date);
+  const tourCard2=(t,i)=>`<div class="card pad"><div class="n"><span class="tdot" style="background:${TCOL[i%TCOL.length][2]}"></span>Vorschlag ${i+1} · ${t.size==='gross'?'große Bäume':'kleine Bäume'}</div>
+    <div class="p">${t.stops.length} Stopps · ${hmMin(timeToMin(pd.start))} bis ${hmMin(t.end)} (+ ${t.backMin} Min zurück) · ${crewHintTxt(t.crew)}</div>
+    <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Bäume bohren: '+t.bohren:''}</div>
+    ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(s.eta)}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}</span></div><div class="p">${esc(orderAddr(s.o))}</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
+    ${t.applied?'<div class="hint">Übernommen.</div>':`<button class="btn" data-pl="planok" data-v="${i}" style="margin:8px 0 0">Diese Tour übernehmen</button>`}</div>`;
+  const res=pd.res;
+  return `<div class="card pad formc"><label class="f">Tourvorschlag für einen Tag</label>
+    <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
+    <div class="mini" style="margin-top:8px"><select class="t" id="pd-k"><option value="auto" ${pd.K==='auto'?'selected':''}>Anzahl Touren automatisch</option>${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${String(pd.K)===String(n)?'selected':''}>${n} ${n===1?'Tour':'Touren'} je Gruppe</option>`).join('')}</select>
+    <select class="t" id="pd-b"><option value="3.5" ${pd.budget==3.5?'selected':''}>Dauer je Tour 3,5 Std</option><option value="4.5" ${pd.budget==4.5?'selected':''}>Dauer je Tour 4,5 Std</option><option value="6" ${pd.budget==6?'selected':''}>Dauer je Tour 6 Std</option></select></div>
+    <label class="f">Aufträge für diesen Tag (${Object.values(pd.sel).filter(Boolean).length} gewählt)</label>
+    <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}${x.late?' · überfällig':x.must?'':' · flexibel'}</div></div></div><span class="p">${mFmt(orderMaxTree(x.o))}</span></div>`).join('')||'<div class="row"><span class="p">Keine passenden Aufträge für diesen Tag.</span></div>'}</div>
+    <div class="mini"><button class="btn sec" data-pl="plall" style="margin:0">Alle wählen</button><button class="btn" data-pl="plrun" style="margin:0" ${pd.busy?'disabled':''}>${pd.busy?'Rechnet …':'Vorschlag berechnen'}</button></div>
+    ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
+    ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
+}
+const crewHintTxt=c=>c;
 function vAuftraege(kind,fahrer,plan){
   const st=['offen','geplant','alle'].includes(cur.ost)?cur.ost:'offen',all=S.orders.filter(o=>!o.deleted);
   const nOff=all.filter(o=>o.status!=='geplant').length,nPl=all.length-nOff;
   const list=all.filter(o=>st==='alle'||(st==='offen'?o.status!=='geplant':o.status==='geplant')).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
   const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge in dieser Ansicht. Lieferscheine kommen über Daten, Import.</div>'}`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${planBox()}${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge in dieser Ansicht. Lieferscheine kommen über Daten, Import.</div>'}`;
 }
 function assignOrder(id){
   const o=S.orders.find(x=>x.id===id);if(!o)return;
@@ -1798,7 +1908,7 @@ function tourCard(t,plan){
   const st=tourStops(t),done=st.filter(x=>x.done).length,url=routeUrl(st),run=canRun(t),stt=t.status||'',ld=st.filter(x=>t.loaded&&t.loaded[x.id]).length;
   const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b></div><div class="p">Gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
   const legSum=(t.legs||[]).reduce((a,b)=>a+b,0)/60,svSum=st.reduce((a,s)=>a+svcMin(s),0);
-  const durBox=plan&&st.length?(t.legs&&t.legs.length?`<div class="p">Geschätzte Dauer: ${fmtMin(legSum+svSum)} (Fahrt ${fmtMin(legSum)}, Stopps ${fmtMin(svSum)})</div>`:`<div class="p">Stoppzeiten geschätzt: ${fmtMin(svSum)}</div>`)+`<button class="btn sec" data-pl="tlegs" data-v="${t.id}" style="margin:4px 0">Fahrzeiten berechnen</button>`:'';
+  const durBox=plan&&st.length?(t.legs&&t.legs.length?`<div class="p">Geschätzte Dauer: ${fmtMin(legSum+svSum)} (Fahrt ${fmtMin(legSum)}, Stopps ${fmtMin(svSum)})</div>`:`<div class="p">Stoppzeiten geschätzt: ${fmtMin(svSum)}</div>`)+`<div class="mini" style="margin:4px 0"><button class="btn sec" data-pl="tlegs" data-v="${t.id}" style="margin:0">Fahrzeiten berechnen</button>${!stt&&st.length>1?`<button class="btn sec" data-pl="topt" data-v="${t.id}" style="margin:0">Reihenfolge optimieren</button>`:''}</div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div>${x.bohren?`<div class="p"><span class="bdg">Baum bohren${x.bohren>1?' ×'+x.bohren:''}</span></div>`:''}</div></div></div>`).join('')}</div></details>`:'';
   const ctrl=run&&!stt&&st.length?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}${st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:(has('lieferplanung')&&!mineRun(t)?`<button class="btn sec" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden (Admin, mit offenen Stopps)</button>`:`<div class="hint">Noch ${st.length-done} Stopps offen. Beenden geht, sobald jeder Stopp auf Geliefert oder Nicht angetroffen steht.</div>`)}`:'');
   return `<div class="tour"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div class="n" style="font-size:17px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>

@@ -181,17 +181,44 @@ exports.routeLegs = onCall(async req => {
   if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Google-Maps-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
   const { origin, stops, depart } = req.data || {};
   if (!origin || !Array.isArray(stops) || !stops.length || stops.length > 25) throw new HttpsError('invalid-argument', 'Start und 1 bis 25 Adressen nötig');
-  const body = { origin: { address: origin }, destination: { address: stops[stops.length - 1] }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'de-DE', regionCode: 'DE' };
-  if (stops.length > 1) body.intermediates = stops.slice(0, -1).map(a => ({ address: a }));
+  const optimize = req.data && req.data.optimize === true;
+  const body = { origin: { address: origin }, destination: { address: optimize ? origin : stops[stops.length - 1] }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'de-DE', regionCode: 'DE' };
+  if (optimize) { body.intermediates = stops.map(a => ({ address: a })); body.optimizeWaypointOrder = true; }
+  else if (stops.length > 1) body.intermediates = stops.slice(0, -1).map(a => ({ address: a }));
   if (depart && new Date(depart) > new Date()) body.departureTime = depart;
   const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.legs.duration,routes.legs.distanceMeters' },
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.legs.duration,routes.legs.distanceMeters,routes.optimizedIntermediateWaypointIndex' },
     body: JSON.stringify(body)
   });
   const j = await res.json();
   if (!res.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', (j.error && j.error.message) || 'Keine Route gefunden');
-  return { legs: j.routes[0].legs.map(l => parseInt(String(l.duration || '0s').replace('s', ''), 10) || 0) };
+  const legs = j.routes[0].legs.map(l => parseInt(String(l.duration || '0s').replace('s', ''), 10) || 0);
+  if (optimize) return { legs, order: j.routes[0].optimizedIntermediateWaypointIndex || stops.map((_, i) => i) };
+  return { legs };
+});
+
+/* Adressen in Koordinaten umwandeln (Geocoding API, Schlüssel aus secrets/maps) */
+exports.geocode = onCall(async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
+  const u = await db.collection('users').doc(req.auth.uid).get();
+  if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const k = await db.doc('secrets/maps').get();
+  if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Google-Maps-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
+  const addrs = (req.data && req.data.addresses) || [];
+  if (!Array.isArray(addrs) || addrs.length > 60) throw new HttpsError('invalid-argument', 'Höchstens 60 Adressen');
+  const out = [];
+  for (let i = 0; i < addrs.length; i += 8) {
+    const part = await Promise.all(addrs.slice(i, i + 8).map(async a => {
+      const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(a)}&region=de&language=de&key=${k.data().key}`);
+      const j = await r.json();
+      if (j.status === 'OK' && j.results[0]) return { lat: j.results[0].geometry.location.lat, lng: j.results[0].geometry.location.lng, partial: !!j.results[0].partial_match };
+      if (j.status === 'REQUEST_DENIED') throw new HttpsError('failed-precondition', 'Geocoding API nicht aktiviert oder für den Schlüssel nicht erlaubt: ' + (j.error_message || ''));
+      return null;
+    }));
+    out.push(...part);
+  }
+  return { coords: out };
 });
 
 /* Fragen zur App: Nachricht an den Admin */
