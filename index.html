@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 A';
+const APP_VERSION='2026-10-21 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1563,7 +1563,8 @@ function vStand(){
     <div class="tile b"><small>Verkäufe</small><b>${num(a.verk)} Stk.</b></div>
     <div class="tile b"><small>Umsatz</small><b>${eur0(a.umsatz)}</b></div>
     <div class="tile ${a.gewinn<0?'r':'g'}"><small>Gewinn</small><b>${eur0(a.gewinn)}</b></div>
-    <div class="tile ${a.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(a.soll)} Stk.</b></div></div>
+    <div class="tile ${a.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(a.soll)} Stk.</b></div>
+    <div class="tile b"><small>Bäume geliefert</small><b>${num(deliveredFor({id:st.id,n:st.name}).del)} Stk.</b></div></div>
   ${insights(a)}
   <h2>Verkäufe pro Tag</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:a.byDay[d].q})))}</div>
   <details data-det="zmehr" ${cur.det.zmehr?'open':''}><summary>Kennzahlen und weitere Diagramme</summary>${kvList(a)}
@@ -1590,6 +1591,10 @@ function vGesamt(){
     <div class="tile ${all.gewinn<0?'r':'g'}"><small>Gewinn</small><b>${eur0(all.gewinn)}</b></div>
     <div class="tile ${all.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(all.soll)} Stk.</b></div></div>
   ${insights(all)}
+  <h2>Gelieferte Bäume</h2>
+  <div class="card scroll"><table><tr><th>Stand</th><th class="r">Geliefert</th><th class="r">Offen oder unterwegs</th></tr>
+  ${S.stands.map(s=>({n:s.name,...deliveredFor({id:s.id,n:s.name})})).concat(partnersList().map(p=>({n:p.n+' (Partner)',...deliveredFor({n:p.n})}))).map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${num(x.del)}</td><td class="r">${x.plan?num(x.plan):'–'}</td></tr>`).join('')}</table></div>
+  <div class="hint">Zählt Bäume aus Lieferscheinen und Stopps, die dem Namen des Stands oder Partners zugeordnet sind.</div>
   <h2>Ranking</h2><div class="hint" style="margin-top:-4px">Stand antippen für Details</div>
   <div class="card scroll"><table><tr><th>#</th><th>Stand</th><th class="r">Verk.</th><th class="r">Bestand</th><th class="r">Umsatz</th><th class="r">Gewinn</th></tr>
   ${per.map((x,i)=>`<tr data-zs="${x.s.id}" style="cursor:pointer"><td>${i+1}</td><td>${esc(x.s.name)}</td><td class="r">${num(x.a.verk)}</td><td class="r ${x.a.soll<0?'neg':''}">${num(x.a.soll)}</td><td class="r">${eur0(x.a.umsatz)}</td><td class="r ${x.a.gewinn<0?'neg':''}">${eur0(x.a.gewinn)}</td></tr>`).join('')}
@@ -1760,7 +1765,7 @@ function vPacken(t){
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}
     ${fin}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung'],['part','Partner']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
@@ -2087,19 +2092,12 @@ function freeStopOrder(s){
 }
 const nameKey=n=>String(n||'').toLowerCase().replace(/[^a-zäöüß0-9]/g,'');
 const partnerMatch=(p,n)=>{const a=nameKey(p.n),b=nameKey(n);return a.length>=4&&b.length>=4&&(b.includes(a)||a.includes(b))};
-function partnerDeliveries(p){
-  const out=[];
-  S.orders.filter(o=>!o.deleted&&partnerMatch(p,o.name)).forEach(o=>{
-    const t=S.tours.find(x=>x.id===o.tourId),st=t&&t.stops&&t.stops[o.stopId],done=o.status==='erledigt'||(st&&st.done&&st.outcome==='geliefert');
-    out.push({date:o.plannedFor||o.from||'',items:orderLines(o).filter(l=>l.cat!=='Ständer').map(posLabel).join('; '),trees:nTrees(o),state:done?'geliefert':o.status==='geplant'?'in Tour':'offen'});
-  });
-  S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(t=>tourStops(t).forEach(s=>{if(s.orderId)return;if(partnerMatch(p,s.name))out.push({date:t.date,items:s.items||'',trees:stopTrees(s),state:s.done&&s.outcome==='geliefert'?'geliefert':s.done?'nicht angetroffen':'in Tour'})}));
-  return out.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-}
-function vPartner(kind,fahrer,plan){
-  const P=partnersList();
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<h2 style="margin-top:4px">Partnerstände</h2><div class="hint">Unabhängige Stände, die Bäume von uns bekommen. Die Liste zeigt Lieferscheine und Stopps mit dem Namen des Partners.</div>${P.map(p=>{const L=partnerDeliveries(p),del=L.filter(x=>x.state==='geliefert').reduce((a,x)=>a+x.trees,0),open=L.filter(x=>x.state!=='geliefert').length;
-    return `<div class="card pad"><div class="n">${esc(p.n)}</div><div class="p">${esc(p.a)}</div><div class="kv"><span>Bäume geliefert</span><b>${del}</b></div>${open?`<div class="p" style="color:var(--orange)">${open} offen oder unterwegs</div>`:''}${L.length?`<details data-det="part-${esc(p.n)}"><summary>Lieferungen (${L.length})</summary>${L.map(x=>`<div class="row" style="display:block"><div class="n">${x.date?wdD(x.date):'ohne Datum'} · <span style="color:${x.state==='geliefert'?'var(--green)':'var(--orange)'}">${x.state}</span></div><div class="p">${esc(mTxt(x.items))||'–'}</div></div>`).join('')}</details>`:'<div class="hint">Noch keine Lieferung erfasst.</div>'}</div>`}).join('')||'<div class="hint">Keine Partnerstände hinterlegt (Daten, Einstellungen).</div>'}`;
+const treesOfStop=s=>{const n=stopTrees(s);if(n)return n;let t=0;String(s.items||'').replace(/(\d+)\s*[×x]/gi,(m,x)=>{t+=+x;return m});return t};
+function deliveredFor(key){
+  let del=0,plan=0;
+  S.orders.filter(o=>!o.deleted&&partnerMatch({n:key.n},o.name)).forEach(o=>{const t=S.tours.find(x=>x.id===o.tourId),st=t&&t.stops&&t.stops[o.stopId],done=o.status==='erledigt'||(st&&st.done&&st.outcome==='geliefert');if(done)del+=nTrees(o);else plan+=nTrees(o)});
+  S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(t=>tourStops(t).forEach(s=>{if(s.orderId)return;if(!((key.id&&s.standId===key.id)||partnerMatch({n:key.n},s.name)))return;const n=treesOfStop(s);if(s.done&&s.outcome==='geliefert')del+=n;else if(!s.done)plan+=n}));
+  return {del,plan};
 }
 function nacharbeit(){
   const td=todayStr(),out=[],seen=new Set();
@@ -2316,12 +2314,11 @@ function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
   if(cur.packTour){const pt=S.tours.find(x=>x.id===cur.packTour&&!x.deleted);if(pt&&(plan||canRun(pt))){vPacken(pt);return}cur.packTour=''}
   const fahrer=!has('toursAll')&&!has('lieferplanung');
-  const kinds=['lief','abh','ges'].concat(plan?['auf','best','part']:[]);
+  const kinds=['lief','abh','ges'].concat(plan?['auf','best']:[]);
   const kind=fahrer?'lief':kinds.includes(cur.lkind)?cur.lkind:(plan?'auf':'lief');
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
   syncPickups();
   if(kind==='best'){vBestellungen(kind,fahrer,plan);return}
-  if(kind==='part'){vPartner(kind,fahrer,plan);return}
   if(kind==='auf'){vAuftraege(kind,fahrer,plan);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));

@@ -1,4 +1,7 @@
 window.RO_DICT={
+"Zählt Bäume aus Lieferscheinen und Stopps, die dem Namen des Stands oder Partners zugeordnet sind.": "Numără brazii din bonurile de livrare și opriri atribuite numelui standului sau partenerului.",
+"Offen oder unterwegs": "Deschis sau pe drum",
+"Gelieferte Bäume": "Brazi livrați",
 "Verkaufsbeginn (bis dahin zeigt das Wetter den Hof, danach den Stand der Person)": "Începutul vânzării (până atunci vremea arată ferma, apoi standul persoanei)",
 "nicht angetroffen": "client absent",
 "in Tour": "în tur",
@@ -1156,6 +1159,7 @@ window.RO_PATTERNS=[
  [/^Diese Tour ist (.+)\. Trotzdem starten\?$/,(m,x)=>`Acest tur este ${x.replace("noch nicht als gepackt markiert","încă nemarcat ca împachetat").replace("ohne Fahrzeug","fără vehicul").replace(" und "," și ")}. Pornești oricum?`],
  [/^(\d+) offen oder unterwegs$/,(m,n)=>`${n} deschise sau pe drum`],
  [/^Lieferungen \((\d+)\)$/,(m,n)=>`Livrări (${n})`],
+ [/^(.+) \(Partner\)$/,(m,n)=>`${n} (partener)`],
  [/^· (\d+) Stopps · (\d+) geliefert$/,(m,a,b)=>`· ${a} ${+a===1?'oprire':'opriri'} · ${b} ${+b===1?'livrată':'livrate'}`],
  [/^Rechte von (.+)$/,(m,x)=>`Drepturile lui ${x}`],
  [/^App-Version (.+)$/,(m,x)=>`Versiune aplicație ${x}`],
