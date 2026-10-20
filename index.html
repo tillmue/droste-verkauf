@@ -311,7 +311,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 C';
+const APP_VERSION='2026-10-22 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1103,6 +1103,11 @@ function delivBox(){
   return `<h3>Lieferrechner</h3><div class="card pad formc"><input class="t" id="dl-addr" placeholder="Straße, Hausnummer, PLZ" value="${esc(d.addr)}" autocomplete="off"><div id="dl-sug" class="card" style="margin:6px 0 0;${sug?'':'display:none'}">${sug}</div><input class="t" id="dl-val" inputmode="decimal" placeholder="Warenwert in € (optional)" value="${esc(d.val)}" style="margin-top:8px"><div class="mini" style="margin-top:8px"><button class="btn" data-pl="dlcalc" style="margin:0" ${d.busy?'disabled':''}>Berechnen</button><button class="btn sec" data-pl="dlclear" style="margin:0">Löschen</button></div>${out}
     <div class="hint">Staffel (Preis inkl. MwSt): bis 10 km ${eur(DELIV.base)}, von 10 bis ${DELIV.k1} km ${eur(DELIV.r1)} je km, von ${DELIV.k1} bis ${DELIV.k2} km zusätzlich ${eur(DELIV.r2)} je km, ab ${DELIV.k2} km zusätzlich ${eur(DELIV.r3)} je km, Gemeinde Belm ${eur(DELIV.belm)}. Die Kilometer sind die gefahrene Strecke von Google Maps ab Hof, einfache Fahrt.</div></div>`;
 }
+function cartTotal(kind){
+  const r=vatRate(),SUP=['p1','p2','p4','p5','p6','p7'],ps=S.products.filter(p=>!p.free&&!SUP.includes(p.id)),hp=p=>p.priceH?p.priceH:(p.price?Math.round(p.price/(1+r/100)*100)/100:0);
+  const items=kind==='H'?PL_HAND:ps.concat(PL_PRIV),cart=kind==='H'?cur.cartH:cur.cartP;
+  return items.reduce((a,p)=>a+(cart[p.id]||0)*((p.pl?p.price:(kind==='H'?hp(p):p.price))||0),0);
+}
 function vPreise(){
   const tabN=cur.prtab==='haendler'?'haendler':cur.prtab==='rechner'?'rechner':'privat',r=vatRate();
   const SUP=['p1','p2','p4','p5','p6','p7'],ps=S.products.filter(p=>!p.free&&!SUP.includes(p.id)),hp=p=>p.priceH?p.priceH:(p.price?Math.round(p.price/(1+r/100)*100)/100:0);
@@ -1110,7 +1115,7 @@ function vPreise(){
   const unit=p=>p.pl?p.price:(tabN==='haendler'?hp(p):p.price);
   const row=p=>{const v=unit(p),q=cart[p.id]||0;
     return `<div class="row"><div class="n" style="flex:1;min-width:0">${p.color?`<span class="dot" style="background:${p.color}"></span>`:''}${esc(p.name)}${p.note?` <span class="p">· ${esc(p.note)}</span>`:''}</div><b style="margin-right:8px">${v?eur(v):'auf Anfrage'}</b>${v?`<div class="ctr">${q?`<button class="fb" data-pl="cart" data-v="${ck}|${p.id}|-1">−</button><b class="fn">${q}</b>`:''}<button class="plus fb" data-pl="cart" data-v="${ck}|${p.id}|1">+</button></div>`:''}</div>`};
-  const sum=ps.reduce((a,p)=>a+(cart[p.id]||0)*(unit(p)||0),0),cnt=Object.values(cart).reduce((a,b)=>a+b,0);
+  const sum=cartTotal(ck),cnt=Object.values(cart).reduce((a,b)=>a+b,0);
   const seg=`<div class="seg">${[['privat','Privat'],['haendler','Händler'],['rechner','Rechner']].map(([k,l])=>`<button class="${tabN===k?'on':''}" data-pl="prtab" data-v="${k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(tabN==='rechner'){
@@ -1592,7 +1597,9 @@ document.addEventListener('click',ev=>{
   if(a==='rankv'){cur.rankv=v;return render()}
   if(a==='rcreset'){if(confirm('Alle Rollen auf den Standard zurücksetzen?')){S.rolesCfg=JSON.parse(JSON.stringify(DEF_ROLECFG));save();render()}return}
   if(a==='gotab'){tab=v;cur.zst=false;window.scrollTo(0,0);return render()}
-  if(a==='prtab'){cur.prtab=v;return render()}
+  if(a==='prtab'){cur.prtab=v;
+    if(v==='rechner'&&cur.vN===''&&cur.vG===''){const tH=cartTotal('H'),tP=cartTotal('P');if(tH>0){cur.vN=f2(tH);cur.vLast='net'}else if(tP>0){cur.vG=f2(tP);cur.vLast='gross'}}
+    return render()}
   if(a==='cart'){const [k,id,d]=v.split('|'),c=k==='H'?cur.cartH:cur.cartP;c[id]=Math.max(0,(c[id]||0)+(+d));if(!c[id])delete c[id];return render()}
   if(a==='cartclear'){if(v==='H')cur.cartH={};else cur.cartP={};return render()}
   if(a==='vatclear'){cur.vN='';cur.vG='';return render()}
