@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Offline, alte Wetterdaten": "Offline, date meteo vechi",
 "Zählt Bäume aus Lieferscheinen und Stopps, die dem Namen des Stands oder Partners zugeordnet sind.": "Numără brazii din bonurile de livrare și opriri atribuite numelui standului sau partenerului.",
 "Offen oder unterwegs": "Deschis sau pe drum",
 "Gelieferte Bäume": "Brazi livrați",

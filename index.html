@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 B';
+const APP_VERSION='2026-10-21 C';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -778,7 +778,7 @@ function wxHtml(){
   return `<div class="wxrow">${days.map(x=>`<div class="wxd"><small>${lab[x.d]}</small><div class="ic">${x.ic}</div><b>${x.tmin}° / ${x.tmax}°</b>
     <small>${x.txt}</small><small>${x.rain>=0.1?x.rain.toFixed(1).replace('.',',')+' mm':'trocken'}${x.pp?' · '+x.pp+' %':''}</small><small>Böen ${x.gust} km/h</small></div>`).join('')}</div>
     ${storm.length?`<div class="warn" style="margin-top:8px">Starker Wind: ${storm.map(x=>lab[x.d]+' bis '+x.gust+' km/h').join(', ')}. Planen, Schilder und Ständer sichern.</div>`:''}
-    <div class="hint" style="margin:6px 2px 0">${wxData.ort||WX.ort} · Deutscher Wetterdienst via Bright Sky · Stand ${at}${wxData.stale?' (offline, alte Daten)':''}</div>`;
+    ${wxData.stale?'<div class="hint" style="margin:6px 2px 0">Offline, alte Wetterdaten</div>':''}`;
 }
 /* ---------- Ich: Dashboard ---------- */
 function vIch(){
