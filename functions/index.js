@@ -114,9 +114,9 @@ exports.syncClaims = onDocumentWritten('users/{uid}', async event => {
 });
 
 /* 1c. Meldungen: neue Meldung an Admin und Chef, Statuswechsel an den Melder */
-const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'], nachschub: ['Nachschub', 'Aprovizionare'], lieferung: ['Lieferung', 'Livrare'], feld: ['Feld', 'Câmp'] };
+const RCAT = { fahrzeug: ['Fahrzeug', 'Vehicul'], maschine: ['Maschine', 'Utilaj'], hof: ['Hof', 'Fermă'], stand: ['Stand', 'Stand'], nachschub: ['Nachschub', 'Aprovizionare'], lieferung: ['Lieferung', 'Livrare'], strich: ['Strichliste', 'Listă liniuțe'], feld: ['Feld', 'Câmp'] };
 async function repObjName(r) {
-  if ((r.cat !== 'stand' && r.cat !== 'nachschub') || !r.obj) return r.obj || '';
+  if ((r.cat !== 'stand' && r.cat !== 'nachschub' && r.cat !== 'strich') || !r.obj) return r.obj || '';
   const d = await db.collection('stands').doc(r.obj).get();
   return d.exists ? d.data().name : r.obj;
 }

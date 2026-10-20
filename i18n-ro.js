@@ -1,4 +1,19 @@
 window.RO_DICT={
+"Notiz oder Zahlen (optional)": "Notiță sau cifre (opțional)",
+"Bitte ein Foto der Strichliste anhängen.": "Atașează o fotografie a listei cu liniuțe.",
+"Tagsüber auf Papier mit der Strichliste zählen. Abends hier ein Foto davon abschicken, die Zahlen werden dann eingetragen.": "Ziua numără pe hârtie cu lista cu liniuțe. Seara trimite aici o fotografie, cifrele vor fi introduse apoi.",
+"Strichliste abschicken": "Trimite lista cu liniuțe",
+"Strichliste": "Listă cu liniuțe",
+"vor Verkaufsbeginn": "înainte de începerea vânzării",
+"Bestand (Soll)": "Stoc (țintă)",
+"wird abends eingetragen": "se introduce seara",
+"noch offen": "încă deschis",
+"Heute verkauft": "Vândut azi",
+"Heute und Bestand": "Azi și stoc",
+"Noch nichts geliefert.": "Încă nimic livrat.",
+"Alle Stände (Gesamt)": "Toate standurile (total)",
+"Wechseln ›": "Schimbă ›",
+"Stand wählen": "Alege standul",
 "Mit zwei Fingern zoomen": "Mărește cu două degete",
 "Adresse": "Adresă",
 "Partnerstand: wir liefern nur die Bäume, kein Aufbau und kein Verkauf in der App.": "Stand partener: livrăm doar bradurile, fără montaj și fără vânzare în aplicație.",
@@ -1079,6 +1094,9 @@ window.RO_DICT={
 };
 
 window.RO_PATTERNS=[
+ [/^(\d+) Stk\. davon automatisch aus Logistik \(geliefert\)\. Hier nur zusätzliche Lieferungen oder Retouren eintragen\.$/,(m,n)=>`${n} buc. din care automat din logistică (livrate). Aici se introduc doar livrări suplimentare sau retururi.`],
+ [/^Stand (.+) abends$/,(m,d)=>`Situația ${d}, seara`],
+ [/^Strichliste vom (.+)$/,(m,d)=>`Listă cu liniuțe din ${d}`],
  [/^(\d+) von (\d+) Aufgaben erledigt\. Ab 80 Prozent \((\d+) Aufgaben\) ist das Feierabendbier verdient\.$/,(m,a,b,c)=>`${a} din ${b} sarcini terminate. De la 80 la sută (${c} sarcini) berea de după muncă este meritată.`],
  [/^Aufgabenarchiv \((\d+) erledigt\)$/,(m,n)=>`Arhiva sarcinilor (${n} terminate)`],
  [/^Alle \((\d+)\)$/,(m,n)=>`Toate (${n})`],
