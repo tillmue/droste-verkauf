@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 k';
+const APP_VERSION='2026-10-21 l';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1334,6 +1334,7 @@ document.addEventListener('click',ev=>{
   if(a==='plall'){const c=planCandidates(cur.pd.date),all=c.length&&c.every(x=>cur.pd.sel[x.o.id]);c.forEach(x=>cur.pd.sel[x.o.id]=!all);return render()}
   if(a==='pdday'){cur.pd.date=v;cur.pd.sel={};planCandidates(v).forEach(x=>{cur.pd.sel[x.o.id]=x.must});cur.pd.res=null;return render()}
   if(a==='ordmenu'){orderMenu(v);return}
+  if(a==='resettest'){return askConfirm('Alle Touren (auch gestartete) ins Archiv, alle Aufträge zurück auf offen und Beispielaufträge auf heute setzen?','Ja, zurücksetzen',()=>{const td0=todayStr();S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(softDel);S.orders.filter(o=>!o.deleted).forEach(o=>{o.status='offen';o.tourId='';o.stopId='';delete o.plannedFor;if(o.demo){o.from=td0;o.to=td0}});cur.pd=null;cur.packTour='';cur.tex={};cur.lkind='auf';save();toast('Zurückgesetzt');render()})}
   if(a==='ttog'){cur.tex=cur.tex||{};cur.tex[v]=!cur.tex[v];return render()}
   if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
   if(a==='plrun'){runPlan();return}
@@ -1692,7 +1693,7 @@ function vPacken(t){
     <div class="card pad"><div class="barw"><i style="width:${units.length?Math.round(done/units.length*100):0}%"></i></div><div class="hint" style="margin:6px 0 0">${done} von ${units.length} aufgeladen. Reihenfolge: zuerst der letzte Stopp.</div></div>
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`<div class="seg">${(plan?[['auf','Plan']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg">${(plan?[['auf','Plan']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');

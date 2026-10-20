@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Zurückgesetzt": "Resetat",
+"Ja, zurücksetzen": "Da, resetează",
+"Alle Touren (auch gestartete) ins Archiv, alle Aufträge zurück auf offen und Beispielaufträge auf heute setzen?": "Toate turele (și cele pornite) în arhivă, toate comenzile înapoi pe deschis și comenzile exemplu pe azi?",
+"Zurücksetzen (Test)": "Resetare (test)",
 "Gepackt": "Împachetat",
 "Anhänger für Touren (einer pro Zeile)": "Remorci pentru ture (una pe rând)",
 "Anhänger später zuweisen": "Atribuie remorca mai târziu",
