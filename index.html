@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 b';
+const APP_VERSION='2026-10-21 c';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1723,7 +1723,7 @@ async function runPlan(){
       let n=0;
       for(const sec of sectors.flatMap(s=>s.length>25?[s.slice(0,Math.ceil(s.length/2)),s.slice(Math.ceil(s.length/2))]:[s])){
         n++;pd.msg=`Route ${n} wird optimiert …`;render();
-        const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),optimize:true,depart:nextDepart()});
+        const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),optimize:true,depart:nextDepart(pd.date,pd.start)});
         const ordd=r.order.map(i=>sec[i]);
         let cur2=timeToMin(pd.start);const stopsOut=ordd.map((o,i)=>{cur2+=Math.round((r.legs[i]||0)/60);const eta=cur2,svc=orderSvc(o);cur2+=svc;
           const we=winEnd(o.window),ws=winStart(o.window);
@@ -1751,7 +1751,7 @@ function applyPlan(idx){
 }
 async function optimizeTour(t){
   const st=tourStops(t),wa=st.filter(s=>s.address);if(wa.length<2||!window.cloud||!window.cloud.routeLegs)return;
-  try{const before=(t.legs||[]).reduce((a,b)=>a+b,0)/60,r=await window.cloud.routeLegs({origin:depot(),stops:wa.map(s=>s.address),optimize:true,depart:nextDepart()});
+  try{const before=(t.legs||[]).reduce((a,b)=>a+b,0)/60,r=await window.cloud.routeLegs({origin:depot(),stops:wa.map(s=>s.address),optimize:true,depart:nextDepart(t.date)});
     r.order.forEach((idx,pos)=>{wa[idx].order=pos+1});st.filter(s=>!s.address).forEach((s,k)=>{s.order=wa.length+k+1});
     const nst=tourStops(t);t.legs=nst.map(s=>s.address?(r.legs[r.order.indexOf(wa.indexOf(s))]||0):0);t.legsSig=nst.map(s=>s.address||'').join('|');
     const after=t.legs.reduce((a,b)=>a+b,0)/60;save();toast(before?`Reihenfolge optimiert (Fahrt ${fmtMin(after)}, vorher ${fmtMin(before)})`:`Reihenfolge optimiert (Fahrt ${fmtMin(after)})`);render()}
@@ -1860,11 +1860,11 @@ function etaTimes(t){
   return out;
 }
 const lineLabel=l=>{const q=+l.q||1,nm=l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);return `${q} × ${nm}${l.l?' '+mFmt(l.l):''}`};
-function nextDepart(){const d=new Date();d.setDate(d.getDate()+1);while([0,6].includes(d.getDay()))d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString()}
+function nextDepart(date,time){if(date){const d=new Date(date+'T'+(time||'08:00')+':00');if(!isNaN(d)&&d>new Date())return d.toISOString()}const d=new Date();d.setDate(d.getDate()+1);while([0,6].includes(d.getDay()))d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString()}
 async function computeLegs(t,quiet){
   const st=tourStops(t);if(!st.length||!window.cloud||!window.cloud.routeLegs)return;
   const withAddr=st.filter(s=>s.address);if(!withAddr.length)return;
-  try{const r=await window.cloud.routeLegs({origin:depot(),stops:withAddr.map(s=>s.address),depart:nextDepart()});
+  try{const r=await window.cloud.routeLegs({origin:depot(),stops:withAddr.map(s=>s.address),depart:nextDepart(t.date)});
     let k=0;t.legs=st.map(s=>s.address?(r.legs[k++]||0):0);t.legsSig=st.map(s=>s.address||'').join('|');save();render()}
   catch(e){if(!quiet)alert('Fahrzeiten konnten nicht berechnet werden: '+((e&&(e.message||e.code))||''))}
 }
