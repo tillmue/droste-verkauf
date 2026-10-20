@@ -1,4 +1,10 @@
 window.RO_DICT={
+"Adresse und Infos": "Adresă și informații",
+"Pläne": "Planuri",
+"Aufgebaut": "Montat",
+"Kennzahlen": "Indicatori",
+"Liste eintippen oder diktieren": "Scrie sau dictează lista",
+"10 blau 3 gelb 5 holzscheibe 4 bunde nobilis 4 41€ 3 25€": "10 albastru 3 galben 5 holzscheibe 4 buchet nobilis 4 41€ 3 25€",
 "Meldung": "Raport",
 "Das Foto konnte nicht hochgeladen werden. Der Eintrag wird ohne Foto gespeichert.": "Fotografia nu a putut fi încărcată. Intrarea se salvează fără foto.",
 "Das Foto konnte nicht hochgeladen werden. Die Aufgabe wird ohne Foto gespeichert.": "Fotografia nu a putut fi încărcată. Sarcina se salvează fără foto.",

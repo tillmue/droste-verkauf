@@ -242,6 +242,9 @@ nav button.on{background:var(--green);color:#fff}
 .blk-h h3{margin:0;font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.01em}
 .blk .row{padding:12px 0}.blk .row:last-child{border-bottom:0}
 .blk.click{cursor:pointer}
+.blk.t-g{border-color:rgba(46,158,79,.75)}.blk.t-g .blk-h h3{color:#7fe0a0}
+.blk>details{border-top:0}.blk>details>summary{padding:0;color:var(--link);font-weight:700}.blk>details[open]>summary{margin-bottom:8px}
+.btn.no{background:transparent;border:2px solid var(--red);color:#ff8a7a}
 .blk.t-o{border-color:var(--orange)}.blk.t-o .blk-h h3{color:var(--orange)}
 .blk.t-r{border-color:var(--red)}
 .pill{display:inline-block;border-radius:999px;padding:3px 11px;font-size:13px;font-weight:700;background:rgba(124,192,255,.2);color:var(--link);white-space:nowrap}
@@ -291,7 +294,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 T';
+const APP_VERSION='2026-10-21 U';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -541,16 +544,15 @@ function vErfassen(){
       <div class="edit"><select class="t" data-qi="${i}" data-qf="pid"><option value="">– ignorieren</option>${S.products.map(p=>`<option value="${p.id}" ${p.id===r.pid?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
       <input class="t" style="width:74px" inputmode="decimal" data-qi="${i}" data-qf="price" value="${String(r.price).replace('.',',')}">
       <input class="t" style="width:58px" inputmode="numeric" data-qi="${i}" data-qf="count" value="${r.count}"></div></div>`).join('')}
-    <div class="mini"><button class="btn green" id="qApply">Übernehmen</button><button class="btn sec" id="qCancel">Verwerfen</button></div>`:'';
-  const dt=(k,title,body)=>`<details data-det="${k}" ${cur.det[k]?'open':''}><summary>${title}</summary>${body}</details>`;
+    <div class="mini"><button class="btn green" id="qApply">Übernehmen</button><button class="btn no" id="qCancel">Verwerfen</button></div>`:'';
+  const dt=(k,title,body)=>`<section class="blk"><details data-det="${k}" ${cur.det[k]?'open':''}><summary>${title}</summary>${body}</details></section>`;
   $('#app').innerHTML=`${backupWarn()}${standChips()}
   <div class="datebar"><button data-d="-1">‹</button><input type="date" id="date" value="${cur.date}"><button data-d="1">›</button></div>
-  <div class="big"><b>${qtyOf(e)}</b><em>Stück</em><span>${eur(revOf(e))}</span></div>
-  <div class="card pad">
-    <textarea class="t" id="qtext" rows="3" placeholder="Liste eintippen oder diktieren: 10 blau 3 gelb 5 holzscheibe 4 bunde nobilis 4 41€ 3 25€">${esc(cur.qtext)}</textarea>
-    <button class="btn" id="qParse" style="margin-bottom:0">Auslesen</button>${parsed}</div>
-  ${(sold.length||(e.extra||[]).length)?`<h3>Erfasst</h3><div class="card">${sold.map(prow).join('')}
-    ${(e.extra||[]).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div><div class="p">${exq(x)} × ${eur(x.price)}</div></div><div class="ctr"><b>${eur(x.price*exq(x))}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}</div>`:''}
+  ${blk('Heute',`<div class="big" style="margin:0 0 6px"><b>${qtyOf(e)}</b><em>Stück</em><span>${eur(revOf(e))}</span></div>`,{tone:'g'})}
+  ${blk('Liste eintippen oder diktieren',`<textarea class="t" id="qtext" rows="3" placeholder="10 blau 3 gelb 5 holzscheibe 4 bunde nobilis 4 41€ 3 25€">${esc(cur.qtext)}</textarea>
+    <button class="btn" id="qParse" style="margin-bottom:6px">Auslesen</button>${parsed}`)}
+  ${(sold.length||(e.extra||[]).length)?`<section class="blk"><div class="blk-h"><h3>Erfasst</h3></div><div class="card">${sold.map(prow).join('')}
+    ${(e.extra||[]).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div><div class="p">${exq(x)} × ${eur(x.price)}</div></div><div class="ctr"><b>${eur(x.price*exq(x))}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}</div></section>`:''}
   ${dt('zaehl','Einzeln zählen',`<div class="card">${S.products.filter(p=>!p.free).map(prow).join('')}</div>`)}
   ${dt('preis','Einzelpreis mit Drehrad',`<div class="card pad">
     <select class="t" id="xp">${S.products.map(p=>`<option value="${p.id}" ${p.id===cur.xp?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
@@ -1759,20 +1761,20 @@ function vStand(){
   const days=a.dates.filter(d=>a.byDay[d]);
   $('#app').innerHTML=`${backupWarn()}<div class="chips"><button class="chip" data-zs="">‹ Gesamt</button>${S.stands.map(s=>`<button class="chip ${s.id===cur.stand?'on':''}" data-stand="${s.id}">${esc(s.name)}</button>`).join('')}</div>
   <h2 style="margin-top:4px">${esc(st.name)}</h2>
-  <div class="tiles">
+  ${blk('Kennzahlen',`<div class="tiles" style="margin:0 0 8px">
     <div class="tile b"><small>Verkäufe</small><b>${num(a.verk)} Stk.</b></div>
     <div class="tile b"><small>Umsatz</small><b>${eur0(a.umsatz)}</b></div>
     <div class="tile ${a.gewinn<0?'r':'g'}"><small>Gewinn</small><b>${eur0(a.gewinn)}</b></div>
     <div class="tile ${a.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(a.soll)} Stk.</b></div>
-    <div class="tile b"><small>Bäume geliefert</small><b>${num(deliveredFor({id:st.id,n:st.name}).del)} Stk.</b></div></div>
+    <div class="tile b"><small>Bäume geliefert</small><b>${num(deliveredFor({id:st.id,n:st.name}).del)} Stk.</b></div></div>`)}
   ${insights(a)}
-  <h2>Verkäufe pro Tag</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:a.byDay[d].q})))}</div>
+  ${blk('Verkäufe pro Tag',barChart(days.map(d=>({l:shortD(d),v:a.byDay[d].q}))))}
   <details data-det="zmehr" ${cur.det.zmehr?'open':''}><summary>Kennzahlen und weitere Diagramme</summary>${kvList(a)}
-  <h2>Umsatz pro Tag</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:Math.round(a.byDay[d].r)})),{color:'var(--green)',fmt:v=>v})}</div>
-  <h2>Bestandsverlauf (Soll)</h2><div class="card pad">${lineChart(a.bestand)}</div>
-  <h2>Verkäufe nach Produkt</h2><div class="card pad">${prodChart(a)}</div>
-  <h2>Tage</h2><div class="card"><table><tr><th>Tag</th><th class="r">Stück</th><th class="r">Umsatz</th></tr>
-  ${days.slice().reverse().map(d=>`<tr><td>${fmtD(d)}</td><td class="r">${a.byDay[d].q}</td><td class="r">${eur(a.byDay[d].r)}</td></tr>`).join('')||'<tr><td colspan=3>Noch keine Daten</td></tr>'}</table></div>
+  ${blk('Umsatz pro Tag',barChart(days.map(d=>({l:shortD(d),v:Math.round(a.byDay[d].r)})),{color:'var(--green)',fmt:v=>v}))}
+  ${blk('Bestandsverlauf (Soll)',lineChart(a.bestand))}
+  ${blk('Verkäufe nach Produkt',prodChart(a))}
+  <section class="blk"><div class="blk-h"><h3>Tage</h3></div><div class="scroll"><table><tr><th>Tag</th><th class="r">Stück</th><th class="r">Umsatz</th></tr>
+  ${days.slice().reverse().map(d=>`<tr><td>${fmtD(d)}</td><td class="r">${a.byDay[d].q}</td><td class="r">${eur(a.byDay[d].r)}</td></tr>`).join('')||'<tr><td colspan=3>Noch keine Daten</td></tr>'}</table></div></section>
   </details>
   <div class="hint">Kosten (Standgebühr, Personal, Auf-/Abbau, Lieferkosten) und Produktionskosten pflegst du unter „Daten“.</div>`;
 }
@@ -1785,27 +1787,25 @@ function vGesamt(){
   const wd=[1,2,3,4,5,6,0].map(i=>({l:WD[i],v:all.byWd[i]})).filter(x=>x.v>0);
   $('#app').innerHTML=`${backupWarn()}
   <h2 style="margin-top:4px">Alle Stände</h2>
-  <div class="tiles">
+  ${blk('Kennzahlen',`<div class="tiles" style="margin:0 0 8px">
     <div class="tile b"><small>Verkäufe</small><b>${num(all.verk)} Stk.</b></div>
     <div class="tile b"><small>Umsatz</small><b>${eur0(all.umsatz)}</b></div>
     <div class="tile ${all.gewinn<0?'r':'g'}"><small>Gewinn</small><b>${eur0(all.gewinn)}</b></div>
-    <div class="tile ${all.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(all.soll)} Stk.</b></div></div>
+    <div class="tile ${all.soll<0?'r':''}"><small>Soll-Bestand</small><b>${num(all.soll)} Stk.</b></div></div>`)}
   ${insights(all)}
-  <h2>Gelieferte Bäume</h2>
-  <div class="card scroll"><table><tr><th>Stand</th><th class="r">Geliefert</th><th class="r">Offen oder unterwegs</th></tr>
-  ${S.stands.map(s=>({n:s.name,...deliveredFor({id:s.id,n:s.name})})).concat(partnersList().map(p=>({n:p.n+' (Partner)',...deliveredFor({n:p.n})}))).map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${num(x.del)}</td><td class="r">${x.plan?num(x.plan):'–'}</td></tr>`).join('')}</table></div>
+  <section class="blk"><div class="blk-h"><h3>Gelieferte Bäume</h3></div><div class="scroll"><table><tr><th>Stand</th><th class="r">Geliefert</th><th class="r">Offen oder unterwegs</th></tr>
+  ${S.stands.map(s=>({n:s.name,...deliveredFor({id:s.id,n:s.name})})).concat(partnersList().map(p=>({n:p.n+' (Partner)',...deliveredFor({n:p.n})}))).map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${num(x.del)}</td><td class="r">${x.plan?num(x.plan):'–'}</td></tr>`).join('')}</table></div></section>
   <div class="hint">Zählt Bäume aus Lieferscheinen und Stopps, die dem Namen des Stands oder Partners zugeordnet sind.</div>
-  <h2>Ranking</h2><div class="hint" style="margin-top:-4px">Stand antippen für Details</div>
-  <div class="card scroll"><table><tr><th>#</th><th>Stand</th><th class="r">Verk.</th><th class="r">Bestand</th><th class="r">Umsatz</th><th class="r">Gewinn</th></tr>
+  <section class="blk"><div class="blk-h"><h3>Ranking</h3></div><div class="hint" style="margin:-4px 0 6px">Stand antippen für Details</div><div class="scroll"><table><tr><th>#</th><th>Stand</th><th class="r">Verk.</th><th class="r">Bestand</th><th class="r">Umsatz</th><th class="r">Gewinn</th></tr>
   ${per.map((x,i)=>`<tr data-zs="${x.s.id}" style="cursor:pointer"><td>${i+1}</td><td>${esc(x.s.name)}</td><td class="r">${num(x.a.verk)}</td><td class="r ${x.a.soll<0?'neg':''}">${num(x.a.soll)}</td><td class="r">${eur0(x.a.umsatz)}</td><td class="r ${x.a.gewinn<0?'neg':''}">${eur0(x.a.gewinn)}</td></tr>`).join('')}
-  <tr class="tot"><td></td><td>Ergebnis</td><td class="r">${num(all.verk)}</td><td class="r ${all.soll<0?'neg':''}">${num(all.soll)}</td><td class="r">${eur0(all.umsatz)}</td><td class="r ${all.gewinn<0?'neg':''}">${eur0(all.gewinn)}</td></tr></table></div>
+  <tr class="tot"><td></td><td>Ergebnis</td><td class="r">${num(all.verk)}</td><td class="r ${all.soll<0?'neg':''}">${num(all.soll)}</td><td class="r">${eur0(all.umsatz)}</td><td class="r ${all.gewinn<0?'neg':''}">${eur0(all.gewinn)}</td></tr></table></div></section>
   <details data-det="gmehr" ${cur.det.gmehr?'open':''}><summary>Kennzahlen und Diagramme</summary>${kvList(all)}
-  <h2>Verkäufe pro Stand</h2><div class="card pad">${hbars(per.map(x=>({l:x.s.name,v:x.a.verk})),v=>v+' Stk.')}</div>
-  <h2>Umsatz pro Stand</h2><div class="card pad">${hbars(per.map(x=>({l:x.s.name,v:Math.round(x.a.umsatz)})),eur0)}</div>
-  <h2>Verkäufe pro Tag (alle)</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:all.byDay[d].q})))}</div>
-  <h2>Umsatz pro Tag (alle)</h2><div class="card pad">${barChart(days.map(d=>({l:shortD(d),v:Math.round(all.byDay[d].r)})),{color:'var(--green)'})}</div>
-  <h2>Bestandsverlauf (alle)</h2><div class="card pad">${lineChart(all.bestand)}</div>
-  <h2>Bestseller</h2><div class="card pad">${prodChart(all)}</div>
+  ${blk('Verkäufe pro Stand',hbars(per.map(x=>({l:x.s.name,v:x.a.verk})),v=>v+' Stk.'))}
+  ${blk('Umsatz pro Stand',hbars(per.map(x=>({l:x.s.name,v:Math.round(x.a.umsatz)})),eur0))}
+  ${blk('Verkäufe pro Tag (alle)',barChart(days.map(d=>({l:shortD(d),v:all.byDay[d].q}))))}
+  ${blk('Umsatz pro Tag (alle)',barChart(days.map(d=>({l:shortD(d),v:Math.round(all.byDay[d].r)})),{color:'var(--green)'}))}
+  ${blk('Bestandsverlauf (alle)',lineChart(all.bestand))}
+  ${blk('Bestseller',prodChart(all))}
   <h2>Umsatz nach Wochentag</h2><div class="card pad">${hbars(wd,eur0)}</div></details>`;
 }
 
@@ -1825,8 +1825,8 @@ function vStaende(){
   const chips=`<div class="chips">${S.stands.map(x=>`<button class="chip ${x.id===sid?'on':''}" data-pl="ps" data-v="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
   const stN=S.stands.find(x=>x.id===sid)||{};
   const kv=(l,v)=>v?`<div class="kv"><span>${l}</span><span>${esc(v)}</span></div>`:'';
-  const addrBox=(stN.address||stN.contact||stN.hours||stN.power||stN.buildDate||stN.teardownDate)?`<div class="card pad">${stN.address?`<div class="n">${esc(stN.address)}</div><div class="mini" style="margin:8px 0">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div>`:''}${kv('Ansprechpartner',stN.contact)}${kv('Öffnungszeiten',stN.hours)}${kv('Starkstrom',stN.power)}${kv('Aufbau am',stN.buildDate?wdD(stN.buildDate):'')}${kv('Abbau am',stN.teardownDate?wdD(stN.teardownDate):'')}</div>`:'';
-  const planB=PLAN_IDS.includes(sid)?`<div class="mini" style="margin:8px 0"><button class="btn sec" data-pl="splan" data-v="${sid}|aufbau" style="margin:0">Aufbauplan</button><button class="btn sec" data-pl="splan" data-v="${sid}|lage" style="margin:0">Lageplan</button></div>`:'';
+  const addrBox=(stN.address||stN.contact||stN.hours||stN.power||stN.buildDate||stN.teardownDate)?`<section class="blk"><div class="blk-h"><h3>Adresse und Infos</h3></div>${stN.address?`<div class="n">${esc(stN.address)}</div><div class="mini" style="margin:8px 0">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div>`:''}${kv('Ansprechpartner',stN.contact)}${kv('Öffnungszeiten',stN.hours)}${kv('Starkstrom',stN.power)}${kv('Aufbau am',stN.buildDate?wdD(stN.buildDate):'')}${kv('Abbau am',stN.teardownDate?wdD(stN.teardownDate):'')}</section>`:'';
+  const planB=PLAN_IDS.includes(sid)?`<section class="blk"><div class="blk-h"><h3>Pläne</h3></div><div class="mini" style="margin-bottom:6px"><button class="btn sec" data-pl="splan" data-v="${sid}|aufbau" style="margin:0">Aufbauplan</button><button class="btn sec" data-pl="splan" data-v="${sid}|lage" style="margin:0">Lageplan</button></div></section>`:'';
   const seg=`<div class="seg">${['p','a','z'].map(m=>`<button class="${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
   if(!pk){$('#app').innerHTML=chips+addrBox+planB+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
   const chk=pk.checks||{},on=i=>!!(chk[i.id]&&chk[i.id][mode]);
@@ -1834,25 +1834,26 @@ function vStaende(){
   const rest=pk.groups.filter(g=>!PORDER.includes(g.key)&&!['besonderheiten','schluss'].includes(g.key));
   const ordered=[...PORDER.map(gOf).filter(Boolean),...rest];
   const bes=gOf('besonderheiten');
-  const notes=bes&&bes.items.length?`<div class="card pad note"><label class="f">Besonderheiten</label><ul class="bul">${bes.items.map(i=>`<li>${esc(i.text)}</li>`).join('')}</ul></div>`:'';
+  const notes=bes&&bes.items.length?blk('Besonderheiten',`<ul class="bul" style="margin:0 0 6px">${bes.items.map(i=>`<li>${esc(i.text)}</li>`).join('')}</ul>`,{tone:'o'}):'';
   const row=i=>`<div class="row pk"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`;
   const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key,all=g.items.length&&dn===g.items.length;
     const master=g.key==='avobox'?`<div class="row pk" style="background:var(--panel);border-radius:10px;padding:8px"><div style="display:flex;gap:10px;align-items:center;flex:1"><button class="chk ${all?'on':''}" data-pl="packall" data-v="${g.key}">${all?'✓':''}</button><div class="n"><b>Avobox komplett (alles drin)</b></div></div></div>`:'';
-    return `<details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="p" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${master}${g.items.map(row).join('')}</div></details>`};
-  const counterBox=(k,label)=>{const c=(pk.counter||{})[k]||{};return `<div class="card pad formc"><label class="f">${label}</label><input class="t" id="pk-counter-${k}" inputmode="numeric" value="${esc(c.v==null?'':c.v)}" placeholder="Zahl eintragen">${c.at?`<div class="hint" style="margin:6px 0 0">Eingetragen von ${esc(c.by||'?')} · ${new Date(c.at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div>`:''}</div>`};
+    return `<section class="blk ${all?'t-g':''}"><details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="pill ${all?'g':''}" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${master}${g.items.map(row).join('')}</div></details></section>`};
+  const counterBox=(k,label)=>{const c=(pk.counter||{})[k]||{};return blk(label,`<input class="t" id="pk-counter-${k}" inputmode="numeric" value="${esc(c.v==null?'':c.v)}" placeholder="Zahl eintragen">${c.at?`<div class="hint" style="margin:6px 0 0">Eingetragen von ${esc(c.by||'?')} · ${new Date(c.at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div>`:''}<div style="height:6px"></div>`)};
   let body='';
   if(mode==='z'){
     const sch=gOf('schluss');
     body=`${counterBox('ab','Zählerstand beim Abbau')}
-      ${sch&&sch.items.length?`<h3>Zum Schluss</h3><div class="card">${sch.items.map(row).join('')}</div>`:''}
-      <div class="card pad formc"><label class="f">Änderungen melden (z. B. 2 Netze fehlen)</label><textarea class="t" id="pk-note" rows="3" placeholder="Was hat sich bei den Mengen geändert?">${esc(cur.pknote||'')}</textarea><button class="btn" data-pl="packnote" style="margin-bottom:0">Absenden</button></div>`;
+      ${sch&&sch.items.length?blk('Zum Schluss',sch.items.map(row).join('')):''}
+      ${blk('Änderungen melden (z. B. 2 Netze fehlen)',`<textarea class="t" id="pk-note" rows="3" placeholder="Was hat sich bei den Mengen geändert?">${esc(cur.pknote||'')}</textarea><button class="btn" data-pl="packnote" style="margin-bottom:6px">Absenden</button>`,{tone:'o'})}`;
   }else{
     const all=ordered.flatMap(g=>g.items),done=all.filter(on).length;
-    body=`<div class="card pad"><div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin:6px 0 0">${done} von ${all.length} ${mode==='p'?'gepackt':'aufgebaut'}</div></div>
+    const fin=all.length&&done===all.length;
+    body=`${blk(mode==='p'?'Gepackt':'Aufgebaut',`<div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin-bottom:6px">${done} von ${all.length} ${mode==='p'?'gepackt':'aufgebaut'}</div>`,{tone:fin?'g':'',pill:pill(done+'/'+all.length,fin?'g':'')})}
       ${mode==='a'?counterBox('auf','Zählerstand beim Aufbau'):''}${ordered.map(sec).join('')}`;
   }
   $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${addrBox}${planB}${seg}${notes}${body}
-    ${isAdmin()&&mode!=='z'?`<button class="btn sec" data-pl="packreset" style="margin-top:14px;color:var(--red)">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
+    ${isAdmin()&&mode!=='z'?`<button class="btn no" data-pl="packreset" style="margin-top:14px">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */
 const DEF_VEH=['Transit Reinhard','Vito Felix','Pritsche Hegger','Kasten Hegger','(T5 Kimme)','(T5 Magnus)','(Ranger Felix)','(Ford Galaxy, kein Lieferfahrzeug)'];
