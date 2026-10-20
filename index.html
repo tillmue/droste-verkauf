@@ -244,7 +244,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 I';
+const APP_VERSION='2026-10-21 J';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -928,8 +928,8 @@ function delivBox(){
   if(d.busy)out='<div class="hint">Strecke wird berechnet …</div>';
   else if(d.err)out=`<div class="hint" style="color:var(--red)">${esc(d.err)}</div>`;
   else if(r){
-    const belm=/\bbelm\b|49191/i.test(d.addr),p=delivPrice(r.km,belm),vr=vatRate(),netto=Math.round(p/(1+vr/100)*100)/100,val=pf(d.val);
-    out=`<div class="kv"><span>Strecke ab Hof (einfach, gefahren)</span><b>${String(r.km).replace('.',',')} km${r.min?' · ca. '+r.min+' Min':''}</b></div>
+    const belm=r.belm!=null?r.belm:/\bbelm\b|49191/i.test(d.addr),p=delivPrice(r.km,belm),vr=vatRate(),netto=Math.round(p/(1+vr/100)*100)/100,val=pf(d.val);
+    out=`${r.addr?`<div class="p" style="color:var(--text)">Gefunden: <b>${esc(r.addr)}</b></div>${r.partial?'<div class="p" style="color:var(--orange)">Die Adresse wurde nur ungefähr gefunden. Bitte mit Postleitzahl und Ort eingeben.</div>':''}`:''}<div class="kv"><span>Strecke ab Hof (einfach, gefahren)</span><b>${String(r.km).replace('.',',')} km${r.min?' · ca. '+r.min+' Min':''}</b></div>
       <div class="kv"><span>${belm?'Gemeinde Belm, pauschal':'Lieferpreis'}</span><b style="font-size:22px">${eur(p)}</b></div>
       <div class="p">Netto ${eur(netto)} (bei ${pct(vr)} MwSt)</div>
       ${val>0&&p>val*0.5?'<div class="p" style="color:var(--orange)">Die Lieferung kostet mehr als die Hälfte vom Warenwert. Besser einen Pauschalpreis absprechen.</div>':''}`;

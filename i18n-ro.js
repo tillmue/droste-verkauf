@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Die Adresse wurde nur ungefähr gefunden. Bitte mit Postleitzahl und Ort eingeben.": "Adresa a fost găsită doar aproximativ. Introdu-o cu cod poștal și localitate.",
 "Die Lieferung kostet mehr als die Hälfte vom Warenwert. Besser einen Pauschalpreis absprechen.": "Livrarea costă mai mult de jumătate din valoarea mărfii. Mai bine stabiliți un preț forfetar.",
 "Lieferpreis": "Preț livrare",
 "Gemeinde Belm, pauschal": "Comuna Belm, forfetar",
@@ -1194,6 +1195,7 @@ window.RO_PATTERNS=[
  [/^(\d+) offen oder unterwegs$/,(m,n)=>`${n} deschise sau pe drum`],
  [/^Lieferungen \((\d+)\)$/,(m,n)=>`Livrări (${n})`],
  [/^(.+) \(Partner\)$/,(m,n)=>`${n} (partener)`],
+ [/^Gefunden: (.+)$/,(m,x)=>`Găsit: ${x}`],
  [/^Netto (.+) \(bei (.+) MwSt\)$/,(m,a,b)=>`Net ${a} (la ${b} TVA)`],
  [/^(\d+(?:,\d+)?) km( · ca\. (\d+) Min)?$/,(m,a,x,b)=>`${a} km${b?" · aprox. "+b+" min":""}`],
  [/^Staffel \(Preis inkl\. MwSt\): (.+)$/,(m,x)=>`Tarif (preț cu TVA inclus): ${x}`],

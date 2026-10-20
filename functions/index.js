@@ -283,16 +283,24 @@ exports.driveKm = onCall(async req => {
   }
   const k = await db.doc('secrets/maps').get();
   if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Der Routing-Schlüssel ist noch nicht hinterlegt (Daten, Einstellungen).');
+  // Adresse erst eindeutig machen (Suche bevorzugt die Gegend um den Hof), damit "Im Gattberg 1" nicht irgendwo in Deutschland landet
+  const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
+  if (gr.status === 'REQUEST_DENIED') throw new HttpsError('failed-precondition', 'Geocoding API nicht erlaubt: ' + (gr.error_message || ''));
+  const g0 = gr.results && gr.results[0];
+  if (!g0) throw new HttpsError('not-found', 'Adresse nicht gefunden');
+  const comp = t => ((g0.address_components || []).find(c => c.types.includes(t)) || {}).long_name || '';
+  const plz = comp('postal_code'), ort = comp('locality'), partial = !!g0.partial_match;
+  const dest = { location: { latLng: { latitude: g0.geometry.location.lat, longitude: g0.geometry.location.lng } } };
   const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration' },
-    body: JSON.stringify({ origin: { address: origin }, destination: { address }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', computeAlternativeRoutes: true, languageCode: 'de-DE', regionCode: 'DE' })
+    body: JSON.stringify({ origin: { address: origin }, destination: dest, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', computeAlternativeRoutes: true, languageCode: 'de-DE', regionCode: 'DE' })
   });
   const j = await res.json();
   if (!res.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', (j.error && j.error.message) || 'Keine Route gefunden');
   // kürzeste der angebotenen Routen (nach Strecke, nicht nach Zeit)
   const best = j.routes.filter(r => r.distanceMeters).sort((a, b) => a.distanceMeters - b.distanceMeters)[0] || j.routes[0];
-  return { km: Math.round((best.distanceMeters || 0) / 100) / 10, min: Math.round((parseInt(String(best.duration || '0s').replace('s', ''), 10) || 0) / 60) };
+  return { km: Math.round((best.distanceMeters || 0) / 100) / 10, min: Math.round((parseInt(String(best.duration || '0s').replace('s', ''), 10) || 0) / 60), addr: g0.formatted_address, plz, ort, belm: plz === '49191', partial };
 });
 
 /* Fragen zur App: Nachricht an den Admin */
