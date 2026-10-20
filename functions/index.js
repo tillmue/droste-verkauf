@@ -119,10 +119,22 @@ async function repObjName(r) {
   const d = await db.collection('stands').doc(r.obj).get();
   return d.exists ? d.data().name : r.obj;
 }
+async function canDoAll(key) {
+  const cfgDoc = await db.doc('settings/roles').get(), cfg = cfgDoc.exists ? cfgDoc.data() : {};
+  return u => {
+    if (u.role === 'admin') return true;
+    const ov = u.perms || {};
+    if (ov[key] !== undefined) return !!ov[key];
+    const rc = cfg[u.role];
+    if (rc && rc[key] !== undefined) return !!rc[key];
+    return u.role === 'chef';
+  };
+}
 exports.reportCreated = onDocumentCreated('reports/{id}', async event => {
   const r = event.data.data();
   const obj = await repObjName(r);
-  const users = (await approvedUsers()).filter(u => ['admin', 'chef'].includes(u.role) && u.id !== r.byUid);
+  const can = await canDoAll('reportsAll');
+  const users = (await approvedUsers()).filter(u => can(u) && u.id !== r.byUid);
   for (const u of users) {
     const li = u.lang === 'ro' ? 1 : 0;
     await pushTo(u, lang => T.report[lang](!!r.urgent, RCAT[r.cat] ? RCAT[r.cat][lang === 'ro' ? 1 : 0] : r.cat, obj, r.text || ''));

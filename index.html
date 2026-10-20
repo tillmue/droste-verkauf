@@ -52,6 +52,7 @@ body.run header,body.run #nav{display:none}
 .timer{font-size:54px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-1px;margin:6px 0}
 .hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px;margin-top:14px}.htile{display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;color:var(--text);font:inherit;font-size:13px;font-weight:600}.hic{position:relative;width:72px;height:72px;border-radius:18px;background:var(--fill);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:36px}.hbd{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;border-radius:11px;background:var(--red);color:#fff;font-style:normal;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
 .vrow{display:flex;gap:8px;align-items:center;margin:8px 0}.vrow label,.vrow .vl{width:64px;text-align:right;color:var(--mut);flex:none}.vrow input{flex:1;min-width:0;text-align:right;font-size:20px}.vrow input.small{flex:none;width:70px}.vrow span{flex:none}
+.rm{width:100%;border-collapse:collapse;font-size:13px}.rm th{padding:4px 2px;color:var(--mut);font-size:12px}.rm td{padding:5px 2px;border-top:1px solid var(--line);text-align:center}.rm td:first-child{text-align:left;padding-right:6px}.rm td.rg{background:var(--fill);font-weight:700;color:var(--link);text-align:left;font-size:12px}.rm input{width:20px;height:20px}
 .btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
 .btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
@@ -228,7 +229,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-19 h';
+const APP_VERSION='2026-10-20 a';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -268,7 +269,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -422,9 +423,8 @@ function render(){
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
-  const sch=roleOf(S.me)==='schonung';
-  const items=sch?[['ich','👤','Übersicht'],['plan','◫','Plan'],['feld','🌲','Feld']]:[['ich','👤','Übersicht'],['plan','◫','Plan'],['staende','⌂','Stände'],has('lieferungen')?['lieferungen','🚚','Logistik']:null,has('feld')?['feld','🌲','Feld']:null,['preise','€','Preise']].filter(Boolean);
-  if(sch&&(tab==='staende'||tab==='lieferungen'||tab==='preise'||tab==='erfassen'||tab==='zahlen'))tab='plan';
+  const items=[['ich','👤','Übersicht'],['plan','◫','Plan'],has('staende')?['staende','⌂','Stände']:null,has('lieferungen')?['lieferungen','🚚','Logistik']:null,has('feld')?['feld','🌲','Feld']:null,has('preise')?['preise','€','Preise']:null].filter(Boolean);
+  {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   if(homeMode()){
     if(tab==='home'){nav.style.display='none';$('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();$('#hstat').textContent=headerStat();vHome(items,oc);return}
@@ -612,13 +612,24 @@ const realRole=n=>(S.roles&&S.roles[n])||'team';
 let asRole='admin';try{asRole=localStorage.getItem('droste-asrole')||'admin'}catch(e){}
 const roleOf=n=>{const r=realRole(n);return(r==='demo'&&n===S.me)?(ASROLES.includes(asRole)?asRole:'admin'):r};
 const isAdmin=()=>roleOf(S.me)==='admin';
-const canCal=()=>isAdmin()||roleOf(S.me)==='chef';
-const seeAllTasks=()=>isAdmin()||roleOf(S.me)==='chef';
-const PERMS=[['verkauf','Verkauf eintragen'],['zahlen','Zahlen ansehen'],['lieferungen','Lieferungen ansehen'],['lieferplanung','Touren planen'],['einkauf','Einkaufsliste'],['archiv','Archiv'],['instagram','Instagram-Kalender'],['feld','Feld: Netzen und Abfahren']];
-const PRESET={demo:'*',admin:'*',chef:'*',verkauf:['verkauf','zahlen','instagram'],team:['instagram'],schonung:['feld'],fahrer:['lieferungen','instagram']};
-function presetFor(role){const q=PRESET[role]||[],o={};PERMS.forEach(([k])=>{o[k]=q==='*'||q.includes(k)});return o}
-const permsOf=n=>(realRole(n)==='demo'&&n===S.me)?presetFor(roleOf(n)):((S.perms&&S.perms[n])||presetFor(roleOf(n)));
+const RIGHTS=[
+  ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Feld','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
+  ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
+  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],
+  ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],
+  ['calEdit','Saison- und Instagram-Kalender bearbeiten','Bearbeiten'],['lieferplanung','Touren planen','Bearbeiten']];
+const PERMS=RIGHTS.map(r=>[r[0],r[1]]);
+const ROLECOLS=[['chef','Ch'],['verkauf','Ve'],['team','Te'],['schonung','Sc'],['fahrer','Fa']];
+const DEF_ROLECFG=(()=>{const all={};RIGHTS.forEach(r=>all[r[0]]=true);const pick=l=>{const o={};RIGHTS.forEach(r=>o[r[0]]=l.includes(r[0]));return o};
+  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),schonung:pick(['feld']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender'])}})();
+function presetFor(role){
+  const o={};if(role==='admin'||role==='demo'){RIGHTS.forEach(r=>o[r[0]]=true);return o}
+  const rc={...(DEF_ROLECFG[role]||{}),...(((S&&S.rolesCfg)||{})[role]||{})};RIGHTS.forEach(r=>o[r[0]]=!!rc[r[0]]);return o}
+const permsOf=n=>{const r=roleOf(n),base=presetFor(r),ov=(realRole(n)==='demo'&&n===S.me)?{}:((S.perms&&S.perms[n])||{}),o={};
+  RIGHTS.forEach(([k])=>{o[k]=r==='admin'?true:(ov[k]!==undefined?!!ov[k]:!!base[k])});return o};
 const has=k=>isAdmin()||!!permsOf(S.me)[k];
+const canCal=()=>has('calEdit');
+const seeAllTasks=()=>has('tasksAll');
 const canSales=()=>has('verkauf')||has('zahlen');
 const meSelect=()=>`<select class="t" data-meselect="1">${S.people.map(n=>`<option ${n===S.me?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
 function whoScreen(){
@@ -924,7 +935,7 @@ const RCAT=[['fahrzeug','Fahrzeug'],['maschine','Maschine'],['hof','Hof'],['stan
 const DEF_MACH='Traktor NewHolland\nNetzmaschine\nHubwagen';
 const machinesList=()=>((S.hofInfo&&S.hofInfo.machines)||DEF_MACH).split('\n').map(x=>x.trim()).filter(Boolean);
 const RST={neu:'Neu',arbeit:'In Arbeit',erledigt:'Erledigt'};
-const seeAllReports=()=>isAdmin()||roleOf(S.me)==='chef';
+const seeAllReports=()=>has('reportsAll');
 const catName=k=>(RCAT.find(c=>c[0]===k)||[0,k])[1];
 const repObj=r=>r.cat==='stand'?standNm(r.obj):(r.obj||'');
 const myStand=()=>{const t=S.tasks.find(x=>!x.deleted&&x.person===S.me&&x.stand&&x.date===todayStr());return t?t.stand:''};
@@ -1044,8 +1055,9 @@ function eventForm(){
     ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}${f.id&&f.series?'<button class="btn red" data-pl="edelser">Ganze Serie ins Archiv</button>':''}</div>`;
 }
 function vPlan(){
-  if(roleOf(S.me)==='schonung')cur.ptab='aufg';
-  const seg=roleOf(S.me)==='schonung'?'':`<div class="seg">${[['aufg','Aufgaben'],['kal','Kalender'],['meld','Meldungen'+(openReports().length&&seeAllReports()?' ('+openReports().length+')':'')],has('einkauf')?['einkauf','Einkauf']:null].filter(Boolean).map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'+(openReports().length&&seeAllReports()?' ('+openReports().length+')':'')],has('einkauf')?['einkauf','Einkauf']:null].filter(Boolean);
+  if(!ptabs.some(x=>x[0]===cur.ptab))cur.ptab='aufg';
+  const seg=`<div class="seg">${ptabs.map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
   const np=isAdmin()?pendingNames().length:0;
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
   $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
@@ -1236,6 +1248,7 @@ document.addEventListener('click',ev=>{
   if(a==='dtask'){tab='plan';cur.ptab='aufg';cur.tf=newTf(todayStr());cur.tf.person=S.me;cur.tfOpen=true;cur.rOpen=false;window.scrollTo(0,0);return render()}
   if(a==='drep'){tab='plan';cur.ptab='aufg';cur.rOpen=true;cur.rf=newRf();cur.rfile=null;cur.tfOpen=false;window.scrollTo(0,0);return render()}
   if(a==='rankv'){cur.rankv=v;return render()}
+  if(a==='rcreset'){if(confirm('Alle Rollen auf den Standard zurücksetzen?')){S.rolesCfg=JSON.parse(JSON.stringify(DEF_ROLECFG));save();render()}return}
   if(a==='gotab'){tab=v;cur.zst=false;window.scrollTo(0,0);return render()}
   if(a==='prtab'){cur.prtab=v;return render()}
   if(a==='cart'){const [k,id,d]=v.split('|'),c=k==='H'?cur.cartH:cur.cartP;c[id]=Math.max(0,(c[id]||0)+(+d));if(!c[id])delete c[id];return render()}
@@ -1626,7 +1639,7 @@ function stopForm(){
 }
 function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
-  const fahrer=roleOf(S.me)==='fahrer';
+  const fahrer=!has('toursAll')&&!has('lieferplanung');
   const kind=fahrer?'lief':['lief','abh','ges'].includes(cur.lkind)?cur.lkind:'lief',view=['monat','woche','tag','liste'].includes(cur.lview)?cur.lview:'monat';
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
@@ -1853,9 +1866,18 @@ function importCal(txt){
 }
 function permBlock(p,i){
   if(roleOf(p)==='admin')return '<div class="hint" style="margin:-4px 0 10px 4px">Admin hat alle Rechte.</div>';
-  const pm=permsOf(p),key='perm-'+i;
-  return `<details data-det="${key}" ${cur.det[key]?'open':''} style="border-top:0;margin:-4px 0 8px"><summary style="padding:6px 4px;font-weight:500;color:var(--link);font-size:14px">Rechte von ${esc(p)}</summary>
-    ${PERMS.map(([k,l])=>`<label class="pk"><input type="checkbox" data-perm="${i}|${k}" ${pm[k]?'checked':''}> ${l}</label>`).join('')}</details>`;
+  const pm=permsOf(p),base=presetFor(roleOf(p)),ov=(S.perms&&S.perms[p])||{},key='perm-'+i;
+  return `<details data-det="${key}" ${cur.det[key]?'open':''} style="border-top:0;margin:-4px 0 8px"><summary style="padding:6px 4px;font-weight:500;color:var(--link);font-size:14px">Rechte von ${esc(p)}${Object.keys(ov).length?' (angepasst)':''}</summary>
+    ${PERMS.map(([k,l])=>`<label class="pk"><input type="checkbox" data-perm="${i}|${k}" ${pm[k]?'checked':''}> ${l}${ov[k]!==undefined&&ov[k]!==base[k]?' <small style="color:var(--orange)">(Ausnahme)</small>':''}</label>`).join('')}</details>`;
+}
+function rightsMatrix(){
+  if(!isAdmin())return '';
+  const groups=[...new Set(RIGHTS.map(r=>r[2]))];
+  return `<h2>Berechtigungen</h2><div class="card pad"><div class="hint" style="margin-top:0">Haken setzen, was eine Rolle sehen oder tun darf. Admin darf immer alles. Ausnahmen für einzelne Personen setzt du oben im Team unter „Rechte von …“. Gilt sofort, auch in der Datenbank.</div>
+    <table class="rm"><thead><tr><th></th>${ROLECOLS.map(([k,l])=>`<th title="${ROLE[k]}">${l}</th>`).join('')}</tr></thead><tbody>
+    ${groups.map(g=>`<tr><td colspan="${ROLECOLS.length+1}" class="rg">${g}</td></tr>${RIGHTS.filter(r=>r[2]===g).map(([k,l])=>`<tr><td>${l}</td>${ROLECOLS.map(([rk])=>`<td><input type="checkbox" data-rc="${rk}|${k}" ${presetFor(rk)[k]?'checked':''}></td>`).join('')}</tr>`).join('')}`).join('')}
+    </tbody></table><div class="hint">Ch Chef · Ve Verkauf · Te Team · Sc Schonung · Fa Fahrer</div>
+    <button class="btn sec" data-pl="rcreset" style="margin:6px 0 0">Alle Rollen auf Standard zurücksetzen</button></div>`;
 }
 function vDaten(){
   if(!isAdmin())return vProfil();
@@ -1864,9 +1886,10 @@ function vDaten(){
   ${questionsBlock()}
   ${freigaben()}
   <h2>Team</h2>
-  <div class="card pad"><div class="hint">Rollen: Admin sieht alles. Chef sieht alles außer Verwaltung. Verkauf sieht Verkauf und Zahlen. Team ist die Standardrolle. Schonung sieht nur Feld und eigene Aufgaben. Fahrer sieht und fährt seine Touren.</div>
+  <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
   ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
+  ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
   <div class="card pad"><div class="hint">Datei einspielen (z. B. Instagram-Plan oder Packlisten der Stände). Schon vorhandene Einträge werden übersprungen.</div>
   <button class="btn sec" id="bImpEv">Importdatei wählen …</button>
@@ -2012,9 +2035,11 @@ document.addEventListener('change',ev=>{
   if(t.dataset.role!=null){
     const n=S.people[+t.dataset.role];
     if(CLOUD){window.cloud.setRole(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
-    S.roles[n]=t.value;S.perms=S.perms||{};S.perms[n]=presetFor(t.value);save();render()}
+    S.roles[n]=t.value;S.perms=S.perms||{};S.perms[n]={};save();render()}
+  if(t.dataset.rc){const [rk,k]=t.dataset.rc.split('|');S.rolesCfg=S.rolesCfg||{};S.rolesCfg[rk]={...presetFor(rk),[k]:t.checked};save();render();return}
   if(t.dataset.perm!=null){
-    const [pi,pk]=t.dataset.perm.split('|'),n=S.people[+pi],np={...permsOf(n),[pk]:t.checked};
+    const [pi,pk]=t.dataset.perm.split('|'),n=S.people[+pi],base=presetFor(roleOf(n)),np={...((S.perms&&S.perms[n])||{})};
+    if(t.checked===!!base[pk])delete np[pk];else np[pk]=t.checked;
     if(CLOUD){window.cloud.setPerms(n,np).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));return}
     S.perms=S.perms||{};S.perms[n]=np;save();render();
   }
@@ -2042,9 +2067,9 @@ let needR=false;
 const editing=()=>{const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$('#app').contains(a))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
 document.addEventListener('focusout',()=>{if(needR)setTimeout(()=>{if(!editing()){needR=false;render()}},250)});
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}hofbarUpdate(true);Object.assign(S,{rolesCfg:{},feld:[],tours:[],reports:[],questions:[],stats:{},perms:{},packs:[],shopping:[],hofInfo:{address:''},tasks:[],events:[],notes:[],penalties:[],emailVerified:{},moves:[],entries:{},products:[],stands:[],people:[],roles:{},approved:{},userIds:{},me:'',myUid:''})}
 function backupLocal(){try{const raw=localStorage.getItem(KEY);if(raw&&!localStorage.getItem(KEY+'-lokal'))localStorage.setItem(KEY+'-lokal',raw)}catch(e){}}
-const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>pr.role==='admin'||!!((pr.perms||presetFor(pr.role))[k]),ready:false,status:'',setCloud(c){cur.cloud=c}};
+const APP={rollTasks,get S(){return S},set S(v){S=v},cur,render:()=>render(),softRender,updateHeader,toast,wipe,backupLocal,defaults:DEFAULT,presetFor,permFor:(pr,k)=>{const r=pr.role;if(r==='admin'||r==='demo')return true;const ov=pr.perms||{};return ov[k]!==undefined?!!ov[k]:!!presetFor(r)[k]},ready:false,status:'',setCloud(c){cur.cloud=c}};
 window.APP=APP;
 
 document.addEventListener('click',async ev=>{

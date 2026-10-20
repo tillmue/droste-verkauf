@@ -10,7 +10,10 @@ service cloud.firestore {
     function isAdmin() { return isMember() && role() == 'admin'; }
     // Rechte pro Person (users/{uid}.perms). Ohne Eintrag gelten Voreinstellungen je Rolle.
     function perms() { return get(userDoc(request.auth.uid)).data.get('perms', {}); }
-    function dflt(k) { return role() == 'chef' || role() == 'demo' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || (role() == 'schonung' && k == 'feld') || (role() == 'fahrer' && k == 'lieferungen') || (role() != 'schonung' && k == 'instagram'); }
+    // Rechte je Rolle stehen in settings/roles (Admin stellt sie in der App um); fehlt das Dokument, gelten die alten Voreinstellungen
+    function rolesDoc() { return /databases/$(database)/documents/settings/roles; }
+    function legacyDflt(k) { return role() == 'chef' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || (role() == 'schonung' && k == 'feld') || (role() == 'fahrer' && k == 'lieferungen') || (role() != 'schonung' && k == 'instagram'); }
+    function dflt(k) { return role() == 'demo' || (exists(rolesDoc()) ? get(rolesDoc()).data.get(role(), {}).get(k, legacyDflt(k)) == true : legacyDflt(k)); }
     function myName() { return get(userDoc(request.auth.uid)).data.name; }
     function perm(k) { return isMember() && (role() == 'admin' || perms().get(k, dflt(k)) == true); }
     function myEmail() { return request.auth.token.email.lower(); }
@@ -48,7 +51,7 @@ service cloud.firestore {
 
     // Aufgaben und Termine
     match /tasks/{id} {
-      allow read: if isMember() && (role() == 'admin' || role() == 'chef' || role() == 'demo' || resource.data.person == '' || resource.data.person == myName());
+      allow read: if isMember() && (perm('tasksAll') || resource.data.person == '' || resource.data.person == myName());
       allow create: if isMember();
       allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen, abhaken oder ins Archiv schieben
       // kein echtes Loeschen, nur Archiv (Feld deleted); Ausnahme: Admin darf Beispieldaten (demo) entfernen
@@ -59,7 +62,7 @@ service cloud.firestore {
     // Schreiben nur Chef und Admin (Saison und Instagram), alle Mitglieder lesen
     match /events/{id} {
       allow read: if isMember();
-      allow create, update: if isMember() && (role() == 'admin' || role() == 'chef' || role() == 'demo');
+      allow create, update: if perm('calEdit');
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
     }
 
@@ -74,7 +77,7 @@ service cloud.firestore {
     // Touren (Lieferungen): ansehen mit Recht "lieferungen", planen mit "lieferplanung";
     // wer nur ansehen darf, darf Stopps abhaken (nur das Feld stops ändern)
     match /tours/{id} {
-      allow read: if perm('lieferungen') || perm('lieferplanung');
+      allow read: if (perm('lieferungen') || perm('lieferplanung')) && (perm('toursAll') || perm('lieferplanung') || resource.data.get('driver', '') == myName() || resource.data.get('codriver', '') == myName());
       allow create: if perm('lieferplanung');
       allow update: if perm('lieferplanung') || (perm('lieferungen') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stops', 'loaded', 'status', 'startedAt', 'startedBy', 'finishedAt']));
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
@@ -85,9 +88,9 @@ service cloud.firestore {
 
     // Meldungen (Fahrzeug, Maschine, Hof, Stand): jeder meldet, Admin und Chef sehen alle und bearbeiten, Melder sieht eigene
     match /reports/{id} {
-      allow read: if isMember() && (role() == 'admin' || role() == 'chef' || role() == 'demo' || resource.data.byUid == request.auth.uid);
+      allow read: if isMember() && (perm('reportsAll') || resource.data.byUid == request.auth.uid);
       allow create: if isMember() && request.resource.data.byUid == request.auth.uid;
-      allow update: if isMember() && (role() == 'admin' || role() == 'chef' || role() == 'demo');
+      allow update: if perm('reportsAll');
       allow delete: if false;
     }
 

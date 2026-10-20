@@ -36,8 +36,12 @@ function initCloud(FB) {
     tasks:    { get: () => T.S.tasks.map(x => [x.id, x]),  put: m => { T.S.tasks = Object.values(m); }, del: true },
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
-    settings: { get: () => { const h = T.S.hofInfo || {}; return (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || h.machines || h.vat || (h.schonungen && Object.keys(h.schonungen).length)) ? [['hof', h]] : []; },
-                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', schonungen: h.schonungen || {} }; }, del: true },
+    settings: { get: () => { const h = T.S.hofInfo || {}, out = [];
+                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || h.machines || h.vat || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
+                  if (T.S.rolesCfg && Object.keys(T.S.rolesCfg).length) out.push(['roles', T.S.rolesCfg]);
+                  return out; },
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', schonungen: h.schonungen || {} };
+                            const rc = m.roles || {}; const changed = JSON.stringify(rc) !== JSON.stringify(T.S.rolesCfg || {}); T.S.rolesCfg = rc; if (changed && T.rolesChanged) setTimeout(() => T.rolesChanged(), 0); }, del: true },
     packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
     feld:     { get: () => T.S.feld.map(x => [x.id, x]), put: m => { T.S.feld = Object.values(m); }, del: false, maps: ['bal'] },
     tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops', 'loaded'] },
@@ -134,9 +138,11 @@ function initCloud(FB) {
     let qs = [base];
     if (name === 'notes' && profile.role !== 'admin') qs = [FB.query(base, FB.where('ownerUid', '==', uid))];
     if (name === 'questions' && !['admin', 'demo'].includes(profile.role)) qs = [FB.query(base, FB.where('byUid', '==', uid))];
-    if (name === 'reports' && !['admin', 'chef', 'demo'].includes(profile.role)) qs = [FB.query(base, FB.where('byUid', '==', uid))];
+    if (name === 'tours' && !T.permFor(profile, 'toursAll') && !T.permFor(profile, 'lieferplanung'))
+      qs = [FB.query(base, FB.where('driver', '==', profile.name)), FB.query(base, FB.where('codriver', '==', profile.name))];
+    if (name === 'reports' && !T.permFor(profile, 'reportsAll')) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
-    if (name === 'tasks' && !['admin', 'chef', 'demo'].includes(profile.role))
+    if (name === 'tasks' && !T.permFor(profile, 'tasksAll'))
       qs = [FB.query(base, FB.where('person', '==', profile.name)), FB.query(base, FB.where('person', '==', ''))];
     const parts = qs.map(() => null);
     qs.forEach((q, qi) => unsubs.push(FB.onSnapshot(q, snap => {
@@ -166,7 +172,7 @@ function initCloud(FB) {
   }
 
   function activate(p, id) {
-    const key = id + ':' + p.role + ':' + JSON.stringify(p.perms || null);
+    const key = id + ':' + p.role + ':' + JSON.stringify(p.perms || null) + ':' + JSON.stringify(T.S.rolesCfg || {});
     if (activeKey === key) return;
     deactivate(); activeKey = key;
     T.backupLocal();
@@ -248,6 +254,7 @@ function initCloud(FB) {
     watchProfile(user);
   }, err => { T.setCloud({ status: 'error', msg: 'Anmeldung nicht möglich (' + (err.code || err.message) + ')' }); T.render(); });
 
+  T.rolesChanged = () => { if (profile && profile.approved === true) activate(profile, uid); };
   window.cloud = {
     sync, resume,
     signIn: (email, pw) => FB.signInWithEmailAndPassword(auth, email.trim(), pw),
@@ -284,7 +291,7 @@ function initCloud(FB) {
       T.render();
     },
     signOut: () => FB.signOut(auth),
-    setRole: (name, role) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { role, perms: T.presetFor(role) }),
+    setRole: (name, role) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { role, perms: {} }),
     setPerms: (name, perms) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { perms }),
     approve: name => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { approved: true }),
     remove: name => FB.deleteDoc(FB.doc(db, 'users', T.S.userIds[name])),
