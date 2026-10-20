@@ -300,7 +300,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 X';
+const APP_VERSION='2026-10-21 Y';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -369,7 +369,7 @@ normalizeS();
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 
 let tab='ich', cur={pen:{person:'',reason:''},det:{},zst:false,stand:null,date:todayStr(),xp:null,parsed:null,qtext:'',ptab:'aufg',cal:todayStr().slice(0,7),cday:todayStr(),pf:'',tfOpen:false,ntext:'',tf:null};
-try{const c=JSON.parse(localStorage.getItem(KEY+'-ui'));if(c&&S.stands.some(s=>s.id===c.stand))cur.stand=c.stand}catch(e){}
+try{const c=JSON.parse(localStorage.getItem(KEY+'-ui'));if(c&&(S.stands.some(s=>s.id===c.stand)||String(c.stand).startsWith('p:')))cur.stand=c.stand}catch(e){}
 if(!cur.stand)cur.stand=S.stands[0].id;
 const keyOf=(st,d)=>st+'|'+d;
 const prod=id=>S.products.find(p=>p.id===id);
@@ -401,7 +401,7 @@ function stats(sids){
   const R={verk:0,umsatz:0,pcost:0,lief:0,ret:0,fee:0,staff:0,setup:0,freight:0,byDay:{},byProd:{},byWd:[0,0,0,0,0,0,0],ist:null,istDate:'',dayMoves:{}};
   const dset=new Set();
   sids.forEach(sid=>{
-    const st=S.stands.find(s=>s.id===sid)||{};
+    const st=S.stands.find(s=>s.id===sid)||{};const pName=String(sid).startsWith('p:')?String(sid).slice(2):'';
     ['fee','staff','setup','freight'].forEach(k=>R[k]+=(+st[k]||0));
     let latest='';
     Object.keys(S.entries).forEach(k=>{
@@ -416,7 +416,7 @@ function stats(sids){
     S.moves.forEach(m=>{if(m.stand!==sid)return;
       const o=R.dayMoves[m.date]||(R.dayMoves[m.date]={l:0,r:0});
       if(m.type==='L'){R.lief+=m.qty;o.l+=m.qty}else{R.ret+=m.qty;o.r+=m.qty}dset.add(m.date)});
-    if(st.id)delivEntries({id:sid,n:st.name}).forEach(d=>{const o=R.dayMoves[d.date]||(R.dayMoves[d.date]={l:0,r:0});R.lief+=d.n;o.l+=d.n;dset.add(d.date);R.autoLief=(R.autoLief||0)+d.n});
+    if(st.id||pName)delivEntries(pName?{n:pName}:{id:sid,n:st.name}).forEach(d=>{const o=R.dayMoves[d.date]||(R.dayMoves[d.date]={l:0,r:0});R.lief+=d.n;o.l+=d.n;dset.add(d.date);R.autoLief=(R.autoLief||0)+d.n});
   });
   if(R.istSid){const v=Object.values(R.istSid);R.ist=v.reduce((a,x)=>a+x.v,0);R.istAll=v.length===sids.length}
   R.fixed=R.fee+R.staff+R.setup+R.freight;
@@ -475,7 +475,7 @@ function backupWarn(){
   return '';
 }
 function standPick(kind){
-  const label=kind==='p'?(standNm(cur.pstand)||'Stand wählen'):((S.stands.find(s=>s.id===cur.stand)||{}).name||'Stand wählen');
+  const label=kind==='p'?(standNm(cur.pstand)||'Stand wählen'):(standNm(cur.stand)||'Stand wählen');
   return `<button class="standpick" data-pl="sselopen" data-v="${kind}"><span><small>Stand</small><b>${esc(label)}</b></span><i>Wechseln ›</i></button>`;
 }
 function standSel(){
@@ -483,7 +483,7 @@ function standSel(){
   const tile=(id,name,sub)=>`<button class="stile ${id===sel?'on':''}" data-pl="sselpick" data-v="${esc(id)}"><b>${esc(name)}</b>${sub?`<small>${sub}</small>`:''}</button>`;
   return `<div class="n" style="font-size:21px;margin:0 0 12px">Stand wählen</div>${k==='z'?`<button class="btn sec" data-pl="sselpick" data-v="@all" style="margin:0 0 12px">Alle Stände (Gesamt)</button>`:''}
     <div class="sgrid">${S.stands.map(x=>tile(x.id,x.name,x.address?esc(String(x.address).split(',')[0]):'')).join('')}</div>
-    ${k==='p'&&pn.length?`<h3>Partnerstände</h3><div class="sgrid">${pn.map(x=>tile('p:'+x.n,x.n,'')).join('')}</div>`:''}
+    ${k==='v'&&pn.length?`<h3>Partnerstände</h3><div class="sgrid">${pn.map(x=>tile('p:'+x.n,x.n,'')).join('')}</div>`:''}
     <button class="btn sec" data-pl="sselclose" style="margin:14px 0 0">Schließen</button>`;
 }
 const standChips=()=>standPick('v');
@@ -566,8 +566,8 @@ function vErfassen(){
     <div class="mini"><button class="btn green" id="qApply">Übernehmen</button><button class="btn no" id="qCancel">Verwerfen</button></div>`:'';
   const dt=(k,title,body)=>`<section class="blk"><details data-det="${k}" ${cur.det[k]?'open':''}><summary>${title}</summary>${body}</details></section>`;
   if(!isAdmin()){
-    $('#app').innerHTML=`${backupWarn()}${standChips()}${nowBlock(cur.stand)}${blk('Strichliste',`<div class="p" style="padding:2px 0 12px">Tagsüber auf Papier mit der Strichliste zählen. Abends hier ein Foto davon abschicken, die Zahlen werden dann eingetragen.</div><button class="btn" data-pl="dstrich" style="margin-bottom:6px">Strichliste abschicken</button>`,{tone:'g'})}${delivBlock({id:cur.stand,n:(S.stands.find(s=>s.id===cur.stand)||{}).name||''})}`;return}
-  $('#app').innerHTML=`${backupWarn()}${standChips()}${nowBlock(cur.stand)}
+    $('#app').innerHTML=`${backupWarn()}${standChips()}${nowBlock(cur.stand)}${blk('Strichliste',`<div class="p" style="padding:2px 0 12px">Tagsüber auf Papier mit der Strichliste zählen. Abends hier ein Foto davon abschicken, die Zahlen werden dann eingetragen.</div><button class="btn" data-pl="dstrich" style="margin-bottom:6px">Strichliste abschicken</button>`,{tone:'g'})}${delivBlock(delivKey(cur.stand))}`;return}
+  $('#app').innerHTML=`${backupWarn()}${standChips()}${nowBlock(cur.stand)}${delivBlock(delivKey(cur.stand))}
   <div class="datebar"><button data-d="-1">‹</button><input type="date" id="date" value="${cur.date}"><button data-d="1">›</button></div>
   ${blk('Heute',`<div class="big" style="margin:0 0 6px"><b>${qtyOf(e)}</b><em>Stück</em><span>${eur(revOf(e))}</span></div>`,{tone:'g'})}
   ${blk('Liste eintippen oder diktieren',`<textarea class="t" id="qtext" rows="3" placeholder="10 blau 3 gelb 5 holzscheibe 4 bunde nobilis 4 41€ 3 25€">${esc(cur.qtext)}</textarea>
@@ -1111,7 +1111,7 @@ function rollTasks(){
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'))){rollTasks()}});
 function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
-function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|'),e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
+function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|');if(String(sid).startsWith('p:'))return;const e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
 function askConfirm(msg,ok,cb,no){
   const d=document.createElement('div');d.className='cheers';
   d.innerHTML=`<div><p>${esc(msg)}</p><button class="btn green" data-ok="1" style="padding:18px">${esc(ok)}</button><div style="height:26px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
@@ -1809,6 +1809,7 @@ function prodChart(a){
   return hbars(rows,v=>v+' Stk.');
 }
 function vStand(){
+  if(!S.stands.some(s=>s.id===cur.stand))cur.stand=S.stands[0].id;
   const a=stats(cur.stand),st=S.stands.find(s=>s.id===cur.stand);
   const days=a.dates.filter(d=>a.byDay[d]);
   $('#app').innerHTML=`${backupWarn()}${standPick('z')}
@@ -1874,7 +1875,7 @@ const standSeg=()=>{
 };
 function vStaende(){
   const pnames=partnersList(),isPn=v=>typeof v==='string'&&v.startsWith('p:')&&pnames.some(p=>'p:'+p.n===v);
-  const sid=(cur.pstand&&(S.stands.some(x=>x.id===cur.pstand)||isPn(cur.pstand)))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
+  const sid=(cur.pstand&&S.stands.some(x=>x.id===cur.pstand))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
   const mode=['p','a','z'].includes(cur.pmode)?cur.pmode:'p',pk=S.packs.find(x=>x.id===sid);
   const chips=standPick('p');
   if(isPn(sid)){const pn=pnames.find(x=>'p:'+x.n===sid),dl=deliveredFor({n:pn.n});
@@ -2376,6 +2377,7 @@ function deliveredFor(key){
   S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(t=>tourStops(t).forEach(s=>{if(s.orderId)return;if(!((key.id&&s.standId===key.id)||partnerMatch({n:key.n},s.name)))return;if(!s.done)plan+=treesOfStop(s)}));
   return {del,plan};
 }
+const delivKey=sid=>String(sid||'').startsWith('p:')?{n:String(sid).slice(2)}:{id:sid,n:standNm(sid)};
 function delivBlock(key){
   const L=delivEntries(key),tot=L.reduce((a,x)=>a+x.n,0);
   return blk('Lieferungen',L.length?L.map(d=>`<div class="row"><div style="min-width:0"><div class="n">${wdD(d.date)}${d.at?' · '+new Date(d.at).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):''}</div><div class="p">${d.what?esc(d.what):''}${d.by?(d.what?' · ':'')+'von '+esc(d.by):''}</div></div><b>${d.n} Stk.</b></div>`).join(''):'<div class="row"><span class="p">Noch nichts geliefert.</span></div>',{pill:pill(tot+' Stk.',tot?'g':'')});
@@ -2931,7 +2933,7 @@ function csv(){
   const L=['Datum;Stand;Typ;Produkt;Anzahl;Preis;Umsatz;Ist-Bestand;Notiz'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""').replace(/\n/g,' ')+'"';
   const nf=n=>String(n).replace('.',',');
-  const sn=sid=>{const s=S.stands.find(x=>x.id===sid);return q(s?s.name:sid)};
+  const sn=sid=>{const s=S.stands.find(x=>x.id===sid);return q(s?s.name:standNm(sid)||sid)};
   Object.keys(S.entries).sort().forEach(k=>{
     const [sid,d]=k.split('|'),e=entry(sid,d);let first=true;
     const tail=()=>{const r=first?[e.rest,q(e.note)]:['',''];first=false;return r};
