@@ -246,9 +246,17 @@ nav button.on{background:var(--green);color:#fff}
 .blk.t-r{border-color:var(--red)}
 .pill{display:inline-block;border-radius:999px;padding:3px 11px;font-size:13px;font-weight:700;background:rgba(124,192,255,.2);color:var(--link);white-space:nowrap}
 .pill.o{background:rgba(255,174,66,.22);color:var(--orange)}.pill.g{background:rgba(46,158,79,.25);color:#7fe0a0}.pill.r{background:rgba(240,80,60,.22);color:#ff8a7a}
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:flex;align-items:flex-end;justify-content:center}
-.sheetbox{width:100%;max-width:560px;max-height:90vh;background:var(--bg,#2c463d);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch}
-.sheetbox .card.pad.formc{margin:0}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
+.sheetbox{width:100%;max-width:520px;max-height:86vh;background:var(--bg,#2c463d);border:1px solid var(--line);border-radius:26px;padding:24px 20px;overflow:auto;-webkit-overflow-scrolling:touch;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.sheetbox .card.pad.formc{margin:0;padding:0!important;border:0!important;background:none!important}
+.sheetbox label.f{font-size:21px;font-weight:700;color:var(--text);margin:0 0 12px;display:block}
+.sheetbox .t{font-size:18px;padding:16px 15px;border-radius:14px}
+.sheetbox textarea.t{min-height:96px}
+.sheetbox input[type=date].t,.sheetbox input[type=time].t{font-size:16px;padding:16px 8px}
+.sheetbox select.t{font-size:15px;padding:16px 6px}
+.sheetbox .btn{font-size:18px;padding:17px;border-radius:15px}
+.sheetbox .mini{gap:10px}
+.sheetbox .rtile{padding:18px 6px;font-size:16px}
 .sheettop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sheettop b{font-size:19px}
 </style>
 </head>
@@ -266,7 +274,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 N';
+const APP_VERSION='2026-10-21 P';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1172,7 +1180,7 @@ function taskDetail(){
 function renderSheet(){
   let el=document.getElementById('sheet');
   if(!cur.sheet){if(el)el.remove();return}
-  if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el&&cur.sheet==='taskd')closeSheet()});document.body.appendChild(el)}
+  if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
   const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
