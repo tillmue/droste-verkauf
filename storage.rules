@@ -11,6 +11,15 @@ service firebase.storage {
       allow read: if member();
       allow write: if member() && okFile();
     }
+    // Fotos zu Aufgaben und Einkauf: jedes freigegebene Mitglied darf hochladen
+    match /aufgaben/{file} {
+      allow read: if member();
+      allow write: if member() && okFile();
+    }
+    match /einkauf/{file} {
+      allow read: if member();
+      allow write: if member() && okFile();
+    }
     // Bilder (Schonungen, Standpläne): alle freigegebenen Mitglieder lesen, nur Admin und Chef laden hoch
     match /{allPaths=**} {
       allow read: if member();
