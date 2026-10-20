@@ -276,7 +276,7 @@ exports.driveKm = onCall(async req => {
   if (ok) {
     const pts = await orsGeocodeMany(ok, [origin, address]);
     if (!pts[0] || !pts[1]) throw new HttpsError('not-found', 'Adresse nicht gefunden');
-    const r = await fetch(`${ORS}/v2/directions/driving-car`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: ok }, body: JSON.stringify({ coordinates: pts.map(p => [p.lng, p.lat]) }) });
+    const r = await fetch(`${ORS}/v2/directions/driving-car`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: ok }, body: JSON.stringify({ coordinates: pts.map(p => [p.lng, p.lat]), preference: 'shortest' }) });
     const j = await r.json();
     if (!r.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', 'Keine Route gefunden');
     return { km: Math.round(j.routes[0].summary.distance / 100) / 10, min: Math.round(j.routes[0].summary.duration / 60) };
@@ -286,11 +286,13 @@ exports.driveKm = onCall(async req => {
   const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration' },
-    body: JSON.stringify({ origin: { address: origin }, destination: { address }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', languageCode: 'de-DE', regionCode: 'DE' })
+    body: JSON.stringify({ origin: { address: origin }, destination: { address }, travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', computeAlternativeRoutes: true, languageCode: 'de-DE', regionCode: 'DE' })
   });
   const j = await res.json();
   if (!res.ok || !j.routes || !j.routes[0]) throw new HttpsError('unavailable', (j.error && j.error.message) || 'Keine Route gefunden');
-  return { km: Math.round((j.routes[0].distanceMeters || 0) / 100) / 10, min: Math.round((parseInt(String(j.routes[0].duration || '0s').replace('s', ''), 10) || 0) / 60) };
+  // kürzeste der angebotenen Routen (nach Strecke, nicht nach Zeit)
+  const best = j.routes.filter(r => r.distanceMeters).sort((a, b) => a.distanceMeters - b.distanceMeters)[0] || j.routes[0];
+  return { km: Math.round((best.distanceMeters || 0) / 100) / 10, min: Math.round((parseInt(String(best.duration || '0s').replace('s', ''), 10) || 0) / 60) };
 });
 
 /* Fragen zur App: Nachricht an den Admin */
