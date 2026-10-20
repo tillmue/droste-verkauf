@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 y';
+const APP_VERSION='2026-10-21 z';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1510,6 +1510,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='ef-repeat'||t.id==='ef-remind')render();
   if(t.id==='asrole'){asRole=t.value;try{localStorage.setItem('droste-asrole',asRole)}catch(e){}tab='ich';cur.ptab='aufg';window.scrollTo(0,0);return render()}
   if(t.id&&t.id.startsWith('pk-counter-')){const k=t.id.slice(11),pk=S.packs.find(x=>x.id===cur.pstand);if(pk){const v=t.value.trim();pk.counter={...(pk.counter||{}),[k]:{v:v===''?'':v,by:S.me,at:Date.now()}};save();render()}}
+  if(t.id==='sp-standId'&&String(t.value).startsWith('partner:')){const p0=partnersList()[+t.value.slice(8)];if(p0){cur.stop.standId='';cur.stop.name=p0.n;cur.stop.address=p0.a;cur.stop.note=cur.stop.note||'Partnerstand'}render();return}
   if(t.id==='sp-standId'){const s0=S.stands.find(x=>x.id===t.value);cur.stop.standId=t.value;if(s0){cur.stop.name=s0.name;if(s0.address)cur.stop.address=s0.address}render()}
   if(t.id==='rp-obj')cur.rf.obj=t.value;
   if(t.id==='rp-text')cur.rf.text=t.value;
@@ -1647,6 +1648,8 @@ function vStaende(){
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */
 const DEF_VEH=['Transit Reinhard','Vito Felix','Pritsche Hegger','Kasten Hegger','(T5 Kimme)','(T5 Magnus)','(Ranger Felix)','(Ford Galaxy, kein Lieferfahrzeug)'];
+const DEF_PARTNER=['E-Center Schinkel | Tannenburgstraße 236, 49084 Osnabrück-Schinkel','Sannemann | Belmer Str. 96, 49084 Osnabrück-Schinkel','Hoppe | Dorfstraße 30, 49565 Bramsche','Sehlmeyer | Stirper Str. 42, 49163 Bohmte-Stirpe','Massmann | Flachswandstraße 15, 49152 Bad Essen'];
+const partnersList=()=>(((S.hofInfo&&S.hofInfo.partners)||DEF_PARTNER.join('\n')).split('\n').map(x=>x.trim()).filter(Boolean)).map(l=>{const i=l.indexOf('|');return i<0?{n:l,a:''}:{n:l.slice(0,i).trim(),a:l.slice(i+1).trim()}});
 const DEF_TRL=['Holzanhänger 1-achser 1','Holzanhänger 1-achser 2','Kipper','Tandem Grün','Kofferanhänger Reinhard','Helges Anhänger','Planenanhänger Reinhard','Autotransporter Reinhard','Langer Anhänger','(Blauer Anhänger Felix)','(Peter Kipper)','(Peter Gitter)','(Peter Einachser)'];
 const trailersList=()=>(S.hofInfo&&S.hofInfo.trailers&&S.hofInfo.trailers.length)?S.hofInfo.trailers:DEF_TRL;
 const vehiclesList=()=>(S.hofInfo&&S.hofInfo.vehicles&&S.hofInfo.vehicles.length)?S.hofInfo.vehicles:DEF_VEH;
@@ -2282,7 +2285,7 @@ function stopForm(){
   const f=cur.stop,pk=String(f.tourId).startsWith('pick:')||((S.tours.find(x=>x.id===f.tourId)||{}).type==='abholung');
   return `<div class="card pad formc"><label class="f">${pk?(f.id?'Abholung bearbeiten':'Neue Abholung'):(f.id?'Stopp bearbeiten':'Neuer Stopp')}</label>
     ${(!pk&&f.id)?`<label class="f">Tour</label><select class="t" id="sp-toTour" style="margin-bottom:8px">${S.tours.filter(x=>!x.deleted&&x.type!=='abholung'&&x.date===(S.tours.find(y=>y.id===f.tourId)||{}).date).map(x=>`<option value="${x.id}" ${(f.toTour||f.tourId)===x.id?'selected':''}>${esc(tourName(x))}${x.driver?' · '+esc(x.driver):''}</option>`).join('')}</select>`:''}
-    ${pk?'':`<select class="t" id="sp-standId" style="margin-bottom:8px"><option value="">Kunde oder Stand?</option>${S.stands.map(s=>`<option value="${s.id}" ${f.standId===s.id?'selected':''}>Stand: ${esc(s.name)}</option>`).join('')}</select>`}
+    ${pk?'':`<select class="t" id="sp-standId" style="margin-bottom:8px"><option value="">Kunde oder Stand?</option>${S.stands.map(s=>`<option value="${s.id}" ${f.standId===s.id?'selected':''}>Stand: ${esc(s.name)}</option>`).join('')}<optgroup label="Partnerstände (nur Bäume, kein Aufbau)">${partnersList().map((p,i)=>`<option value="partner:${i}">Partner: ${esc(p.n)}</option>`).join('')}</optgroup></select>`}
     <input class="t" id="sp-name" placeholder="${pk?'Kunde / Firma':'Name'}" value="${esc(f.name)}">
     ${pk?'':`<input class="t" id="sp-address" placeholder="Adresse (Straße, PLZ Ort)" value="${esc(f.address)}" style="margin-top:8px">`}
     <div class="mini" style="margin-top:8px"><input class="t" type="time" id="sp-time" value="${f.time}" style="min-width:0"><input class="t" id="sp-phone" inputmode="tel" placeholder="Telefon" value="${esc(f.phone)}" style="min-width:0"></div>
@@ -2567,6 +2570,8 @@ function vDaten(){
   <textarea class="t" id="hof-mach" rows="3">${esc(machinesList().join('\n'))}</textarea>
   <label class="f">Fahrzeuge für Touren (eins pro Zeile)</label>
   <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea>
+  <label class="f">Partnerstände, die nur Bäume von uns bekommen (Name | Adresse, einer pro Zeile)</label>
+  <textarea class="t" id="hof-partner" rows="5">${esc(partnersList().map(p=>p.n+' | '+p.a).join('\n'))}</textarea>
   <label class="f">Anhänger für Touren (einer pro Zeile)</label>
   <textarea class="t" id="hof-trl" rows="2">${esc(trailersList().join('\n'))}</textarea>
   <label class="f">Schonungen und Gänge (eine Zeile pro Schonung: Name: Vorgewände, Gang 1, Gang 2 …)</label>
@@ -2796,6 +2801,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-mach'){S.hofInfo={...S.hofInfo,machines:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
+  if(t.id==='hof-partner'){S.hofInfo={...S.hofInfo,partners:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
   if(t.id==='hof-trl'){S.hofInfo={...S.hofInfo,trailers:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;

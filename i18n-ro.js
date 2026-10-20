@@ -1,4 +1,7 @@
 window.RO_DICT={
+"Partnerstand": "Stand partener",
+"Partnerstände, die nur Bäume von uns bekommen (Name | Adresse, einer pro Zeile)": "Standuri partenere care primesc doar brazi de la noi (Nume | Adresă, câte unul pe rând)",
+"Partnerstände (nur Bäume, kein Aufbau)": "Standuri partenere (doar brazi, fără montaj)",
 "Gespeichert. Der Auftrag in der Planung bleibt unverändert.": "Salvat. Lucrarea din planificare rămâne neschimbată.",
 "Tour ins Archiv verschieben? Die Aufträge der Tour gehen zurück auf offen.": "Muți turul în arhivă? Comenzile turului revin pe deschis.",
 "· Preis auf Anfrage": "· Preț la cerere",
