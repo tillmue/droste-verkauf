@@ -231,7 +231,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 s';
+const APP_VERSION='2026-10-21 t';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -956,7 +956,7 @@ function handOver(id){
   document.body.appendChild(d);
 }
 const RCAT=[['fahrzeug','Fahrzeug'],['maschine','Maschine'],['hof','Hof'],['stand','Stand'],['feld','Feld']];
-const DEF_MACH='Traktor NewHolland\nNetzmaschine\nHubwagen';
+const DEF_MACH=['Kettensäge','Netzmaschine (Trecker)','Netzmaschine (Hof)','Palettiermaschine','Akkuschrauber Rot','Akkuschrauber Weiß','Akkuschrauber Gelb','Akkuschrauber Grün','Akkuschrauber Blau','Ameise Reinhard','Ameise Rolf','Hubwagen','Akkuschere','Radlader','Gabelstapler','Case Trecker','Schlumpf (New Holland)','John Deere','Steiger'].join('\n');
 const machinesList=()=>((S.hofInfo&&S.hofInfo.machines)||DEF_MACH).split('\n').map(x=>x.trim()).filter(Boolean);
 const RST={neu:'Neu',arbeit:'In Arbeit',erledigt:'Erledigt'};
 const seeAllReports=()=>has('reportsAll');
@@ -969,7 +969,7 @@ const openReports=()=>S.reports.filter(r=>!r.deleted&&r.status!=='erledigt'&&(se
 function reportForm(){
   const f=cur.rf,sel=(a,b)=>a===b?'selected':'';
   const tiles=RCAT.filter(c=>c[0]!=='feld').map(([k,l])=>`<button class="rtile ${f.cat===k?'on':''}" data-pl="rcat" data-v="${k}">${l}</button>`).join('');
-  const opts=f.cat==='fahrzeug'?vehiclesList().map(v=>[v,v]):f.cat==='maschine'?machinesList().map(v=>[v,v]):f.cat==='stand'?S.stands.map(s=>[s.id,s.name]):null;
+  const opts=f.cat==='fahrzeug'?vehiclesList().concat(trailersList()).map(v=>[v,v]):f.cat==='maschine'?machinesList().map(v=>[v,v]):f.cat==='stand'?S.stands.map(s=>[s.id,s.name]):null;
   const objSel=opts?`<select class="t" id="rp-obj" style="margin-bottom:8px"><option value="">${f.cat==='stand'?'Welcher Stand?':f.cat==='fahrzeug'?'Welches Fahrzeug?':'Welche Maschine?'}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${sel(v,f.obj)}>${esc(l)}</option>`).join('')}</select>`:'';
   return `<div class="card pad formc"><label class="f">Was möchtest du melden?</label><div class="rgrid">${tiles}</div>
     ${f.cat?`${objSel}<textarea class="t" id="rp-text" rows="3" placeholder="Was ist los? (z. B. Schlauch undicht)">${esc(f.text)}</textarea>
@@ -1604,8 +1604,8 @@ function vStaende(){
     ${isAdmin()&&mode!=='z'?`<button class="btn sec" data-pl="packreset" style="margin-top:14px;color:var(--red)">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */
-const DEF_VEH=['Ford Transit','Ford Galaxy'];
-const DEF_TRL=['Stangenanhänger','Blauer Anhänger'];
+const DEF_VEH=['Transit Reinhard','Vito Felix','Pritsche Hegger','Kasten Hegger','(T5 Kimme)','(T5 Magnus)','(Ranger Felix)','(Ford Galaxy, kein Lieferfahrzeug)'];
+const DEF_TRL=['Holzanhänger 1-achser 1','Holzanhänger 1-achser 2','Kipper','Tandem Grün','Kofferanhänger Reinhard','Helges Anhänger','Planenanhänger Reinhard','Autotransporter Reinhard','Langer Anhänger','(Blauer Anhänger Felix)','(Peter Kipper)','(Peter Gitter)','(Peter Einachser)'];
 const trailersList=()=>(S.hofInfo&&S.hofInfo.trailers&&S.hofInfo.trailers.length)?S.hofInfo.trailers:DEF_TRL;
 const vehiclesList=()=>(S.hofInfo&&S.hofInfo.vehicles&&S.hofInfo.vehicles.length)?S.hofInfo.vehicles:DEF_VEH;
 const tourStops=t=>Object.values(t.stops||{}).filter(x=>!x.deleted).sort(t.type==='abholung'?((a,b)=>(a.time||'99')<(b.time||'99')?-1:(a.time||'99')>(b.time||'99')?1:(a.order||0)-(b.order||0)):((a,b)=>(a.order||0)-(b.order||0)));
@@ -1793,8 +1793,8 @@ function planSim(t){
 }
 const tourDur=t=>planSim(t).dur;
 const brkTxt=(road,t,home)=>{const b=road.find(x=>x.k==='Frühstück'),l=road.find(x=>x.k==='Mittag'),p=[];
-  if(b)p.push('Frühstück 15 Min unterwegs eingerechnet');else if(!t.bfPre&&(t.depart||495)<720)p.push('Frühstück am Hof');
-  if(l)p.push('Mittag 30 Min unterwegs eingerechnet');else if(!t.luPre&&home>=720)p.push('Mittag am Hof');
+  if(b)p.push('Frühstück unterwegs');else if(!t.bfPre&&(t.depart||495)<720)p.push('Frühstück am Hof');
+  if(l)p.push('Mittag unterwegs');else if(!t.luPre&&home>=720)p.push('Mittag am Hof');
   return p.join('<br>')};
 const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
