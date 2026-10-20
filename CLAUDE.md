@@ -226,3 +226,4 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - 22.10.2026 H: Freigabe eines neuen Nutzers fragt jetzt (`approveAsk`): "Ja, mit Strafbierkiste" / "Nein, ohne Strafbierkiste" / Abbrechen. Die Strafbierkiste wird nicht mehr automatisch vergeben. Der Sammel-Knopf unter Daten, Team bleibt für bestehende Accounts.
 - 22.10.2026 I: Kopfzeile: rechts neben dem Zahnrad stehen wieder Name und darunter die Rolle (`#who`, antippen öffnet das Profil); Knöpfe 38 px, Logo kleiner, damit alles auf 375 px passt. `headerStat()` liefert nur noch die Rolle (der Sync-Status steht weiter am Zahnrad).
 - 22.10.2026 J: Kopfzeile Reihenfolge: Logo links, rechts bündig Anleitung, Frage, Aktualisieren, Zahnrad, Name mit Rolle (`#who`, nicht mehr dehnbar).
+- 22.10.2026 K: Bestellung (Logistik, Bestellschein): Liefer- und Rechnungsanschrift schlagen beim Tippen Adressen vor (`bfSuggest`, Cloud Function `addrSuggest`, Pick `bfpick`), wie im Lieferrechner.

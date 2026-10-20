@@ -314,7 +314,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 J';
+const APP_VERSION='2026-10-22 K';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1700,6 +1700,7 @@ document.addEventListener('click',ev=>{
   if(a==='ordmenu'){orderMenu(v);return}
   if(a==='dlcalc'){dlRun();return}
   if(a==='dlclear'){clearTimeout(window.__dls);cur.dl={addr:'',val:'',res:null,busy:false,err:'',sug:[],pick:null};render();return}
+  if(a==='bfpick'){const [k,i]=v.split('|'),x=((cur.bfsug||{})[k]||[])[+i];if(!x)return;cur.bf[k]=x.addr;cur.bfsug[k]=[];return render()}
   if(a==='dlpick'){const d=cur.dl,x=(d.sug||[])[+v];if(!x)return;d.addr=x.addr;d.pick=x;d.sug=[];dlRun();return}
   if(a==='splan'){const [sid,typ]=v.split('|');planViewer(()=>window.cloud.imageUrl('standplaene/'+sid+'-'+typ+'.png'));return}
   if(a==='bfnew'){cur.bf=bfNew();cur.bOpen=true;window.scrollTo(0,0);return render()}
@@ -2419,6 +2420,13 @@ function bestCard(b){
     <div class="p">${tr?tr+' Bäume':'Keine Bäume'}${srv.length?' · '+srv.join(', '):''}${b.gesamt?' · '+esc(b.gesamt):''}</div>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="bfedit" data-v="${b.id}" style="margin:0">Bearbeiten</button>${b.status==='uebernommen'?'':`<button class="btn" data-pl="bfplan" data-v="${b.id}" style="margin:0">In Planung übernehmen</button>`}</div></div>`;
 }
+function bfSuggest(k,v){
+  clearTimeout(window['__bfs'+k]);const box=()=>document.getElementById('bf-sug-'+k);
+  cur.bfsug=cur.bfsug||{};
+  if(v.trim().length<6){cur.bfsug[k]=[];if(box()){box().innerHTML='';box().style.display='none'}return}
+  window['__bfs'+k]=setTimeout(()=>{if(!window.cloud||!window.cloud.addrSuggest)return;
+    window.cloud.addrSuggest({input:v.trim().replace(/\s*\n\s*/g,', ')}).then(r=>{const it=(r&&r.items)||[];cur.bfsug[k]=it;const b=box();if(b){b.innerHTML=it.map((x,i)=>`<div class="row" data-pl="bfpick" data-v="${k}|${i}" style="cursor:pointer"><div class="n" style="min-width:0">${esc(x.addr)}</div></div>`).join('');b.style.display=it.length?'':'none'}}).catch(()=>{})},600);
+}
 function bestForm(){
   const f=cur.bf,ch=(k,v,l)=>`<button class="chip ${f[k]===v?'on':''}" data-pl="bfset" data-v="${k}|${v}">${l}</button>`,
     yn=(k,withOrt)=>`<div class="chips" style="margin:0 0 6px"><button class="chip ${f.leist[k].jn==='ja'?'on':''}" data-pl="bfl" data-v="${k}|jn|ja">ja</button><button class="chip ${f.leist[k].jn==='nein'?'on':''}" data-pl="bfl" data-v="${k}|jn|nein">nein</button>${withOrt?`<button class="chip ${f.leist[k].ort==='draussen'?'on':''}" data-pl="bfl" data-v="${k}|ort|draussen">draußen</button><button class="chip ${f.leist[k].ort==='drinnen'?'on':''}" data-pl="bfl" data-v="${k}|ort|drinnen">drinnen</button>`:''}</div>`;
@@ -2427,8 +2435,8 @@ function bestForm(){
     <div class="chips" style="margin-top:6px">${ch('art','privat','Privat')}${ch('art','firma','Firma')}</div>
     <div class="mini" style="margin-top:6px"><input class="t" id="bf-phone" inputmode="tel" placeholder="Telefon" value="${esc(f.phone)}" style="min-width:0"><input class="t" id="bf-contact" placeholder="Ansprechperson" value="${esc(f.contact)}" style="min-width:0"></div>
     <input class="t" id="bf-email" type="email" placeholder="E-Mail" value="${esc(f.email)}" style="margin-top:8px">
-    <label class="f">Lieferanschrift</label><textarea class="t" id="bf-liefer" rows="2" placeholder="Straße, PLZ, Ort">${esc(f.liefer)}</textarea>
-    <label class="f">Rechnungsanschrift</label><div class="chips" style="margin:0 0 6px"><button class="chip ${f.rgleich?'on':''}" data-pl="bfrg">wie Lieferanschrift</button></div>${f.rgleich?'':`<textarea class="t" id="bf-rechnung" rows="2">${esc(f.rechnung)}</textarea>`}
+    <label class="f">Lieferanschrift</label><textarea class="t" id="bf-liefer" rows="2" placeholder="Straße, Hausnummer, PLZ, Ort" autocomplete="off">${esc(f.liefer)}</textarea><div id="bf-sug-liefer" class="card" style="margin:6px 0 0;display:none"></div>
+    <label class="f">Rechnungsanschrift</label><div class="chips" style="margin:0 0 6px"><button class="chip ${f.rgleich?'on':''}" data-pl="bfrg">wie Lieferanschrift</button></div>${f.rgleich?'':`<textarea class="t" id="bf-rechnung" rows="2" placeholder="Straße, Hausnummer, PLZ, Ort" autocomplete="off">${esc(f.rechnung)}</textarea><div id="bf-sug-rechnung" class="card" style="margin:6px 0 0;display:none"></div>`}
     <label class="f">Liefer- oder Abholdatum</label><div class="mini"><input class="t" type="date" id="bf-datum" value="${esc(f.datum)}" style="min-width:0"><input class="t" id="bf-zeitwunsch" placeholder="Zeitwunsch (z. B. 9 bis 12 Uhr)" value="${esc(f.zeitwunsch)}" style="min-width:0"></div>
     <div class="chips" style="margin-top:6px">${ch('tageszeit','vormittags','vormittags')}${ch('tageszeit','nachmittags','nachmittags')}</div>
     <label class="f">Bäume und Ware</label>
@@ -3196,7 +3204,7 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('shf-')&&cur.shf)cur.shf[t.id.slice(4)]=t.value;
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
-  if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else cur.bf[k]=t.value}
+  if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else{cur.bf[k]=t.value;if((k==='liefer'||k==='rechnung')&&ev.type==='input')bfSuggest(k,t.value)}}
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
 });
 document.addEventListener('change',ev=>{
@@ -3223,7 +3231,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
-  if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else cur.bf[k]=t.value}
+  if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else{cur.bf[k]=t.value;if((k==='liefer'||k==='rechnung')&&ev.type==='input')bfSuggest(k,t.value)}}
 });
 
 /* ---------- Sprache: Übersetzung der Oberfläche (Deutsch / Rumänisch) ---------- */
