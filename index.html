@@ -312,7 +312,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 F';
+const APP_VERSION='2026-10-22 G';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -943,8 +943,12 @@ function wxHtml(){
     ${wxData.stale?'<div class="hint" style="margin:6px 2px 0">Offline, alte Wetterdaten</div>':''}`;
 }
 /* ---------- Ich: Dashboard ---------- */
+function einstSheet(){
+  const L=S.people.filter(p=>S.approved[p]!==false),has0=p=>S.penalties.some(x=>!x.deleted&&x.person===p&&x.reason==='Einstand in die App');
+  return `<div class="n" style="font-size:21px;margin:0 0 4px">Einstand-Strafbierkiste</div><div class="hint" style="margin:0 0 10px">Grund „Einstand in die App“. Haken weg bei allen, die keine bekommen sollen.</div>${L.map(p=>`<label class="chkrow" style="padding:8px 0"><input type="checkbox" data-ein="${esc(p)}" ${has0(p)?'disabled':(cur.einstOff.has(p)?'':'checked')}> ${esc(p)}${has0(p)?' <span class="p">(hat schon eine)</span>':''}</label>`).join('')}<div class="mini" style="margin-top:14px"><button class="btn sec" data-pl="einstcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="einstgo" style="margin:0">Vergeben</button></div>`;
+}
 function einstand(n){
-  if(S.penalties.some(p=>p.person===n&&p.reason==='Einstand in die App'))return;
+  if(S.penalties.some(p=>!p.deleted&&p.person===n&&p.reason==='Einstand in die App'))return;
   S.penalties.push({id:uid(),person:n,reason:'Einstand in die App',qty:1,by:S.me,at:Date.now(),paid:false});save();render();
 }
 function renamePerson(old,nw){
@@ -985,7 +989,7 @@ function vIch(){
   while(days.has(d.toDateString())){streak++;d.setDate(d.getDate()-1)}
   const created=S.tasks.filter(t=>t.createdBy===me).length;
   const doneAll=live.filter(t=>t.done&&t.doneBy===me).length;
-  const myPen=S.penalties.filter(p=>p.person===me&&!p.paid).reduce((a,p)=>a+(p.qty||1),0);
+  const myPen=S.penalties.filter(p=>!p.deleted&&p.person===me&&!p.paid).reduce((a,p)=>a+(p.qty||1),0);
   const CAL={saison:'Saison',lieferung:'Lieferung',insta:'Instagram'};
   const evs=S.events.filter(e=>!e.deleted&&e.date<=td&&td<=(e.end||e.date)&&(e.cal!=='insta'||has('instagram')));
   const sb=has('zahlen')?salesByDate()[td]:null;
@@ -995,7 +999,7 @@ function vIch(){
   const rank=Object.entries(src).map(([l,v])=>({l,v})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,5);
   const pens=S.penalties.filter(p=>!p.deleted),openPen=pens.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0)),paidPen=pens.filter(p=>p.paid).sort((a,b)=>(b.paidAt||b.at||0)-(a.paidAt||a.at||0));
   const penSum={};pens.forEach(p=>{const x=penSum[p.person]||(penSum[p.person]={o:0,b:0});x[p.paid?'b':'o']+=(p.qty||1)});
-  const penRow=(p,paid)=>`<div class="row"><div style="min-width:0"><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')}</div><div class="p">Vergeben von ${esc(p.by||'?')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div>${!paid&&isAdmin()?`<button class="btn sec" data-pl="penpaid" data-v="${p.id}" style="margin:0;width:auto;padding:8px 14px">bezahlt</button>`:''}</div>`;
+  const penRow=(p,paid)=>`<div class="row"><div style="min-width:0"><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')}</div><div class="p">Vergeben von ${esc(p.by||'?')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div><div style="display:flex;gap:6px;flex:none">${!paid&&isAdmin()?`<button class="btn sec" data-pl="penpaid" data-v="${p.id}" style="margin:0;width:auto;padding:8px 14px">bezahlt</button>`:''}${isAdmin()?`<button class="btn no" data-pl="pendel" data-v="${p.id}" style="margin:0;width:auto;padding:8px 12px" aria-label="Löschen">×</button>`:''}</div></div>`;
   const nRep=openReports().length;
   const hello=now.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});
   const pn=cur.pen;
@@ -1355,7 +1359,7 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='evview'?evView():'';
+  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
 }
@@ -1638,6 +1642,10 @@ document.addEventListener('click',ev=>{
   if(a==='gomine'){cur.mineOpen=!cur.mineOpen;return render()}
   if(a==='goevt'){const e=S.events.find(x=>x.id===v);if(e){cur.ef={...e};cur.evv=e.id;cur.sheet=canCal()?'event':'evview';render()}return}
   if(a==='penadd'){const per=cur.pen.person||S.people[0];if(!(cur.pen.reason||'').trim())return alert('Bitte einen Grund eintragen.');S.penalties.push({id:uid(),person:per,reason:(cur.pen.reason||'').trim(),qty:1,by:S.me,at:Date.now(),paid:false});cur.pen.reason='';save();return render()}
+  if(a==='pendel'){const x=S.penalties.find(y=>y.id===v);if(!x||!isAdmin())return;return askConfirm(`Strafbierkiste von ${x.person} („${x.reason||'ohne Angabe'}“) löschen?`,'Ja, löschen',()=>{softDel(x);save();render()})}
+  if(a==='einstopen'){if(!isAdmin())return;cur.einstOff=new Set([S.me]);cur.sheet='einst';return render()}
+  if(a==='einstcancel'){return closeSheet()}
+  if(a==='einstgo'){if(!isAdmin())return;let n=0;S.people.filter(p=>S.approved[p]!==false&&!cur.einstOff.has(p)&&!S.penalties.some(x=>!x.deleted&&x.person===p&&x.reason==='Einstand in die App')).forEach(p=>{S.penalties.push({id:uid(),person:p,reason:'Einstand in die App',qty:1,by:S.me,at:Date.now(),paid:false});n++});save();closeSheet();toast(n+' Strafbierkiste'+(n===1?'':'n')+' vergeben');return}
   if(a==='penpaid'){const x=S.penalties.find(y=>y.id===v);if(x){x.paid=true;x.paidAt=Date.now();save();render()}return}
   if(a==='fs'){cur.fs=v;cur.fg='';cur.frest=false;return render()}
   if(a==='fg'){cur.fg=v;return render()}
@@ -2928,7 +2936,7 @@ function vDaten(){
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
   ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
-  ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}</div>
+  ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
   <div class="card pad"><div class="hint">Datei einspielen (z. B. Instagram-Plan oder Packlisten der Stände). Schon vorhandene Einträge werden übersprungen.</div>
@@ -3085,6 +3093,7 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
+  if(t.dataset.ein!=null){if(t.checked)cur.einstOff.delete(t.dataset.ein);else cur.einstOff.add(t.dataset.ein);return}
   if(t.dataset.pe!=null){
     const i=+t.dataset.pe,old=S.people[i],nw=t.value.trim().replace(/\s+/g,' ')||old;
     if(CLOUD){

@@ -1,4 +1,8 @@
 window.RO_DICT={
+"(hat schon eine)": "(are deja una)",
+"Grund „Einstand in die App“. Haken weg bei allen, die keine bekommen sollen.": "Motiv „Bun venit în aplicație”. Debifează persoanele care nu primesc.",
+"Einstand-Strafbierkiste vergeben": "Atribuie lada de bere de intrare",
+"Einstand-Strafbierkiste": "Lada de bere de intrare",
 "Nach dem Registrieren muss der Admin dich freigeben.": "După înregistrare, administratorul trebuie să te aprobe.",
 "Registrieren (ich bin neu hier)": "Înregistrare (sunt nou aici)",
 "Anmelden (ich habe schon einen Account)": "Autentificare (am deja un cont)",
@@ -1119,6 +1123,8 @@ window.RO_DICT={
 };
 
 window.RO_PATTERNS=[
+ [/^Strafbierkiste von (.+) \(„(.+)“\) löschen\?$/,(m,a,b)=>`Ștergi lada de bere a lui ${a} („${b}”)?`],
+ [/^(\d+) Strafbierkisten? vergeben$/,(m,n)=>`${n} lăzi de bere atribuite`],
  [/^(\d+) Artikel ausgewählt\. Preise inklusive MwSt, für Privatkunden und Firmen\.$/,(m,n)=>`${n} articole selectate. Prețuri cu TVA inclus, pentru persoane fizice și firme.`],
  [/^Heute erledigt \((\d+)\), zum Zurückholen antippen$/,(m,n)=>`Terminate azi (${n}), atinge pentru a redeschide`],
  [/^„(.+)“ in „(.+)“ umbenennen\? Aufgaben, Meldungen, Strafbierkisten und Touren werden mit umgestellt\.$/,(m,a,b)=>`Redenumești „${a}” în „${b}”? Sarcinile, rapoartele, lăzile de bere și turele se actualizează.`],
