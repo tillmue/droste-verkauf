@@ -227,7 +227,7 @@ header img{height:34px;width:auto;padding:4px 8px;background:#fff;border-radius:
 #prof[data-st=off] #av{background-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23ff6b5e%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%223%22/%3E%3Cpath d=%22M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z%22/%3E%3C/svg%3E")}
 
 #guide{font-size:0;background-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23f5f7f6%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z%22/%3E%3Cpath d=%22M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z%22/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:21px}
-.planview{position:fixed;inset:0;background:#10201a;z-index:40;display:flex;flex-direction:column}.planview .bar{display:flex;gap:8px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}.planview .bar button{flex:1;border:0;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font-size:15px;font-weight:600;padding:12px 4px}.planview .pvs{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}.planview img{display:block;width:100%;height:auto;background:#fff;max-width:none}
+.planview{position:fixed;inset:0;background:#10201a;z-index:40;display:flex;flex-direction:column}.planview .bar{display:flex;gap:8px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}.planview .bar button{flex:1;border:0;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font-size:15px;font-weight:600;padding:12px 4px}.planview .pvs{flex:1;position:relative;overflow:hidden;touch-action:none}.planview .pvh{position:absolute;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;color:rgba(255,255,255,.6);font-size:13px;pointer-events:none}.planview img{display:block;width:100%;height:auto;background:#fff;max-width:none}
 /* Design: Navigation, Bloecke, Pop-ups */
 .formc{border:1px solid var(--line)!important;background:var(--fill)!important}
 nav{padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px}
@@ -294,7 +294,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-21 U';
+const APP_VERSION='2026-10-21 W';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1232,9 +1232,15 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():'';
+  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
+}
+function besSheet(){
+  const pk=S.packs.find(x=>x.id===cur.pstand),g=pk&&pk.groups.find(x=>x.key==='besonderheiten'),its=g?g.items:[];
+  return `<div class="sheettop"><b>Besonderheiten</b></div><div class="n" style="margin:0 0 10px;color:var(--mut)">${esc(pk?pk.name:'')}</div>
+    <ul class="bul" style="margin:0 0 16px;padding-left:22px">${its.map(i=>`<li style="font-size:20px;line-height:1.45;margin:10px 0">${esc(i.text)}</li>`).join('')}</ul>
+    <button class="btn" data-pl="besclose">Schließen</button>`;
 }
 function closeSheet(){cur.sheet='';cur.sd='';cur.sdf=null;cur.sfile=null;cur.shf=null;cur.hfile=null;cur.tfile=null;cur.tfOpen=false;render()}
 function taskForm(inSheet){
@@ -1542,15 +1548,31 @@ document.addEventListener('click',ev=>{
   if(a==='dlcalc'){dlRun();return}
   if(a==='dlclear'){clearTimeout(window.__dls);cur.dl={addr:'',val:'',res:null,busy:false,err:'',sug:[],pick:null};render();return}
   if(a==='dlpick'){const d=cur.dl,x=(d.sug||[])[+v];if(!x)return;d.addr=x.addr;d.pick=x;d.sug=[];dlRun();return}
-  if(a==='splan'){const [sid,typ]=v.split('|'),d=document.createElement('div');d.className='planview';let w=100,rot=false;
-    d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="-">Kleiner</button><button data-x="+">Größer</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""></div></div>';
+  if(a==='splan'){const [sid,typ]=v.split('|'),d=document.createElement('div');d.className='planview';let rot=false,sc=1,tx=0,ty=0;
+    d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""></div></div><div class="pvh">Mit zwei Fingern zoomen</div>';
     const im=d.querySelector('img'),pvs=d.querySelector('.pvs'),wr=d.querySelector('.pvw');
-    const lay=()=>{const cw=pvs.clientWidth,base=cw*w/100,r=(im.naturalWidth&&im.naturalHeight)?im.naturalWidth/im.naturalHeight:1.414;
-      if(!rot){wr.style.cssText='position:relative;width:'+base+'px;height:'+(base/r)+'px';im.style.cssText='position:absolute;left:0;top:0;width:'+base+'px;height:'+(base/r)+'px;max-width:none'}
-      else{wr.style.cssText='position:relative;width:'+base+'px;height:'+(base*r)+'px';im.style.cssText='position:absolute;left:0;top:0;width:'+(base*r)+'px;height:'+base+'px;max-width:none;transform-origin:0 0;transform:translateX('+base+'px) rotate(90deg)'}};
+    let W=0,H=0;
+    const clamp=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,w=W*sc,h=H*sc;tx=w<=cw?(cw-w)/2:Math.min(0,Math.max(cw-w,tx));ty=h<=ch?(ch-h)/2:Math.min(0,Math.max(ch-h,ty))};
+    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')'};
+    const lay=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,r=(im.naturalWidth&&im.naturalHeight)?im.naturalWidth/im.naturalHeight:1.414;
+      const iw=rot?1/r:r;let w0=cw,h0=cw/iw;if(h0>ch){h0=ch;w0=ch*iw}
+      W=w0;H=h0;wr.style.cssText='position:absolute;left:0;top:0;transform-origin:0 0;width:'+W+'px;height:'+H+'px';
+      if(!rot)im.style.cssText='position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;max-width:none';
+      else im.style.cssText='position:absolute;left:0;top:0;width:'+H+'px;height:'+W+'px;max-width:none;transform-origin:0 0;transform:translateX('+W+'px) rotate(90deg)';
+      apply()};
     im.onload=lay;lay();window.addEventListener('resize',lay);new MutationObserver(()=>{if(!d.isConnected)window.removeEventListener('resize',lay)}).observe(document.body,{childList:true});
     if(window.cloud&&window.cloud.imageUrl)window.cloud.imageUrl('standplaene/'+sid+'-'+typ+'.png').then(u=>{im.src=u}).catch(()=>{pvs.innerHTML='<div style="color:#fff;padding:24px">Der Plan konnte nicht geladen werden.</div>'});
-    d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;lay();pvs.scrollTo(0,0)}else if(x==='+'){w=Math.min(400,w+60);lay()}else if(x==='-'){w=Math.max(100,w-60);lay()}});
+    const pt=t=>[t.clientX,t.clientY],mid=ts=>[(ts[0].clientX+ts[1].clientX)/2,(ts[0].clientY+ts[1].clientY)/2],dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
+    let g=null,last=0;
+    pvs.addEventListener('touchstart',e=>{const ts=e.touches;
+      if(ts.length===2){const m=mid(ts),r=pvs.getBoundingClientRect();g={k:'pinch',d0:dist(ts),s0:sc,px:(m[0]-r.left-tx)/sc,py:(m[1]-r.top-ty)/sc}}
+      else if(ts.length===1){const n=Date.now();if(n-last<300){sc=sc>1.2?1:2.5;tx=ty=0;apply();last=0;g=null;return}last=n;g={k:'pan',x:ts[0].clientX,y:ts[0].clientY,tx,ty}}},{passive:true});
+    pvs.addEventListener('touchmove',e=>{if(!g)return;e.preventDefault();const ts=e.touches,r=pvs.getBoundingClientRect();
+      if(g.k==='pinch'&&ts.length===2){const m=mid(ts);sc=Math.min(8,Math.max(1,g.s0*dist(ts)/g.d0));tx=m[0]-r.left-g.px*sc;ty=m[1]-r.top-g.py*sc;apply()}
+      else if(g.k==='pan'&&ts.length===1){tx=g.tx+ts[0].clientX-g.x;ty=g.ty+ts[0].clientY-g.y;apply()}},{passive:false});
+    pvs.addEventListener('touchend',e=>{if(e.touches.length===0)g=null;else if(e.touches.length===1)g={k:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,tx,ty}},{passive:true});
+    pvs.addEventListener('wheel',e=>{e.preventDefault();const r=pvs.getBoundingClientRect(),px=(e.clientX-r.left-tx)/sc,py=(e.clientY-r.top-ty)/sc;sc=Math.min(8,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15)));tx=e.clientX-r.left-px*sc;ty=e.clientY-r.top-py*sc;apply()},{passive:false});
+    d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;sc=1;tx=ty=0;lay()}});
     document.body.appendChild(d);return}
   if(a==='bfnew'){cur.bf=bfNew();cur.bOpen=true;window.scrollTo(0,0);return render()}
   if(a==='bfedit'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.bf=JSON.parse(JSON.stringify(b));cur.bOpen=true;window.scrollTo(0,0);return render()}
@@ -1617,6 +1639,8 @@ document.addEventListener('click',ev=>{
   }
   if(a==='stab'){tab=v;cur.zst=false;window.scrollTo(0,0);return render()}
   if(a==='ps'){cur.pstand=v;return render()}
+  if(a==='besopen'){cur.sheet='bes';return render()}
+  if(a==='besclose')return closeSheet();
   if(a==='pmode'){cur.pmode=v;return render()}
   if(a==='packck'){
     const pk=S.packs.find(x=>x.id===cur.pstand);if(!pk)return;
@@ -1817,16 +1841,23 @@ const PORDER=['stand','wichtig','avobox','huette','werkzeug'];
 const standSeg=()=>{
   const c=[['staende','Packliste'],has('verkauf')?['erfassen','Verkauf']:null,has('zahlen')?['zahlen','Zahlen']:null].filter(Boolean);
   if(c.length<2)return '';
-  return `<div class="chips">${c.map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-pl="stab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  return `<div class="seg">${c.map(([k,l])=>`<button class="${tab===k?'on':''}" data-pl="stab" data-v="${k}">${l}</button>`).join('')}</div>`;
 };
 function vStaende(){
-  const sid=(cur.pstand&&S.stands.some(x=>x.id===cur.pstand))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
+  const pnames=partnersList(),isPn=v=>typeof v==='string'&&v.startsWith('p:')&&pnames.some(p=>'p:'+p.n===v);
+  const sid=(cur.pstand&&(S.stands.some(x=>x.id===cur.pstand)||isPn(cur.pstand)))?cur.pstand:(S.stands[0]||{}).id;cur.pstand=sid;
   const mode=['p','a','z'].includes(cur.pmode)?cur.pmode:'p',pk=S.packs.find(x=>x.id===sid);
-  const chips=`<div class="chips">${S.stands.map(x=>`<button class="chip ${x.id===sid?'on':''}" data-pl="ps" data-v="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
+  const chips=`<div class="chips">${S.stands.map(x=>`<button class="chip ${x.id===sid?'on':''}" data-pl="ps" data-v="${x.id}">${esc(x.name)}</button>`).join('')}${pnames.length?`<span class="pill" style="align-self:center;flex:none">Partner</span>`+pnames.map(x=>`<button class="chip ${'p:'+x.n===sid?'on':''}" data-pl="ps" data-v="${esc('p:'+x.n)}">${esc(x.n)}</button>`).join(''):''}</div>`;
+  if(isPn(sid)){const pn=pnames.find(x=>'p:'+x.n===sid),dl=deliveredFor({n:pn.n});
+    $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pn.n)}</h2>
+      ${blk('Adresse',`${pn.a?`<div class="n">${esc(pn.a)}</div><div class="mini" style="margin:8px 0 6px">${routeBtns(gmapsUrl(pn.a),appleUrl(pn.a))}</div>`:'<div class="hint">Keine Adresse hinterlegt.</div>'}`)}
+      ${blk('Bäume geliefert',`<div class="tiles" style="margin:0 0 8px"><div class="tile g"><small>Geliefert</small><b>${num(dl.del)} Stk.</b></div><div class="tile b"><small>Offen oder unterwegs</small><b>${dl.plan?num(dl.plan)+' Stk.':'–'}</b></div></div>`)}
+      <div class="hint">Partnerstand: wir liefern nur die Bäume, kein Aufbau und kein Verkauf in der App.</div>`;
+    return}
   const stN=S.stands.find(x=>x.id===sid)||{};
   const kv=(l,v)=>v?`<div class="kv"><span>${l}</span><span>${esc(v)}</span></div>`:'';
   const addrBox=(stN.address||stN.contact||stN.hours||stN.power||stN.buildDate||stN.teardownDate)?`<section class="blk"><div class="blk-h"><h3>Adresse und Infos</h3></div>${stN.address?`<div class="n">${esc(stN.address)}</div><div class="mini" style="margin:8px 0">${routeBtns(gmapsUrl(stN.address),appleUrl(stN.address))}</div>`:''}${kv('Ansprechpartner',stN.contact)}${kv('Öffnungszeiten',stN.hours)}${kv('Starkstrom',stN.power)}${kv('Aufbau am',stN.buildDate?wdD(stN.buildDate):'')}${kv('Abbau am',stN.teardownDate?wdD(stN.teardownDate):'')}</section>`:'';
-  const planB=PLAN_IDS.includes(sid)?`<section class="blk"><div class="blk-h"><h3>Pläne</h3></div><div class="mini" style="margin-bottom:6px"><button class="btn sec" data-pl="splan" data-v="${sid}|aufbau" style="margin:0">Aufbauplan</button><button class="btn sec" data-pl="splan" data-v="${sid}|lage" style="margin:0">Lageplan</button></div></section>`:'';
+  const planB=(PLAN_IDS.includes(sid)&&mode!=='z')?`<div class="mini" style="margin:0 0 14px"><button class="btn sec" data-pl="splan" data-v="${sid}|aufbau" style="margin:0">Aufbauplan</button>${mode==='a'?`<button class="btn sec" data-pl="splan" data-v="${sid}|lage" style="margin:0">Lageplan</button>`:''}</div>`:'';
   const seg=`<div class="seg">${['p','a','z'].map(m=>`<button class="${mode===m?'on':''}" data-pl="pmode" data-v="${m}">${PMODE[m]}</button>`).join('')}</div>`;
   if(!pk){$('#app').innerHTML=chips+addrBox+planB+`<div class="hint">Für diesen Stand gibt es noch keine Packliste.${isAdmin()?' Als Admin spielst du sie unter Daten, Kalender importieren ein.':''}</div>`;return}
   const chk=pk.checks||{},on=i=>!!(chk[i.id]&&chk[i.id][mode]);
@@ -1834,7 +1865,7 @@ function vStaende(){
   const rest=pk.groups.filter(g=>!PORDER.includes(g.key)&&!['besonderheiten','schluss'].includes(g.key));
   const ordered=[...PORDER.map(gOf).filter(Boolean),...rest];
   const bes=gOf('besonderheiten');
-  const notes=bes&&bes.items.length?blk('Besonderheiten',`<ul class="bul" style="margin:0 0 6px">${bes.items.map(i=>`<li>${esc(i.text)}</li>`).join('')}</ul>`,{tone:'o'}):'';
+  const notes=bes&&bes.items.length?`<button class="qtile o" data-pl="besopen" style="width:100%;flex-direction:row;justify-content:center;gap:10px;margin:0 0 14px"><b>!</b>Besonderheiten (${bes.items.length})</button>`:'';
   const row=i=>`<div class="row pk"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`;
   const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key,all=g.items.length&&dn===g.items.length;
     const master=g.key==='avobox'?`<div class="row pk" style="background:var(--panel);border-radius:10px;padding:8px"><div style="display:flex;gap:10px;align-items:center;flex:1"><button class="chk ${all?'on':''}" data-pl="packall" data-v="${g.key}">${all?'✓':''}</button><div class="n"><b>Avobox komplett (alles drin)</b></div></div></div>`:'';
@@ -1852,7 +1883,7 @@ function vStaende(){
     body=`${blk(mode==='p'?'Gepackt':'Aufgebaut',`<div class="barw"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><div class="hint" style="margin-bottom:6px">${done} von ${all.length} ${mode==='p'?'gepackt':'aufgebaut'}</div>`,{tone:fin?'g':'',pill:pill(done+'/'+all.length,fin?'g':'')})}
       ${mode==='a'?counterBox('auf','Zählerstand beim Aufbau'):''}${ordered.map(sec).join('')}`;
   }
-  $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${addrBox}${planB}${seg}${notes}${body}
+  $('#app').innerHTML=`${chips}<h2 style="margin-top:4px">${esc(pk.name)}</h2>${seg}${planB}${notes}${addrBox}${body}
     ${isAdmin()&&mode!=='z'?`<button class="btn no" data-pl="packreset" style="margin-top:14px">Alle Häkchen für ${esc(pk.name)} zurücksetzen</button>`:''}`;
 }
 /* ---------- Lieferungen: Touren pro Tag ---------- */

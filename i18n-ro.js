@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Mit zwei Fingern zoomen": "Mărește cu două degete",
+"Adresse": "Adresă",
+"Partnerstand: wir liefern nur die Bäume, kein Aufbau und kein Verkauf in der App.": "Stand partener: livrăm doar bradurile, fără montaj și fără vânzare în aplicație.",
+"Keine Adresse hinterlegt.": "Nicio adresă înregistrată.",
 "Adresse und Infos": "Adresă și informații",
 "Pläne": "Planuri",
 "Aufgebaut": "Montat",
@@ -1130,6 +1134,7 @@ window.RO_PATTERNS=[
  [/^KW (\d+)$/,(m,n)=>`Săpt. ${n}`],
  [/^Verschoben von (.+)$/,(m,d)=>`Mutat de la ${d}`],
  [/^Abgegeben von (.+)$/,(m,d)=>`Predat de ${d}`],
+ [/^Besonderheiten \((\d+)\)$/,(m,n)=>`Particularități (${n})`],
  [/^Von (.+)$/,(m,n)=>`De la ${n}`],
  [/^Zugewiesen von (.+?) an (.+)$/,(m,a,b)=>`Atribuit de ${a} lui ${b}`],
  [/^Gestartet um (.+)$/,(m,x)=>`Pornit la ${x}`],
