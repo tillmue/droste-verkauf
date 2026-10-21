@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 Z';
+const APP_VERSION='2026-10-22 ZA';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2200,9 +2200,11 @@ const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),
 const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>+p.len||0));
 const orderSvc=o=>svcMin({service:orderService(o),lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat}))});
 const winTimes=w=>[...String(w||'').matchAll(/(\d{1,2}):(\d{2})/g)].map(m=>(+m[1])*60+(+m[2]));
-const winEnd=w=>{const t=winTimes(w);if(!t.length)return null;return t.length===1&&/\bab\s*\d/i.test(w)?1080:t[t.length-1]};
-const winStart=w=>{const t=winTimes(w);if(!t.length)return null;return t.length>1?t[0]:(/\bab\s*\d/i.test(w)?t[0]:450)};
-const winTxt=w=>{const e=winEnd(w);if(e==null)return /nachmittag/i.test(w||'')?'nachmittags (Wunsch)':/vormittag/i.test(w||'')?'vormittags (Wunsch)':'';const s=winStart(w),f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /\bab\s*\d/i.test(w)&&winTimes(w).length===1?'ab '+f(s)+' Uhr':f(s)+' bis '+f(e)+' Uhr'};
+const tHM=(s,d)=>{const m=String(s||'').match(/(\d{1,2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):d};
+const winDefs=()=>{const h0=S.hofInfo||{};return {amTo:tHM(h0.amEnd,720),pmFrom:tHM(h0.pmFrom,780),pmTo:tHM(h0.pmTo,960)}};
+const winEnd=w=>{const t=winTimes(w);if(!t.length)return /nachmittag/i.test(w||'')?winDefs().pmTo:/vormittag/i.test(w||'')?winDefs().amTo:null;return t.length===1&&/\bab\s*\d/i.test(w)?1080:t[t.length-1]};
+const winStart=w=>{const t=winTimes(w);if(!t.length)return /nachmittag/i.test(w||'')?winDefs().pmFrom:/vormittag/i.test(w||'')?450:null;return t.length>1?t[0]:(/\bab\s*\d/i.test(w)?t[0]:450)};
+const winTxt=w=>{const e=winEnd(w);if(e==null)return '';if(!winTimes(w).length){const f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /nachmittag/i.test(w)?'nachmittags ('+f(winStart(w))+' bis '+f(e)+' Uhr)':'vormittags (bis '+f(e)+' Uhr)'}const s=winStart(w),f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /\bab\s*\d/i.test(w)&&winTimes(w).length===1?'ab '+f(s)+' Uhr':f(s)+' bis '+f(e)+' Uhr'};
 const nTrees=o=>orderTrees(o).reduce((a,p)=>a+(+p.qty||1),0);
 const SOLO=20;
 const up5=m=>Math.ceil(m/5)*5;
@@ -2478,6 +2480,7 @@ function planBox(){
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option><option value="max" ${pd.P==='max'?'selected':''}>Fahrer: unbegrenzt (alle Touren gleichzeitig)</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
+    ${(()=>{const n=cands.filter(x=>pd.sel[x.o.id]&&!winTimes(x.o.window).length&&/vormittag|nachmittag/i.test(x.o.window||'')).length;return n?`<div class="hint" style="color:var(--orange)">${n} ${n===1?'Auftrag hat':'Aufträge haben'} nur "vormittags" oder "nachmittags" als Zeitfenster. Die Planung nimmt dafür die Zeiten aus den Einstellungen als Pflicht. Bitte beim Kunden klären, was genau gemeint ist.</div>`:''})()}
     <label class="f">Aufträge für diesen Tag (${nSel} von ${cands.length} gewählt)</label>
     <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
@@ -3089,6 +3092,9 @@ function vDaten(){
   <label class="f">OpenRouteService-Schlüssel (Token aus dem HeiGIT-Konto) ${S.hofInfo&&S.hofInfo.matrixSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
   <input class="t" id="hof-mxkey" type="password" autocomplete="off" placeholder="Schlüssel einfügen und bestätigen">
   <div class="hint" id="mxkey-msg">Hier kommt der Token von account.heigit.org hinein. Damit berechnet die Tourenplanung die Straßenentfernungen kostenlos. Ohne Schlüssel nutzt sie Google (kostet nach 10.000 Abfragen im Monat etwas).</div>
+  <label class="f">"Vormittags" im Lieferschein bedeutet: bis (Pflicht, für die Tourenplanung)</label>
+  <input class="t" id="hof-amend" type="time" value="${esc((S.hofInfo&&S.hofInfo.amEnd)||'12:00')}">
+  <div class="mini"><div><label class="f">"Nachmittags" von</label><input class="t" id="hof-pmfrom" type="time" value="${esc((S.hofInfo&&S.hofInfo.pmFrom)||'13:00')}"></div><div><label class="f">"Nachmittags" bis</label><input class="t" id="hof-pmto" type="time" value="${esc((S.hofInfo&&S.hofInfo.pmTo)||'16:00')}"></div></div>
   <label class="f">Spätestens zurück am Hof (für die Tourenplanung, leer = egal)</label>
   <input class="t" id="hof-dayend" type="time" value="${esc((S.hofInfo&&S.hofInfo.dayEnd)||'')}">
   <label class="f">Höchstzahl Bäume pro Tour (Standard 60, für die Tourenplanung)</label>
@@ -3347,6 +3353,9 @@ document.addEventListener('change',ev=>{
     .catch(e=>{if(msg){msg.textContent='Nicht gespeichert: '+(e.code||e.message)+(e.code==='permission-denied'?'. Sind die neuen Firestore-Regeln veröffentlicht?':'');msg.style.color='var(--red)'}})}
   if(t.id==='hof-mxkey'&&t.value.trim()&&window.cloud&&window.cloud.setSecret){const kv=t.value.trim(),msg=document.getElementById('mxkey-msg');if(msg){msg.textContent='Wird gespeichert …';msg.style.color=''}
     window.cloud.setSecret('orsMatrix',kv).then(()=>{t.value='';S.hofInfo={...S.hofInfo,matrixSet:true};save();toast('Schlüssel gespeichert');render()}).catch(e=>{if(msg){msg.textContent='Nicht gespeichert: '+(e.code||e.message);msg.style.color='var(--red)'}})}
+  if(t.id==='hof-amend'){S.hofInfo={...S.hofInfo,amEnd:t.value.trim()};save()}
+  if(t.id==='hof-pmfrom'){S.hofInfo={...S.hofInfo,pmFrom:t.value.trim()};save()}
+  if(t.id==='hof-pmto'){S.hofInfo={...S.hofInfo,pmTo:t.value.trim()};save()}
   if(t.id==='hof-dayend'){S.hofInfo={...S.hofInfo,dayEnd:t.value.trim()};save()}
   if(t.id==='hof-treecap'){S.hofInfo={...S.hofInfo,treeCap:t.value.trim()};save()}
   if(t.id==='hof-resmin'){S.hofInfo={...S.hofInfo,reserveMin:t.value.trim()};save()}

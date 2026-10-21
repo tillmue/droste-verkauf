@@ -1,4 +1,7 @@
 window.RO_DICT={
+"\"Nachmittags\" bis": "„După-amiaza” până la",
+"\"Nachmittags\" von": "„După-amiaza” de la",
+"\"Vormittags\" im Lieferschein bedeutet: bis (Pflicht, für die Tourenplanung)": "„Dimineața” în bonul de livrare înseamnă: până la (obligatoriu, pentru planificare)",
 "vormittags (Wunsch)": "dimineața (dorință)",
 "nachmittags (Wunsch)": "după-amiaza (dorință)",
 "Spätestens zurück am Hof (für die Tourenplanung, leer = egal)": "Cel târziu înapoi la fermă (pentru planificare, gol = indiferent)",
