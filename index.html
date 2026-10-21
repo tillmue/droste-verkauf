@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 T';
+const APP_VERSION='2026-10-22 U';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2262,7 +2262,7 @@ async function ensureDepotLL(){
 }
 
 /* Neuer Tourenbau (22.10.2026): Einfügen nach Personenminuten, Zeitfenster mit Puffer, Kosten = Personen mal Dauer */
-const BUF=30,TREECAP=60,MAXSTOPS=25;
+const BUF=30,TREECAP=60,MAXSTOPS=25,NEWTOUR=15;
 const tmin=(a,b,P)=>{
   if(P&&P.mat&&a.mi!=null&&b.mi!=null){const s=P.mat[a.mi]&&P.mat[a.mi][b.mi];if(s!=null){const m=Math.ceil(s/60*1.1);return m<1?1:m}}
   const m=Math.round(havKm(a,b)*1.3/40*60);return m<1?1:m};
@@ -2275,11 +2275,11 @@ function orderCrewInfo(o,ds){
 function evalTour(list,P,loose){
   if(!list.length)return {crew:0,dur:0,cost:0,eta:[]};
   if(!loose&&(list.length>MAXSTOPS||(list.length>1&&list.reduce((a,x)=>a+x.n,0)>TREECAP)))return null;
-  const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep;
-  for(const x of list){c+=tmin(pos,x,P);if(x.ws!=null&&c<x.ws)c=x.ws;if(!loose&&x.we!=null&&c>x.we-BUF)return null;eta.push(c);c+=Math.round(x.svc2*f);c=brkAdd(c,bs);pos=x}
+  const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0;
+  for(const x of list){c+=tmin(pos,x,P);if(x.ws!=null&&c<x.ws)c=x.ws;if(!loose&&x.we!=null&&c>x.we-BUF)return null;eta.push(c);c+=Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
   c+=tmin(pos,P.dep,P);const dur=c-P.start;
   if(!loose&&dur>P.lim)return null;
-  return {crew,dur,cost:crew*dur,eta};
+  return {crew,dur,cost:crew*(dur-brk),eta,brk};
 }
 function buildToursV2(orders,dep,P){
   dep={...dep,mi:0};P={...P,dep};
@@ -2293,8 +2293,8 @@ function buildToursV2(orders,dep,P){
     let best=null;
     tours.forEach((T,ti)=>{for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);const e=evalTour(l,P);if(!e)continue;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}});
     let solo=evalTour([it],P),late=false;if(!solo){solo=evalTour([it],P,true);late=true}
-    if(best&&best.d<=solo.cost){const T=tours[best.ti];T.list.splice(best.p,0,it);T.e=best.e;addH(it.o,`Kommt in {T${T.id}}: kostet dort nur +${Math.round(best.d)} Personenminuten, eine eigene Fahrt hätte ${Math.round(solo.cost)} gekostet`)}
-    else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${TREECAP} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
+    if(best&&best.d<=solo.cost+solo.crew*NEWTOUR){const T=tours[best.ti];T.list.splice(best.p,0,it);T.e=best.e;addH(it.o,`Kommt in {T${T.id}}: kostet dort nur +${Math.round(best.d)} Personenminuten, eine eigene Fahrt hätte ${Math.round(solo.cost+solo.crew*NEWTOUR)} gekostet (inklusive ${NEWTOUR} Min Beladen am Hof je Person)`)}
+    else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost+solo.crew*NEWTOUR)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${TREECAP} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
   }
   for(let pass=0;pass<5;pass++){
     let moved=false;
@@ -2302,7 +2302,7 @@ function buildToursV2(orders,dep,P){
       for(let i=0;i<A.list.length&&!moved;i++){
         const it=A.list[i],A2=A.list.slice();A2.splice(i,1);const eA=A2.length?evalTour(A2,P):{cost:0,eta:[],crew:0,dur:0};if(!eA)continue;
         let best=null;
-        tours.forEach((B,bi)=>{if(bi===ai)return;for(let p=0;p<=B.list.length;p++){const l=B.list.slice();l.splice(p,0,it);const eB=evalTour(l,P);if(!eB)continue;const delta=(eA.cost-A.e.cost)+(eB.cost-B.e.cost);if(delta<-2&&(!best||delta<best.delta))best={delta,bi,p,eB}}});
+        tours.forEach((B,bi)=>{if(bi===ai)return;for(let p=0;p<=B.list.length;p++){const l=B.list.slice();l.splice(p,0,it);const eB=evalTour(l,P);if(!eB)continue;const delta=(eA.cost-A.e.cost)+(eB.cost-B.e.cost)-(A2.length?0:A.e.crew*NEWTOUR);if(delta<-2&&(!best||delta<best.delta))best={delta,bi,p,eB}}});
         if(best){const B=tours[best.bi];B.list.splice(best.p,0,it);B.e=best.eB;A.list=A2;A.e=eA;moved=true;addH(it.o,`Später verschoben von {T${A.id}} nach {T${B.id}}: spart ${Math.round(-best.delta)} Personenminuten`)}
       }}
     for(let ti=tours.length-1;ti>=0;ti--)if(!tours[ti].list.length)tours.splice(ti,1);
