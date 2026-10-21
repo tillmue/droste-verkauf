@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 Y';
+const APP_VERSION='2026-10-22 Z';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2200,9 +2200,9 @@ const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),
 const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>+p.len||0));
 const orderSvc=o=>svcMin({service:orderService(o),lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat}))});
 const winTimes=w=>[...String(w||'').matchAll(/(\d{1,2}):(\d{2})/g)].map(m=>(+m[1])*60+(+m[2]));
-const winEnd=w=>{const t=winTimes(w);if(!t.length)return /nachmittag/i.test(w||'')?960:/vormittag/i.test(w||'')?720:null;return t.length===1&&/\bab\s*\d/i.test(w)?1080:t[t.length-1]};
-const winStart=w=>{const t=winTimes(w);if(!t.length)return /nachmittag/i.test(w||'')?780:/vormittag/i.test(w||'')?450:null;return t.length>1?t[0]:(/\bab\s*\d/i.test(w)?t[0]:450)};
-const winTxt=w=>{const e=winEnd(w);if(e==null)return '';if(!winTimes(w).length)return /nachmittag/i.test(w)?'nachmittags':'vormittags';const s=winStart(w),f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /\bab\s*\d/i.test(w)&&winTimes(w).length===1?'ab '+f(s)+' Uhr':f(s)+' bis '+f(e)+' Uhr'};
+const winEnd=w=>{const t=winTimes(w);if(!t.length)return null;return t.length===1&&/\bab\s*\d/i.test(w)?1080:t[t.length-1]};
+const winStart=w=>{const t=winTimes(w);if(!t.length)return null;return t.length>1?t[0]:(/\bab\s*\d/i.test(w)?t[0]:450)};
+const winTxt=w=>{const e=winEnd(w);if(e==null)return /nachmittag/i.test(w||'')?'nachmittags (Wunsch)':/vormittag/i.test(w||'')?'vormittags (Wunsch)':'';const s=winStart(w),f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /\bab\s*\d/i.test(w)&&winTimes(w).length===1?'ab '+f(s)+' Uhr':f(s)+' bis '+f(e)+' Uhr'};
 const nTrees=o=>orderTrees(o).reduce((a,p)=>a+(+p.qty||1),0);
 const SOLO=20;
 const up5=m=>Math.ceil(m/5)*5;
@@ -2529,7 +2529,7 @@ function bestToOrder(b){
   if(L.abh.jn==='ja')add('Abholung','Service');
   const d=b.datum||todayStr();
   return {id:'bs-'+b.id,ls:'Bestellung',custNo:'',name:b.name,contact:b.contact||'',street,zipcity:zip,phone:b.phone||'',billing:b.rgleich?'':(b.rechnung||''),date:todayStr(),from:d,to:d,
-    window:b.zeitwunsch||(b.tageszeit==='vormittags'?'bis 12:00':b.tageszeit==='nachmittags'?'ab 12:00':''),hints:[b.sonst].filter(Boolean),positions,status:'offen',tourId:'',stopId:'',
+    window:b.zeitwunsch||(b.tageszeit==='vormittags'?'vormittags':b.tageszeit==='nachmittags'?'nachmittags':''),hints:[b.sonst].filter(Boolean),positions,status:'offen',tourId:'',stopId:'',
     place:L.auf.ort==='draussen'?'draußen':L.auf.ort==='drinnen'?'drinnen':'',fromBestellung:b.id};
 }
 function bestCard(b){

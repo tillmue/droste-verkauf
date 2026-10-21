@@ -1,4 +1,6 @@
 window.RO_DICT={
+"vormittags (Wunsch)": "dimineața (dorință)",
+"nachmittags (Wunsch)": "după-amiaza (dorință)",
 "Spätestens zurück am Hof (für die Tourenplanung, leer = egal)": "Cel târziu înapoi la fermă (pentru planificare, gol = indiferent)",
 "Höchstzahl Bäume pro Tour (Standard 60, für die Tourenplanung)": "Număr maxim de arbori pe tură (standard 60, pentru planificare)",
 "Warum so?": "De ce așa?",
