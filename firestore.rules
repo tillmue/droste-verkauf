@@ -52,7 +52,7 @@ service cloud.firestore {
     // Aufgaben und Termine
     match /tasks/{id} {
       allow read: if isMember() && (perm('tasksAll') || resource.data.person == '' || resource.data.person == myName());
-      allow create: if isMember();
+      allow create: if isMember() && request.resource.data.get('demo', false) != true;   // Beispielaufgaben nie neu anlegen (alte Geraete koennen sonst Geloeschtes wiederbringen)
       allow update: if isMember();   // jeder darf jede Aufgabe uebernehmen, abhaken oder ins Archiv schieben
       // kein echtes Loeschen, nur Archiv (Feld deleted); Ausnahme: Admin darf Beispieldaten (demo) entfernen
       allow delete: if isAdmin() && resource.data.get('demo', false) == true;
