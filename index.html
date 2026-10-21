@@ -2201,7 +2201,7 @@ const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laterne
 const orderSvc=o=>svcMin({service:orderService(o),lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat}))});
 const winTimes=w=>[...String(w||'').matchAll(/(\d{1,2}):(\d{2})/g)].map(m=>(+m[1])*60+(+m[2]));
 const tHM=(s,d)=>{const m=String(s||'').match(/(\d{1,2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):d};
-const winDefs=()=>{const h0=S.hofInfo||{};return {amTo:tHM(h0.amEnd,720),pmFrom:tHM(h0.pmFrom,780),pmTo:tHM(h0.pmTo,960)}};
+const winDefs=()=>{const h0=S.hofInfo||{};return {amTo:tHM(h0.amEnd,720),pmFrom:tHM(h0.pmFrom,780),pmTo:tHM(h0.pmTo,1020)}};
 const winEnd=w=>{const t=winTimes(w);if(!t.length)return /nachmittag/i.test(w||'')?winDefs().pmTo:/vormittag/i.test(w||'')?winDefs().amTo:null;return t.length===1&&/\bab\s*\d/i.test(w)?1080:t[t.length-1]};
 const winStart=w=>{const t=winTimes(w);if(!t.length)return /nachmittag/i.test(w||'')?winDefs().pmFrom:/vormittag/i.test(w||'')?450:null;return t.length>1?t[0]:(/\bab\s*\d/i.test(w)?t[0]:450)};
 const winTxt=w=>{const e=winEnd(w);if(e==null)return '';if(!winTimes(w).length){const f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /nachmittag/i.test(w)?'nachmittags ('+f(winStart(w))+' bis '+f(e)+' Uhr)':'vormittags (bis '+f(e)+' Uhr)'}const s=winStart(w),f=m=>Math.floor(m/60)+':'+String(m%60).padStart(2,'0');return /\bab\s*\d/i.test(w)&&winTimes(w).length===1?'ab '+f(s)+' Uhr':f(s)+' bis '+f(e)+' Uhr'};
@@ -3094,7 +3094,7 @@ function vDaten(){
   <div class="hint" id="mxkey-msg">Hier kommt der Token von account.heigit.org hinein. Damit berechnet die Tourenplanung die Straßenentfernungen kostenlos. Ohne Schlüssel nutzt sie Google (kostet nach 10.000 Abfragen im Monat etwas).</div>
   <label class="f">"Vormittags" im Lieferschein bedeutet: bis (Pflicht, für die Tourenplanung)</label>
   <input class="t" id="hof-amend" type="time" value="${esc((S.hofInfo&&S.hofInfo.amEnd)||'12:00')}">
-  <div class="mini"><div><label class="f">"Nachmittags" von</label><input class="t" id="hof-pmfrom" type="time" value="${esc((S.hofInfo&&S.hofInfo.pmFrom)||'13:00')}"></div><div><label class="f">"Nachmittags" bis</label><input class="t" id="hof-pmto" type="time" value="${esc((S.hofInfo&&S.hofInfo.pmTo)||'16:00')}"></div></div>
+  <div class="mini"><div><label class="f">"Nachmittags" von</label><input class="t" id="hof-pmfrom" type="time" value="${esc((S.hofInfo&&S.hofInfo.pmFrom)||'13:00')}"></div><div><label class="f">"Nachmittags" bis</label><input class="t" id="hof-pmto" type="time" value="${esc((S.hofInfo&&S.hofInfo.pmTo)||'17:00')}"></div></div>
   <label class="f">Spätestens zurück am Hof (für die Tourenplanung, leer = egal)</label>
   <input class="t" id="hof-dayend" type="time" value="${esc((S.hofInfo&&S.hofInfo.dayEnd)||'')}">
   <label class="f">Höchstzahl Bäume pro Tour (Standard 60, für die Tourenplanung)</label>
