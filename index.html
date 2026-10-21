@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 V';
+const APP_VERSION='2026-10-22 W';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2220,7 +2220,7 @@ function tourSched(items,back,start,fl){
   return {...r,road,late:items.reduce((a,it,k)=>a+(it.we!=null&&r.eta[k]>it.we?1:0),0)};
 }
 function scheduleDrivers(defs,P){
-  const RELOAD=15,D=[...Array(P)].map((_,i)=>({n:i+1,avail:495,bf:false,lu:false,ev:[]})),res=[];let late=0;
+  const RELOAD=30,D=[...Array(P)].map((_,i)=>({n:i+1,avail:495,bf:false,lu:false,ev:[]})),res=[];let late=0;
   defs.slice().sort((a,b)=>(a.urg-b.urg)||(b.crewN-a.crewN)||(b.dur-a.dur)).forEach(def=>{
     const need=Math.min(def.crewN,P),pick=D.slice().sort((a,b)=>a.avail-b.avail||a.n-b.n).slice(0,need);
     const start=Math.max(...pick.map(d=>d.avail)),fl={bf:pick[0].bf,lu:pick[0].lu},its=itemsAt(def.items,need),r=tourSched(its,def.back,start,fl);
@@ -2262,7 +2262,7 @@ async function ensureDepotLL(){
 }
 
 /* Neuer Tourenbau (22.10.2026): Einfügen nach Personenminuten, Zeitfenster mit Puffer, Kosten = Personen mal Dauer */
-const BUF=30,MAXSTOPS=25,NEWTOUR=15;
+const BUF=30,MAXSTOPS=25,NEWTOUR=30,BULK=25,LOADW=0.008;
 const treeCap=()=>{const v=parseInt((S.hofInfo&&S.hofInfo.treeCap)||'');return v>0?v:60};
 const tmin=(a,b,P)=>{
   if(P&&P.mat&&a.mi!=null&&b.mi!=null){const s=P.mat[a.mi]&&P.mat[a.mi][b.mi];if(s!=null){const m=Math.ceil(s/60*1.1);return m<1?1:m}}
@@ -2277,11 +2277,11 @@ function evalTour(list,P,loose){
   if(!list.length)return {crew:0,dur:0,cost:0,eta:[]};
   if(!loose&&list.length>MAXSTOPS){P._why='mehr als '+MAXSTOPS+' Stopps';return null}
   if(!loose&&list.length>1&&list.reduce((a,x)=>a+x.n,0)>treeCap()){P._why='Baumgrenze erreicht ('+list.reduce((a,x)=>a+x.n,0)+' von '+treeCap()+' Bäumen)';return null}
-  const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0;
-  for(const x of list){c+=tmin(pos,x,P);if(x.ws!=null&&c<x.ws)c=x.ws;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
+  const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0,rem=list.reduce((a,x)=>a+x.n,0),loadC=0;
+  for(const x of list){const tl=tmin(pos,x,P);loadC+=rem*tl;rem-=x.n;c+=tl;if(x.ws!=null&&c<x.ws)c=x.ws;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
   c+=tmin(pos,P.dep,P);const dur=c-P.start;
   if(!loose&&dur>P.lim){P._why='Tour würde zu lang ('+fmtMin(dur)+')';return null}
-  return {crew,dur,cost:crew*(dur-brk),eta,brk};
+  return {crew,dur,cost:crew*(dur-brk)+LOADW*loadC,eta,brk};
 }
 function buildToursV2(orders,dep,P){
   dep={...dep,mi:0};P={...P,dep};
@@ -2295,6 +2295,7 @@ function buildToursV2(orders,dep,P){
     let best=null;const rej=[];
     tours.forEach((T,ti)=>{let ok=false,why='';for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);P._why='';const e=evalTour(l,P);if(!e){why=P._why||why;continue}ok=true;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}if(!ok&&why)rej.push(`Nicht möglich in {T${T.id}}: ${why}`)});
     let solo=evalTour([it],P),late=false;if(!solo){solo=evalTour([it],P,true);late=true}
+    if(it.n>=BULK)addH(it.o,`Großabnehmer (${it.n} Bäume, ab ${BULK}): die Ladung fährt nur so lange mit, wie es sich lohnt (Ladungskosten in der Rechnung)`);
     rej.slice(0,3).forEach(x=>addH(it.o,x));
     if(best&&best.d<=solo.cost+solo.crew*NEWTOUR){const T=tours[best.ti];T.list.splice(best.p,0,it);T.e=best.e;addH(it.o,`Kommt in {T${T.id}}: kostet dort nur +${Math.round(best.d)} Personenminuten, eine eigene Fahrt hätte ${Math.round(solo.cost+solo.crew*NEWTOUR)} gekostet (inklusive ${NEWTOUR} Min Beladen am Hof je Person)`)}
     else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost+solo.crew*NEWTOUR)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${treeCap()} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
