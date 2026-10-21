@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZK';
+const APP_VERSION='2026-10-22 ZL';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2660,7 +2660,7 @@ function vBestellungen(kind,fahrer,plan){
   if(cur.bOpen&&cur.bf){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${bestForm()}`;return}
   const all=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>String(b.bestellt||'').localeCompare(String(a.bestellt||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>b.status!=='uebernommen'&&!b.sent);
   $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Keine offenen Bestellungen.</div>'}
-    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
+    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/[2]Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner [3]Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
 }
 function freeStopOrder(s){
   if(!s||!s.orderId)return;const o=S.orders.find(x=>x.id===s.orderId);if(!o||o.status!=='geplant'||(o.stopId&&o.stopId!==s.id))return;
