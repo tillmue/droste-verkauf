@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Spätestens zurück am Hof (für die Tourenplanung, leer = egal)": "Cel târziu înapoi la fermă (pentru planificare, gol = indiferent)",
 "Höchstzahl Bäume pro Tour (Standard 60, für die Tourenplanung)": "Număr maxim de arbori pe tură (standard 60, pentru planificare)",
 "Warum so?": "De ce așa?",
 "Alle, die für Touren in Frage kommen, auch ohne App-Konto. Die Kraft bestimmt die Besetzungsempfehlung. Personen mit App-Konto werden automatisch dazugenommen.": "Toți cei care vin în considerare pentru ture, și fără cont în aplicație. Forța determină recomandarea de echipă. Persoanele cu cont sunt adăugate automat.",
