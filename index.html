@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZH';
+const APP_VERSION='2026-10-22 ZJ';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1742,6 +1742,8 @@ document.addEventListener('click',ev=>{
   if(a==='ttog'){cur.tex=cur.tex||{};const t0=S.tours.find(x=>x.id===v),cur0=cur.tex[v]!==undefined?!!cur.tex[v]:!!(t0&&t0.status==='gestartet');cur.tex[v]=!cur0;return render()}
   if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
   if(a==='plrun'){runPlan();return}
+  if(a==='plock'){const pd=cur.pd;pd.locks=pd.locks||{};pd.locks[+v]=!pd.locks[+v];return render()}
+  if(a==='plrest'){planRest();return}
   if(a==='planauto'){(async()=>{planPickups(cur.pd.date);if(!Object.values(cur.pd.sel).some(Boolean))planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
   if(a==='planok'){applyPlan(v==='all'?null:+v);return}
   if(a==='topt'){const t=S.tours.find(x=>x.id===v);if(t){toast('Reihenfolge wird optimiert …');optimizeTour(t)}return}
@@ -1881,6 +1883,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='pd-date'&&cur.pd){cur.pd.date=t.value;cur.pd.sel={};planCandidates(t.value).forEach(x=>{cur.pd.sel[x.o.id]=true});cur.pd.res=null;render()}
   if(t.id==='pd-start'&&cur.pd)cur.pd.start=t.value||'07:30';
   if(t.id==='pd-p'&&cur.pd)cur.pd.P=t.value;
+  if(t.dataset&&t.dataset.mv&&cur.pd&&t.value!==''){planMove(t.dataset.mv,t.value==='new'?'new':+t.value);t.value='';return}
   if(t.dataset.tset){const [id,f]=t.dataset.tset.split('|'),tt=S.tours.find(x=>x.id===id);if(tt){tt[f]=t.value;save();render()}}
   if(t.dataset.tveh){const tt=S.tours.find(x=>x.id===t.dataset.tveh);if(tt){tt.vehicle=t.value;save();render()}}
   if(t.id==='ef-repeat'||t.id==='ef-remind')render();
@@ -2295,11 +2298,14 @@ function evalTour0(list,P,loose,bfOn,luOn){
   if(!loose&&dur>P.lim){P._why='Tour würde zu lang ('+fmtMin(dur)+')';return null}
   return {crew,dur,cost:crew*(dur-brk)+LOADW*loadC,eta,brk,w0};
 }
+function planItem(o,P,mi){const ci=orderCrewInfo(o,P.date);let ws=winStart(o.window),we=winEnd(o.window);
+  if(ci.win){ws=Math.max(ws==null?0:ws,ci.win[0]);we=we==null?ci.win[1]:Math.min(we,ci.win[1])}
+  return {o,lat:o.lat,lng:o.lng,mi,k:ci.k,ci,ws,we,svc2:orderSvc(o),sv:orderSv(o),n:nTrees(o),must:(o.to||o.from||'')<=P.date?1:0}}
+function crewTxtOf(list){const crew=Math.max(...list.map(x=>x.k)),sehr=Math.max(0,...list.map(x=>x.ci.sehr)),kr=crew===1&&list.some(x=>x.ci.kraeftig),req=crew===3?'3 Personen':crew===2?'2 Personen':'1 Person';
+  return {crew,txt:req+(sehr?', davon mindestens '+sehr+' sehr kräftig':'')+(kr&&!sehr?', Person mindestens kräftig':'')}}
 function buildToursV2(orders,dep,P){
   dep={...dep,mi:0};P={...P,dep};
-  const items=orders.map(o=>{const ci=orderCrewInfo(o,P.date);let ws=winStart(o.window),we=winEnd(o.window);
-    if(ci.win){ws=Math.max(ws==null?0:ws,ci.win[0]);we=we==null?ci.win[1]:Math.min(we,ci.win[1])}
-    return {o,lat:o.lat,lng:o.lng,mi:orders.indexOf(o)+1,k:ci.k,ci,ws,we,svc2:orderSvc(o),sv:orderSv(o),n:nTrees(o),must:(o.to||o.from||'')<=P.date?1:0}});
+  const items=orders.map(o=>planItem(o,P,orders.indexOf(o)+1));
   items.sort((a,b)=>(b.k-a.k)||(b.must-a.must)||((a.we==null)-(b.we==null))||((a.we||0)-(b.we||0)));
   const tours=[],hist={};let tid=0;
   const addH=(o,t)=>{(hist[o.id]=hist[o.id]||[]).push(t)};
@@ -2331,6 +2337,64 @@ function buildToursV2(orders,dep,P){
     const txt=req+(sehr?', davon mindestens '+sehr+' sehr kräftig':'')+(kr&&!sehr?', Person mindestens kräftig':'');
     const mx=T.list.filter(x=>x.k===crew).slice(0,3).map(x=>{const c=x.ci;return `${x.o.name} (${c.L>4?'längster Baum '+mFmt(c.L)+(c.sehr?', davon '+c.sehr+' sehr kräftig nötig':''):c.L>2.5?'längster Baum '+mFmt(c.L)+', 2,5 bis 4 m':c.n>=30&&!c.win?c.n+' Bäume, ab 30 zu zweit':c.L?'längster Baum '+mFmt(c.L):'wenige kleine Bäume'})`});
     return {orders:T.list.map(x=>x.o),crew,reqTxt:txt,late:!!T.late,bid:T.id,cost:Math.round(T.e.cost),crewWhy:mx,stopsWhy:T.list.map(x=>({id:x.o.id,hist:hist[x.o.id]||[],ws:x.ws,we:x.we}))};});
+}
+function assemblePlan(pd,tours){
+  const cx=pd.ctx,missing=cx.missing,matNote=cx.matNote;let P=+pd.P||0;
+    const defs=tours.map((t,i)=>({i,items:t.items,back:t.backMin,crewN:t.crewN,dur:t.preDur,urg:Math.min(9999,...t.stops.map(s=>{const e=winEnd(s.o.window);return e==null?9999:e}))}));
+    pd.ftry=[];
+    if(pd.P==='max')P=Math.max(1,tours.reduce((a,t)=>a+t.crewN,0));
+    const maxCrew=Math.max(1,...defs.map(d=>d.crewN));let Puse=P,sch;
+    if(!P){let best=null;for(let p=maxCrew;p<=Math.max(maxCrew,Math.min(24,defs.length*maxCrew));p++){const r=scheduleDrivers(defs,p);(pd.ftry=pd.ftry||[]).push({p,late:r.late,end:r.makespan});if(!best||r.late<best.r.late||(r.late===best.r.late&&r.makespan<best.r.makespan))best={p,r};if(r.late===0&&r.makespan<=960){best={p,r};break}}Puse=best.p;sch=best.r}
+    else sch=scheduleDrivers(defs,P);
+    tours.forEach((t,i)=>{const r=sch.res[i];t.depart=r.start;t.end=r.end;t.home=r.home;t.road=r.road;t.bfPre=r.bfPre;t.luPre=r.luPre;t.slots=r.slots;t.wait=r.wait;t.pb=r.road.reduce((a,b)=>a+b.len,0);t.capped=r.capped;
+      t.stay=r.its.reduce((a,b)=>a+b.svc,0);t.stops.forEach((s,k)=>{s.eta=r.eta[k];s.svc=r.its[k].svc;const we=winEnd(s.o.window);s.warn=we!=null&&s.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:(we!=null&&s.eta>we-BUF?`Zeitfenster bis ${hmMin(we)}: weniger als ${BUF} Min Puffer`:'')})});
+    const overview=sch.D.map(d=>({n:d.n,ev:d.ev.map(e=>({tour:tours[e.idx],start:e.start,home:e.home,hof:e.hof}))}));
+    tours.sort((a,b)=>a.depart-b.depart||a.slots[0]-b.slots[0]);
+    const w=[];if(matNote)w.push(matNote);
+    tours.forEach((t,i)=>{if(t.devPct>0.25&&t.devMin>10)w.push(`Vorschlag ${i+1}: Google rechnet mit ${t.devMin} Min mehr Fahrzeit als die Straßenmatrix (Verkehr oder andere Route), bitte die Zeiten prüfen.`)});
+    if(tours.some(t=>t.capped))w.push(`Mit ${Puse} Fahrern sind nicht alle Touren so besetzbar, wie sie es bräuchten (große Bäume oder viele Bäume am Stopp brauchen 2 bis 3 Personen).`);
+    const de=(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0,bad=r=>r.late>0||(de&&r.makespan>de);
+    if(P&&pd.P!=='max'&&bad(sch)){let need=0;for(let q=P+1;q<=24;q++){if(!bad(scheduleDrivers(defs,q))){need=q;break}}
+      w.push(need?`Mit ${P} Personen geht es nicht: ${sch.late>0?sch.late+(sch.late===1?' Stopp liegt':' Stopps liegen')+' außerhalb des Zeitfensters':'die Rückkehr liegt nach '+hmMin(de)+' Uhr'}. Es werden mindestens ${need} Personen benötigt.`:`Mit ${P} Personen geht es nicht, auch mit bis zu 24 Personen nicht (Zeitfenster zu eng).`)}
+    else if(sch.late>0)w.push(`Bei ${sch.late} ${sch.late===1?'Stopp':'Stopps'} wird das Zeitfenster überschritten.`);
+    if(sch.makespan>990)w.push(`Mit ${Puse} Fahrern sind die Touren erst ca. ${hmMin(up5(sch.makespan))} fertig.`);
+    pd.res={tours,missing,warn:w.join(' '),puse:Puse,auto:!P,unl:pd.P==='max',ftry:pd.ftry,overview};pd.msg='';
+}
+let MVID=2000;
+async function planMove(oid,target){
+  const pd=cur.pd,res=pd&&pd.res,cx=pd&&pd.ctx;if(!res||!cx||pd.busy)return;
+  const src=res.tours.findIndex(t=>t.stops.some(s=>s.o.id===oid));if(src<0||src===target||res.tours[src].applied||(target!=='new'&&res.tours[target].applied))return;
+  const o=res.tours[src].stops.find(s=>s.o.id===oid).o;pd.busy=true;pd.err='';pd.msg='Wird neu gerechnet …';render();
+  try{
+    const lists=res.tours.map(t=>t.stops.map(s=>s.o));lists[src]=lists[src].filter(x=>x.id!==oid);let tgt;
+    if(target==='new'){lists.push([o]);tgt=lists.length-1}
+    else{tgt=target;const base=lists[tgt],mk=l=>l.map(x=>planItem(x,cx.PP,cx.located.indexOf(x)+1));let best=null;
+      for(let q=0;q<=base.length;q++){const l=base.slice();l.splice(q,0,o);let e=evalTour(mk(l),{...cx.PP});if(!e)e=evalTour(mk(l),{...cx.PP},true);if(e&&(!best||e.cost<best.c)){best={c:e.cost,q}}}
+      base.splice(best?best.q:base.length,0,o)}
+    const out=[];
+    for(let i=0;i<lists.length;i++){
+      if(!lists[i].length)continue;
+      if(i!==src&&i!==tgt){out.push(res.tours[i]);continue}
+      const its=lists[i].map(x=>planItem(x,cx.PP,cx.located.indexOf(x)+1)),ci=crewTxtOf(its),old=(res.tours[i]&&res.tours[i].meta)||{},e=evalTour(its,{...cx.PP},true);
+      const meta={bid:++MVID,cost:e?Math.round(e.cost):0,crewWhy:its.filter(x=>x.k===ci.crew).slice(0,3).map(x=>x.o.name),stopsWhy:lists[i].map(x=>{const h=((old.stopsWhy||[]).find(w=>w.id===x.id)||{}).hist||[];return {id:x.id,hist:x.id===oid?h.concat(['Von Hand hierher verschoben']):h}})};
+      out.push(await cx.mkTour(ci.crew>=3?'gross':'klein',lists[i],ci.crew,ci.txt,meta));
+    }
+    assemblePlan(pd,out);pd.msg='';
+  }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
+  pd.busy=false;render();
+}
+async function planRest(){
+  const pd=cur.pd,res=pd&&pd.res,cx=pd&&pd.ctx;if(!res||!cx||pd.busy)return;
+  const keep=res.tours.filter(t=>t.applied||pd.locks[t.bid]),rest=res.tours.filter(t=>!keep.includes(t));if(!rest.length)return;
+  pd.busy=true;pd.err='';pd.msg='Der Rest wird neu gerechnet …';render();
+  try{
+    const orders=rest.flatMap(t=>t.stops.map(s=>s.o));
+    keep.forEach(t=>{const old=t.bid;t.bid=++MVID;if(pd.locks[old]){delete pd.locks[old];pd.locks[t.bid]=true}if(t.meta)t.meta.bid=t.bid});
+    const built=buildToursV2(orders.map(o=>cx.located.find(x=>x.id===o.id)||o),cx.dep,cx.PP),out=keep.slice();
+    for(const b0 of built)out.push(await cx.mkTour(b0.crew>=3?'gross':'klein',b0.orders,b0.crew,b0.reqTxt,b0));
+    assemblePlan(pd,out);pd.msg='';
+  }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
+  pd.busy=false;render();
 }
 async function runPlan(){
   const pd=cur.pd;pd.busy=true;pd.err='';pd.res=null;pd.msg='Orte werden ermittelt …';render();
@@ -2367,27 +2431,8 @@ async function runPlan(){
     const built=buildToursV2(located,dep,{start:timeToMin(pd.start),lim:pd.budget*60+45,date:pd.date,mat,dayEnd:(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0});
     let nb=0;
     for(const b0 of built){nb++;pd.msg=`Route ${nb} von ${built.length} wird berechnet …`;render();tours.push(await mkTour(b0.crew>=3?'gross':'klein',b0.orders,b0.crew,b0.reqTxt,b0))}
-    // Fahrer einteilen: Touren nacheinander, wenn es weniger Fahrer als Touren gibt
-    pd.msg='Fahrer werden eingeteilt …';render();
-    const defs=tours.map((t,i)=>({i,items:t.items,back:t.backMin,crewN:t.crewN,dur:t.preDur,urg:Math.min(9999,...t.stops.map(s=>{const e=winEnd(s.o.window);return e==null?9999:e}))}));
-    pd.ftry=[];
-    if(pd.P==='max')P=Math.max(1,tours.reduce((a,t)=>a+t.crewN,0));
-    const maxCrew=Math.max(1,...defs.map(d=>d.crewN));let Puse=P,sch;
-    if(!P){let best=null;for(let p=maxCrew;p<=Math.max(maxCrew,Math.min(24,defs.length*maxCrew));p++){const r=scheduleDrivers(defs,p);(pd.ftry=pd.ftry||[]).push({p,late:r.late,end:r.makespan});if(!best||r.late<best.r.late||(r.late===best.r.late&&r.makespan<best.r.makespan))best={p,r};if(r.late===0&&r.makespan<=960){best={p,r};break}}Puse=best.p;sch=best.r}
-    else sch=scheduleDrivers(defs,P);
-    tours.forEach((t,i)=>{const r=sch.res[i];t.depart=r.start;t.end=r.end;t.home=r.home;t.road=r.road;t.bfPre=r.bfPre;t.luPre=r.luPre;t.slots=r.slots;t.wait=r.wait;t.pb=r.road.reduce((a,b)=>a+b.len,0);t.capped=r.capped;
-      t.stay=r.its.reduce((a,b)=>a+b.svc,0);t.stops.forEach((s,k)=>{s.eta=r.eta[k];s.svc=r.its[k].svc;const we=winEnd(s.o.window);s.warn=we!=null&&s.eta>we?`Zeitfenster bis ${hmMin(we)} wird überschritten`:(we!=null&&s.eta>we-BUF?`Zeitfenster bis ${hmMin(we)}: weniger als ${BUF} Min Puffer`:'')})});
-    const overview=sch.D.map(d=>({n:d.n,ev:d.ev.map(e=>({tour:tours[e.idx],start:e.start,home:e.home,hof:e.hof}))}));
-    tours.sort((a,b)=>a.depart-b.depart||a.slots[0]-b.slots[0]);
-    const w=[];if(matNote)w.push(matNote);
-    tours.forEach((t,i)=>{if(t.devPct>0.25&&t.devMin>10)w.push(`Vorschlag ${i+1}: Google rechnet mit ${t.devMin} Min mehr Fahrzeit als die Straßenmatrix (Verkehr oder andere Route), bitte die Zeiten prüfen.`)});
-    if(tours.some(t=>t.capped))w.push(`Mit ${Puse} Fahrern sind nicht alle Touren so besetzbar, wie sie es bräuchten (große Bäume oder viele Bäume am Stopp brauchen 2 bis 3 Personen).`);
-    const de=(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0,bad=r=>r.late>0||(de&&r.makespan>de);
-    if(P&&pd.P!=='max'&&bad(sch)){let need=0;for(let q=P+1;q<=24;q++){if(!bad(scheduleDrivers(defs,q))){need=q;break}}
-      w.push(need?`Mit ${P} Personen geht es nicht: ${sch.late>0?sch.late+(sch.late===1?' Stopp liegt':' Stopps liegen')+' außerhalb des Zeitfensters':'die Rückkehr liegt nach '+hmMin(de)+' Uhr'}. Es werden mindestens ${need} Personen benötigt.`:`Mit ${P} Personen geht es nicht, auch mit bis zu 24 Personen nicht (Zeitfenster zu eng).`)}
-    else if(sch.late>0)w.push(`Bei ${sch.late} ${sch.late===1?'Stopp':'Stopps'} wird das Zeitfenster überschritten.`);
-    if(sch.makespan>990)w.push(`Mit ${Puse} Fahrern sind die Touren erst ca. ${hmMin(up5(sch.makespan))} fertig.`);
-    pd.res={tours,missing,warn:w.join(' '),puse:Puse,auto:!P,unl:pd.P==='max',ftry:pd.ftry,overview};pd.msg='';
+    pd.ctx={dep,located,missing,mat,matNote,mkTour,PP:{start:timeToMin(pd.start),lim:pd.budget*60+45,date:pd.date,mat,dayEnd:(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0,dep:{...dep,mi:0}}};pd.locks={};
+    assemblePlan(pd,tours);
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
   pd.busy=false;render();
 }
@@ -2482,9 +2527,9 @@ function planBox(){
     ${recs[i]&&recs[i].txt?`<div class="p"><b>Empfehlung:</b> ${recs[i].txt}</div>`:''}
     <div class="p"><b>${t.treesN||0} Bäume</b>${t.maxLen?', längster '+mFmt(t.maxLen):''}${t.treesN>treeCap()?' · mehr als '+treeCap()+' Bäume':''}</div>
     <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Beim Packen bohren: '+t.bohren:''}</div>
-    ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(up5(s.eta))}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}${winTxt(s.o.window)?` <span class="p">· ${winTxt(s.o.window)}</span>`:''}</span></div><div class="p">${esc(orderAddr(s.o))} · Aufenthalt ${s.svc} Min</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
+    ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(up5(s.eta))}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}${winTxt(s.o.window)?` <span class="p">· ${winTxt(s.o.window)}</span>`:''}</span></div><div class="p">${esc(orderAddr(s.o))} · Aufenthalt ${s.svc} Min</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}${t.applied||pd.busy?'':`<select class="t" data-mv="${s.o.id}" style="margin-top:6px;font-size:13px"><option value="">Verschieben nach …</option>${res.tours.map((u,j)=>j===i||u.applied?'':`<option value="${j}">Vorschlag ${j+1}</option>`).join('')}<option value="new">Neue Tour</option></select>`}</div>`).join('')}
     ${whyHtml(t,i,recs[i])}
-    ${t.applied?'<div class="hint">Übernommen.</div>':`<button class="btn" data-pl="planok" data-v="${i}" style="margin:8px 0 0">Diese Tour übernehmen</button>`}</div>`;
+    ${t.applied?'<div class="hint">Übernommen.</div>':`<div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plock" data-v="${t.bid}" style="margin:0">${pd.locks&&pd.locks[t.bid]?'Fixiert (tippen zum Lösen)':'Fixieren'}</button><button class="btn" data-pl="planok" data-v="${i}" style="margin:0">Diese Tour übernehmen</button></div>`}</div>`;
   const fplan=res=>`<div class="card pad"><div class="n">Fahrereinteilung (${res.puse} ${res.puse===1?'Fahrer':'Fahrer'}${res.auto?', automatisch gewählt':res.unl?', unbegrenzt: alle Touren gleichzeitig':''})</div>${res.auto&&res.ftry&&res.ftry.length?`<details data-det="why-f" ${cur.det['why-f']?'open':''}><summary style="padding:6px 0">Warum ${res.puse} Fahrer?</summary><ul class="bul" style="margin:0 0 6px;padding-left:18px">${res.ftry.map(f=>`<li>${f.p} Fahrer: ${f.late?f.late+' Zeitfenster verletzt, ':''}fertig ca. ${hmMin(up5(f.end))}${f.p===res.puse?' (gewählt: kleinste Zahl, bei der alles bis 16:00 fertig ist und kein Zeitfenster verletzt wird)':''}</li>`).join('')}</ul></details>`:''}${res.overview.map(d=>`<div class="p" style="color:var(--text)"><b>Fahrer ${d.n}:</b> ${d.ev.length?d.ev.map(e=>`${hmMin(up5(e.start))} ${e.tour.solo?'Einzelfahrt':'Vorschlag '+(res.tours.indexOf(e.tour)+1)} bis ${hmMin(up5(e.home))}${e.hof.map(h=>' · '+h.k+' am Hof').join('')}`).join(' → '):'nicht benötigt'}</div>`).join('')}</div>`;
   const nSel=Object.values(pd.sel).filter(Boolean).length;
   const allOn=cands.length&&cands.every(x=>pd.sel[x.o.id]);
@@ -2498,7 +2543,7 @@ function planBox(){
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
     <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`${nSel===cands.length?'Alle '+cands.length:nSel} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
     ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
-    ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${fplan(res)}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
+    ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3><div class="hint">Du kannst einzelne Stopps unter "Verschieben nach …" in eine andere Tour legen, Touren fixieren und den Rest neu rechnen lassen.</div><button class="btn sec" data-pl="plrest" style="margin:0 0 8px" ${pd.busy||res.tours.every(t=>t.applied||(pd.locks&&pd.locks[t.bid]))?'disabled':''}>Rest neu berechnen (ohne fixierte Touren)</button>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${fplan(res)}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
 }
 const crewHintTxt=c=>c;
 function prepBox(){
