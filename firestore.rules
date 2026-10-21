@@ -89,6 +89,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Angebote: wie Bestellungen
+    match /angebote/{id} {
+      allow read, create, update: if perm('lieferplanung');
+      allow delete: if false;
+    }
+
     // Aufträge (Lieferscheine): nur wer Touren planen darf
     match /orders/{id} {
       allow read, create, update: if perm('lieferplanung');

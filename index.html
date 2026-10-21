@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZL';
+const APP_VERSION='2026-10-22 ZN';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -357,7 +357,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.angebote=S.angebote||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -1725,6 +1725,17 @@ document.addEventListener('click',ev=>{
   if(a==='bfpick'){const [k,i]=v.split('|'),x=((cur.bfsug||{})[k]||[])[+i];if(!x)return;cur.bf[k]=x.addr;cur.bfsug[k]=[];return render()}
   if(a==='dlpick'){const d=cur.dl,x=(d.sug||[])[+v];if(!x)return;d.addr=x.addr;d.pick=x;d.sug=[];dlRun();return}
   if(a==='splan'){const [sid,typ]=v.split('|');planViewer(()=>window.cloud.imageUrl('standplaene/'+sid+'-'+typ+'.png'));return}
+  if(a==='agnew'){cur.ag=agNew();cur.agOpen=true;window.scrollTo(0,0);return render()}
+  if(a==='agedit'){const b=S.angebote.find(x=>x.id===v);if(!b)return;cur.ag=JSON.parse(JSON.stringify(b));cur.agOpen=true;window.scrollTo(0,0);return render()}
+  if(a==='agcancel'){cur.agOpen=false;cur.ag=null;return render()}
+  if(a==='agpos'){if(cur.ag.pos.length<6)cur.ag.pos.push({bez:'',menge:'',einzel:'',art:'ware'});return render()}
+  if(a==='agart'){const q=cur.ag.pos[+v];q.art=q.art==='leist'?'ware':'leist';return render()}
+  if(a==='agsave'){const f=cur.ag;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
+    const c=agCalc(f),row={...f,name:f.name.trim(),netto:c.netto,brutto:c.brutto,updated:Date.now()};
+    if(f.id){const b=S.angebote.find(x=>x.id===f.id);if(b){const was=agSig(b);Object.assign(b,row);if(b.sent&&agSig(b)!==was)b.sent=false}}
+    else S.angebote.push({...row,id:uid(),by:S.me,created:Date.now()});
+    cur.agOpen=false;cur.ag=null;save();toast('Angebot gespeichert. Die PDF entsteht gleich auf dem Mac.');return render()}
+  if(a==='agdel'){const b=S.angebote.find(x=>x.id===cur.ag.id);if(b&&confirm('Angebot ins Archiv verschieben?')){softDel(b);cur.agOpen=false;cur.ag=null;save();render()}return}
   if(a==='bfnew'){cur.bf=bfNew();cur.bOpen=true;window.scrollTo(0,0);return render()}
   if(a==='bfedit'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.bf=JSON.parse(JSON.stringify(b));cur.bOpen=true;window.scrollTo(0,0);return render()}
   if(a==='bfcancel'){cur.bOpen=false;cur.bf=null;return render()}
@@ -2166,7 +2177,7 @@ function vPacken(t){
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}
     ${fin}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg ptabs">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg ptabs">${(plan?[['auf','Planung']]:[]).concat([['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']]).concat(plan?[['best','Bestellung'],['ang','Angebot']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
@@ -2571,7 +2582,7 @@ function vAuftraege(kind,fahrer,plan){
 const BPOS=5;
 const bfNew=()=>({id:null,name:'',email:'',phone:'',contact:'',art:'',liefer:'',rechnung:'',rgleich:false,datum:'',tageszeit:'',zeitwunsch:'',
   pos:[...Array(3)].map(()=>({sorte:'',anzahl:'',groesse:'',preis:''})),
-  leist:{sk:{jn:'',anz:'',preis:''},sg:{jn:'',anz:'',preis:''},auf:{jn:'',ort:'',preis:''},lie:{jn:'',preis:''},abh:{jn:'',preis:''}},
+  leist:{sk:{jn:'',anz:'',preis:''},sg:{jn:'',anz:'',preis:''},auf:{jn:'',ort:'',anz:'',preis:''},lie:{jn:'',anz:'',preis:''},abh:{jn:'',anz:'',preis:''}},
   sonst:'',gesamt:'',zahlung:'',bezahlt:'',kassiert:'',bestellt:todayStr(),kuerzel:String(S.me||'').split(/\s+/).map(w=>w[0]||'').join('').toUpperCase()});
 const fmtDe=d=>d?String(d).split('-').reverse().join('.'):'';
 cur.bf=null;cur.bOpen=false;
@@ -2645,9 +2656,9 @@ function bestForm(){
     <label class="f">Leistungen</label>
     <div class="card pad" style="margin:0 0 8px"><div class="n">Ständer klein</div>${yn('sk')}<div class="mini"><input class="t" id="bf-l-sk-anz" inputmode="numeric" placeholder="Anzahl" value="${esc(f.leist.sk.anz)}" style="min-width:0"><input class="t" id="bf-l-sk-preis" placeholder="Preis" value="${esc(f.leist.sk.preis)}" style="min-width:0"></div></div>
     <div class="card pad" style="margin:0 0 8px"><div class="n">Ständer groß</div>${yn('sg')}<div class="mini"><input class="t" id="bf-l-sg-anz" inputmode="numeric" placeholder="Anzahl" value="${esc(f.leist.sg.anz)}" style="min-width:0"><input class="t" id="bf-l-sg-preis" placeholder="Preis" value="${esc(f.leist.sg.preis)}" style="min-width:0"></div></div>
-    <div class="card pad" style="margin:0 0 8px"><div class="n">Aufstellen <span class="p">4 €/m</span></div>${yn('auf',true)}<input class="t" id="bf-l-auf-preis" placeholder="Preis" value="${esc(f.leist.auf.preis)}"></div>
-    <div class="card pad" style="margin:0 0 8px"><div class="n">Lieferung <span class="p">bis 10 km 15 €, ab 10 km 1,5 €/km (Gemeinde Belm 10 €)</span></div>${yn('lie')}<input class="t" id="bf-l-lie-preis" placeholder="Preis" value="${esc(f.leist.lie.preis)}"></div>
-    <div class="card pad" style="margin:0 0 8px"><div class="n">Abholung <span class="p">Rücknahme im Januar, Preis wie Lieferung</span></div>${yn('abh')}<input class="t" id="bf-l-abh-preis" placeholder="Preis" value="${esc(f.leist.abh.preis)}"></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Aufstellen <span class="p">4 €/m</span></div>${yn('auf',true)}<div class="mini"><input class="t" id="bf-l-auf-anz" inputmode="decimal" placeholder="Meter" value="${esc(f.leist.auf.anz)}" style="min-width:0"><input class="t" id="bf-l-auf-preis" placeholder="Preis" value="${esc(f.leist.auf.preis)}" style="min-width:0"></div></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Lieferung <span class="p">bis 10 km 15 €, ab 10 km 1,5 €/km (Gemeinde Belm 10 €)</span></div>${yn('lie')}<div class="mini"><input class="t" id="bf-l-lie-anz" inputmode="decimal" placeholder="Kilometer" value="${esc(f.leist.lie.anz)}" style="min-width:0"><input class="t" id="bf-l-lie-preis" placeholder="Preis" value="${esc(f.leist.lie.preis)}" style="min-width:0"></div></div>
+    <div class="card pad" style="margin:0 0 8px"><div class="n">Abholung <span class="p">Rücknahme im Januar, Preis wie Lieferung</span></div>${yn('abh')}<div class="mini"><input class="t" id="bf-l-abh-anz" inputmode="decimal" placeholder="Kilometer" value="${esc(f.leist.abh.anz)}" style="min-width:0"><input class="t" id="bf-l-abh-preis" placeholder="Preis" value="${esc(f.leist.abh.preis)}" style="min-width:0"></div></div>
     <label class="f">Sonstiges</label><textarea class="t" id="bf-sonst" rows="2">${esc(f.sonst)}</textarea>
     <div class="mini" style="margin-top:8px"><input class="t" id="bf-gesamt" placeholder="Gesamt" value="${esc(f.gesamt)}" style="min-width:0"><div class="chips" style="margin:0;align-self:center">${ch('zahlung','bar','Bar')}${ch('zahlung','rechnung','Rechnung')}</div></div>
     <div class="mini" style="margin-top:8px"><input class="t" id="bf-bezahlt" placeholder="Bezahlt am" value="${esc(f.bezahlt)}" style="min-width:0"><input class="t" id="bf-kassiert" placeholder="Dankend erhalten (Kürzel)" value="${esc(f.kassiert)}" style="min-width:0"></div>
@@ -2661,6 +2672,40 @@ function vBestellungen(kind,fahrer,plan){
   const all=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>String(b.bestellt||'').localeCompare(String(a.bestellt||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>b.status!=='uebernommen'&&!b.sent);
   $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Keine offenen Bestellungen.</div>'}
     <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/[2]Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner [3]Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
+}
+const agNew=()=>({id:null,name:'',contact:'',street:'',plzort:'',datum:todayStr(),anrede:'Sehr geehrte Damen und Herren,',einleitung:'vielen Dank für Ihre Anfrage. Gern bieten wir Ihnen an:',
+  pos:[...Array(3)].map(()=>({bez:'',menge:'',einzel:'',art:'ware'})),termine:'Lieferung: November 2026\nAbholung: Januar 2027\nTermine nach Absprache.',gueltig:shiftDate(todayStr(),14)});
+const agSig=f=>JSON.stringify([f.name,f.contact,f.street,f.plzort,f.datum,f.anrede,f.einleitung,f.pos,f.termine,f.gueltig]);
+function agCalc(f){let w=0,l=0;const g=(f.pos||[]).map(p=>{const x=Math.round(numOf(p.menge)*numOf(p.einzel)*100)/100;if(p.art==='leist')l+=x;else w+=x;return x});
+  const m7=Math.round(w*7)/100,m19=Math.round(l*19)/100,netto=Math.round((w+l)*100)/100;return {g,netto,m7,m19,brutto:Math.round((netto+m7+m19)*100)/100}}
+const agSums=f=>{const c=agCalc(f);return `<div class="kv"><span>Nettobetrag</span><b>${eur(c.netto)}</b></div><div class="kv"><span>MwSt. 7 % auf Bäume</span><b>${eur(c.m7)}</b></div><div class="kv"><span>MwSt. 19 % auf Leistungen</span><b>${eur(c.m19)}</b></div><div class="kv"><span><b>Gesamtbetrag brutto</b></span><b>${eur(c.brutto)}</b></div>`};
+function agInput(t){const f=cur.ag,k=t.id.slice(3);let m;
+  if(m=k.match(/^p(\d)-(\w+)$/))f.pos[+m[1]][m[2]]=t.value;else f[k]=t.value;
+  const c=agCalc(f);f.pos.forEach((p,i)=>{const e=document.getElementById('ag-g'+i);if(e)e.textContent=eur(c.g[i])});const e=document.getElementById('ag-sums');if(e)e.innerHTML=agSums(f)}
+function agForm(){
+  const f=cur.ag,c=agCalc(f);
+  return `<div class="card pad formc"><label class="f">${f.id?'Angebot bearbeiten':'Neues Angebot'}</label>
+    <input class="t" id="ag-name" placeholder="Firma / Name" value="${esc(f.name)}">
+    <input class="t" id="ag-contact" placeholder="Ansprechperson" value="${esc(f.contact)}" style="margin-top:8px">
+    <input class="t" id="ag-street" placeholder="Straße und Hausnummer" value="${esc(f.street)}" style="margin-top:8px">
+    <div class="mini" style="margin-top:8px"><input class="t" id="ag-plzort" placeholder="PLZ und Ort" value="${esc(f.plzort)}" style="min-width:0"><input class="t" type="date" id="ag-datum" value="${esc(f.datum)}" style="min-width:0"></div>
+    <label class="f">Anrede und Einleitung</label><input class="t" id="ag-anrede" value="${esc(f.anrede)}"><textarea class="t" id="ag-einleitung" rows="2" style="margin-top:6px">${esc(f.einleitung)}</textarea>
+    <label class="f">Positionen (Preise netto)</label>
+    ${f.pos.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-p${i}-bez" placeholder="Bezeichnung" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px"><input class="t" id="ag-p${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0"><input class="t" id="ag-p${i}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(p.einzel)}" style="min-width:0"></div><div class="mini" style="margin-top:6px;align-items:center"><button class="chip on" data-pl="agart" data-v="${i}">${p.art==='leist'?'Leistung (19 %)':'Bäume und Ware (7 %)'}</button><b id="ag-g${i}" style="text-align:right">${eur(c.g[i])}</b></div></div>`).join('')}
+    ${f.pos.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Position</button>':''}
+    <div id="ag-sums" class="card pad" style="margin:0 0 8px">${agSums(f)}</div>
+    <label class="f">Termine</label><textarea class="t" id="ag-termine" rows="3">${esc(f.termine)}</textarea>
+    <label class="f">Gültig bis</label><input class="t" type="date" id="ag-gueltig" value="${esc(f.gueltig)}">
+    <div class="mini" style="margin-top:10px"><button class="btn" data-pl="agsave" style="margin:0">Speichern</button><button class="btn sec" data-pl="agcancel" style="margin:0">Abbrechen</button></div>
+    ${f.sent?'<div class="hint">Abgesendet'+(f.sentAt?' am '+new Date(f.sentAt).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'')+'. Änderungen machen es wieder zum offenen Angebot.</div>':''}
+    ${f.id?'<button class="btn red" data-pl="agdel">Angebot ins Archiv</button>':''}</div>`;
+}
+function vAngebote(kind,fahrer,plan){
+  if(cur.agOpen&&cur.ag){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${agForm()}`;return}
+  const all=(S.angebote||[]).filter(b=>!b.deleted).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>!b.sent);
+  const card=b=>`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'<b style="color:var(--green)">Abgesendet</b>':'Offen'}</span></div><div class="p">${fmtDe(b.datum)}${b.contact?' · '+esc(b.contact):''} · ${eur(b.brutto||0)} brutto</div><div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="agedit" data-v="${b.id}" style="margin:0">Bearbeiten</button></div></div>`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="agnew">+ Neues Angebot</button>${L.map(card).join('')||'<div class="hint">Keine offenen Angebote.</div>'}
+    <details data-det="angarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="agedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':'Offen'} · ${fmtDe(b.datum)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Angebote/[2]Absendbereit und [3]Abgesendet.</div></details>`;
 }
 function freeStopOrder(s){
   if(!s||!s.orderId)return;const o=S.orders.find(x=>x.id===s.orderId);if(!o||o.status!=='geplant'||(o.stopId&&o.stopId!==s.id))return;
@@ -2925,11 +2970,12 @@ function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
   if(cur.packTour){const pt=S.tours.find(x=>x.id===cur.packTour&&!x.deleted);if(pt&&(plan||canRun(pt))){vPacken(pt);return}cur.packTour=''}
   const fahrer=!has('toursAll')&&!has('lieferplanung');
-  const kinds=['lief','abh','ges'].concat(plan?['auf','best']:[]);
+  const kinds=['lief','abh','ges'].concat(plan?['auf','best','ang']:[]);
   const kind=fahrer?'lief':kinds.includes(cur.lkind)?cur.lkind:(plan?'auf':'lief');
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
   syncPickups();
   if(kind==='best'){vBestellungen(kind,fahrer,plan);return}
+  if(kind==='ang'){vAngebote(kind,fahrer,plan);return}
   if(kind==='auf'){vAuftraege(kind,fahrer,plan);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||t.driver===S.me||t.codriver===S.me));
@@ -3424,6 +3470,7 @@ document.addEventListener('input',ev=>{
   if(t.id&&t.id.startsWith('shf-')&&cur.shf)cur.shf[t.id.slice(4)]=t.value;
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
+  if(t.id&&t.id.startsWith('ag-')&&cur.ag){agInput(t);return}
   if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else{cur.bf[k]=t.value;if((k==='liefer'||k==='rechnung')&&ev.type==='input')bfSuggest(k,t.value)}}
   if(t.id&&t.id.startsWith('pn-'))cur.pen[t.id.slice(3)]=t.value;
 });
@@ -3456,6 +3503,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='hof-veh'){S.hofInfo={...S.hofInfo,vehicles:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
+  if(t.id&&t.id.startsWith('ag-')&&cur.ag){agInput(t);return}
   if(t.id&&t.id.startsWith('bf-')&&cur.bf){const k=t.id.slice(3);let m;if(m=k.match(/^p(\d)-(\w+)$/))cur.bf.pos[+m[1]][m[2]]=t.value;else if(m=k.match(/^l-(\w+)-(\w+)$/))cur.bf.leist[m[1]][m[2]]=t.value;else{cur.bf[k]=t.value;if((k==='liefer'||k==='rechnung')&&ev.type==='input')bfSuggest(k,t.value)}}
 });
 
