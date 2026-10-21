@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZO';
+const APP_VERSION='2026-10-22 ZP';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1728,12 +1728,14 @@ document.addEventListener('click',ev=>{
   if(a==='agnew'){cur.ag=agNew();cur.agOpen=true;window.scrollTo(0,0);return render()}
   if(a==='agedit'){const b=S.angebote.find(x=>x.id===v);if(!b)return;cur.ag=JSON.parse(JSON.stringify(b));cur.agOpen=true;window.scrollTo(0,0);return render()}
   if(a==='agcancel'){cur.agOpen=false;cur.ag=null;return render()}
-  if(a==='agpos'){if(cur.ag.pos.length<6)cur.ag.pos.push({bez:'',menge:'',einzel:'',art:'ware',pausch:false});return render()}
-  if(a==='agpa'){const q=cur.ag.pos[+v];q.pausch=!q.pausch;if(q.pausch){q.mengeOld=q.menge;q.menge='1'}else{q.menge=q.mengeOld||'';delete q.mengeOld}return render()}
+  if(a==='agpos'){if(cur.ag.baeume.length<6)cur.ag.baeume.push({bez:'',menge:'',einzel:''});return render()}
+  if(a==='agpa'){cur.ag.svc.mode=v==='pausch'?'pausch':'einzeln';return render()}
+  if(a==='agson'){const k=cur.ag.svc.it[v];k.on=!k.on;return render()}
   if(a==='agfrom'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.ag=agFromBest(b);cur.agOpen=true;window.scrollTo(0,0);return render()}
   if(a==='agdl'){const b=S.angebote.find(x=>x.id===v);if(!b)return;agDownload(b);return}
-  if(a==='agart'){const q=cur.ag.pos[+v];q.art=q.art==='leist'?'ware':'leist';return render()}
   if(a==='agsave'){const f=cur.ag;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
+    const pos=agPos(f);if(pos.length>6)return alert('Das Angebot hat Platz für 6 Zeilen. Bitte Bäume oder Leistungen zusammenfassen (zum Beispiel pauschal).');
+    f.pos=pos;f.vat=vatRate();f.anrede=agAnrede(f.contact);f.einleitung=AG_EINL;
     const c=agCalc(f),row={...f,name:f.name.trim(),netto:c.netto,brutto:c.brutto,updated:Date.now()};
     if(f.id){const b=S.angebote.find(x=>x.id===f.id);if(b){const was=agSig(b);Object.assign(b,row);if(b.sent&&agSig(b)!==was)b.sent=false}}
     else{const nid=uid();S.angebote.push({...row,id:nid,by:S.me,created:Date.now()});if(f.fromBestellung){const bb=S.bestellungen.find(x=>x.id===f.fromBestellung);if(bb)bb.angebotId=nid}}
@@ -2676,25 +2678,37 @@ function vBestellungen(kind,fahrer,plan){
   $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Keine offenen Bestellungen.</div>'}
     <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/[2]Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner [3]Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
 }
-const agNew=()=>({id:null,name:'',contact:'',street:'',plzort:'',datum:todayStr(),anrede:'Sehr geehrte Damen und Herren,',einleitung:'vielen Dank für Ihre Anfrage. Gern bieten wir Ihnen an:',
-  pos:[...Array(3)].map(()=>({bez:'',menge:'',einzel:'',art:'ware'})),termine:'Lieferung: November 2026\nAbholung: Januar 2027\nTermine nach Absprache.',gueltig:shiftDate(todayStr(),14)});
+const AG_EINL='vielen Dank für Ihre Anfrage. Gern bieten wir Ihnen an:';
+const AG_SVC=[['lie','Lieferung','km'],['auf','Aufstellen','m'],['abh','Abholung','km'],['sk','Ständer klein','Stück'],['sg','Ständer groß','Stück']];
+const agSvcNew=()=>({mode:'einzeln',preis:'',it:Object.fromEntries(AG_SVC.map(([k])=>[k,{on:false,menge:'',einzel:''}]))});
+const agAnrede=c=>{c=String(c||'').trim();if(!c)return 'Sehr geehrte Damen und Herren,';
+  let m=c.match(/^(?:herrn?|hr\.?)\s+(.+)$/i);if(m)return 'Sehr geehrter Herr '+m[1].trim()+',';
+  m=c.match(/^(?:frau|fr\.?)\s+(.+)$/i);if(m)return 'Sehr geehrte Frau '+m[1].trim()+',';
+  return 'Guten Tag '+c+','};
+const agNew=()=>({id:null,name:'',contact:'',street:'',plzort:'',datum:todayStr(),
+  baeume:[...Array(2)].map(()=>({bez:'',menge:'',einzel:''})),svc:agSvcNew(),termine:'Lieferung: November 2026\nAbholung: Januar 2027\nTermine nach Absprache.',gueltig:shiftDate(todayStr(),14)});
+function agPos(f){const out=[];(f.baeume||[]).filter(x=>x.bez||x.menge||x.einzel).forEach(x=>out.push({bez:x.bez,menge:x.menge,einzel:x.einzel,art:'ware'}));
+  const sv=f.svc||agSvcNew(),on=AG_SVC.filter(([k])=>sv.it[k].on);
+  if(sv.mode==='pausch'){if(on.length||sv.preis)out.push({bez:'Pauschale: '+(on.map(x=>x[1]).join(', ').replace(/, ([^,]*)$/,' und $1')||'Leistungen'),menge:'1',einzel:sv.preis,art:'leist',pausch:true})}
+  else on.forEach(([k,n,u])=>{const x=sv.it[k];out.push({bez:n+(u&&u!=='Stück'&&x.menge?' ('+x.menge+' '+u+')':''),menge:x.menge,einzel:x.einzel,art:'leist'})});
+  return out}
 const agSig=f=>JSON.stringify([f.name,f.contact,f.street,f.plzort,f.datum,f.anrede,f.einleitung,f.pos,f.termine,f.gueltig]);
-function agCalc(f){let w=0,l=0;const g=(f.pos||[]).map(p=>{const x=Math.round(numOf(p.menge)*numOf(p.einzel)*100)/100;if(p.art==='leist')l+=x;else w+=x;return x});
-  const m7=Math.round(w*7)/100,m19=Math.round(l*19)/100,netto=Math.round((w+l)*100)/100;return {g,netto,m7,m19,brutto:Math.round((netto+m7+m19)*100)/100}}
-const agSums=f=>{const c=agCalc(f);return `<div class="kv"><span>Nettobetrag</span><b>${eur(c.netto)}</b></div><div class="kv"><span>MwSt. 7 % auf Bäume</span><b>${eur(c.m7)}</b></div><div class="kv"><span>MwSt. 19 % auf Leistungen</span><b>${eur(c.m19)}</b></div><div class="kv"><span><b>Gesamtbetrag brutto</b></span><b>${eur(c.brutto)}</b></div>`};
+function agCalc(f){const r=f.vat||vatRate(),g=agPos(f).map(p=>Math.round(numOf(p.menge)*numOf(p.einzel)*100)/100),netto=Math.round(g.reduce((a,x)=>a+x,0)*100)/100,m=Math.round(netto*r)/100;
+  return {g,netto,m,r,brutto:Math.round((netto+m)*100)/100}}
+const agSums=f=>{const c=agCalc(f);return `<div class="kv"><span>Nettobetrag</span><b>${eur(c.netto)}</b></div><div class="kv"><span>MwSt. ${String(c.r).replace('.',',')} %</span><b>${eur(c.m)}</b></div><div class="kv"><span><b>Gesamtbetrag brutto</b></span><b>${eur(c.brutto)}</b></div>${c.g.length>6?'<div class="hint" style="color:var(--red)">Mehr als 6 Zeilen: bitte zusammenfassen.</div>':''}`};
 function agInput(t){const f=cur.ag,k=t.id.slice(3);let m;
-  if(m=k.match(/^p(\d)-(\w+)$/))f.pos[+m[1]][m[2]]=t.value;else f[k]=t.value;
-  const c=agCalc(f);f.pos.forEach((p,i)=>{const e=document.getElementById('ag-g'+i);if(e)e.textContent=eur(c.g[i])});const e=document.getElementById('ag-sums');if(e)e.innerHTML=agSums(f)}
+  if(m=k.match(/^b(\d)-(\w+)$/))f.baeume[+m[1]][m[2]]=t.value;
+  else if(m=k.match(/^s-(\w+)-(\w+)$/))f.svc.it[m[1]][m[2]]=t.value;
+  else if(k==='spreis')f.svc.preis=t.value;
+  else{f[k]=t.value;if(k==='contact'){const e=document.getElementById('ag-anrede');if(e)e.textContent=agAnrede(t.value)}}
+  const e=document.getElementById('ag-sums');if(e)e.innerHTML=agSums(f)}
 function agFromBest(b){
   const f=agNew();f.fromBestellung=b.id;f.name=b.name||'';f.contact=b.contact||'';
   const adr=String((b.rgleich||!b.rechnung)?b.liefer:b.rechnung||'').split(/\n|,\s*(?=\d{5}\s)/).map(x=>x.trim()).filter(Boolean),m=adr.length&&adr[adr.length-1].match(/^\d{5}\s+.+/);
   if(m){f.plzort=adr.pop();f.street=adr.join(', ')}else f.street=adr.join(', ');
-  const pos=[];
-  (b.pos||[]).filter(p=>p.sorte||p.anzahl).forEach(p=>pos.push({bez:[p.sorte,p.groesse].filter(Boolean).join(' '),menge:p.anzahl||'',einzel:'',art:'ware',pausch:false}));
-  const L=b.leist||{},add=(k,txt,unit,art)=>{const x=L[k];if(!x||x.jn!=='ja')return;const pr=String(x.preis||'').trim();
-    pos.push(pr&&k!=='sk'&&k!=='sg'?{bez:txt+' (pauschal)',menge:'1',mengeOld:x.anz||'',einzel:pr,art,pausch:true}:{bez:txt+(x.anz&&unit?' ('+x.anz+' '+unit+')':''),menge:x.anz||'',einzel:k==='sk'||k==='sg'?pr:'',art,pausch:false})};
-  add('sk','Ständer klein','','leist');add('sg','Ständer groß','','leist');add('auf','Aufstellen','m','leist');add('lie','Lieferung','km','leist');add('abh','Abholung','km','leist');
-  f.pos=pos.slice(0,6);while(f.pos.length<3)f.pos.push({bez:'',menge:'',einzel:'',art:'ware',pausch:false});
+  f.baeume=(b.pos||[]).filter(p=>p.sorte||p.anzahl).map(p=>({bez:[p.sorte,p.groesse].filter(Boolean).join(' '),menge:p.anzahl||'',einzel:''})).slice(0,6);while(f.baeume.length<2)f.baeume.push({bez:'',menge:'',einzel:''});
+  const L=b.leist||{};let sum=0,pr=false;AG_SVC.forEach(([k])=>{const x=L[k];if(!x||x.jn!=='ja')return;f.svc.it[k]={on:true,menge:x.anz||'',einzel:(k==='sk'||k==='sg')?(x.preis||''):''};if(k!=='sk'&&k!=='sg'&&String(x.preis||'').trim()){pr=true;sum+=numOf(x.preis)}});
+  if(pr){f.svc.mode='pausch';f.svc.preis=String(Math.round(sum*100)/100).replace('.',',')}
   const t=[];if(b.datum)t.push('Lieferung: '+fmtDe(b.datum));else t.push('Lieferung: November 2026');if(L.abh&&L.abh.jn==='ja')t.push('Abholung: Januar 2027');t.push('Termine nach Absprache.');f.termine=t.join('\n');
   return f}
 const agReady=b=>!!b.pdfAt&&b.pdfAt>=(b.updated||0);
@@ -2703,17 +2717,23 @@ async function agDownload(b){
     a.href=URL.createObjectURL(bl);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
   catch(e){toast('Download nicht möglich: '+((e&&(e.code||e.message))||'Fehler'))}}
 function agForm(){
-  const f=cur.ag,c=agCalc(f);
+  const f=cur.ag;if(!f.baeume){f.baeume=(f.pos||[]).map(p=>({bez:p.bez,menge:p.menge,einzel:p.einzel}));if(!f.baeume.length)f.baeume=[{bez:'',menge:'',einzel:''}]}if(!f.svc)f.svc=agSvcNew();
+  const sv=f.svc,pa=sv.mode==='pausch';
   return `<div class="card pad formc"><label class="f">${f.id?'Angebot bearbeiten':'Neues Angebot'}</label>
     <input class="t" id="ag-name" placeholder="Firma / Name" value="${esc(f.name)}">
-    <input class="t" id="ag-contact" placeholder="Ansprechperson" value="${esc(f.contact)}" style="margin-top:8px">
+    <input class="t" id="ag-contact" placeholder="Ansprechperson (z. B. Herr Werner)" value="${esc(f.contact)}" style="margin-top:8px">
     <input class="t" id="ag-street" placeholder="Straße und Hausnummer" value="${esc(f.street)}" style="margin-top:8px">
     <div class="mini" style="margin-top:8px"><input class="t" id="ag-plzort" placeholder="PLZ und Ort" value="${esc(f.plzort)}" style="min-width:0"><input class="t" type="date" id="ag-datum" value="${esc(f.datum)}" style="min-width:0"></div>
-    <label class="f">Anrede und Einleitung</label><input class="t" id="ag-anrede" value="${esc(f.anrede)}"><textarea class="t" id="ag-einleitung" rows="2" style="margin-top:6px">${esc(f.einleitung)}</textarea>
-    <label class="f">Positionen (Preise netto)</label>
-    ${f.pos.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-p${i}-bez" placeholder="Bezeichnung" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px">${p.pausch?'':`<input class="t" id="ag-p${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0">`}<input class="t" id="ag-p${i}-einzel" inputmode="decimal" placeholder="${p.pausch?'Pauschalbetrag netto':'Einzelpreis netto'}" value="${esc(p.einzel)}" style="min-width:0"></div><div class="mini" style="margin-top:6px;align-items:center"><button class="chip on" data-pl="agart" data-v="${i}">${p.art==='leist'?'Leistung (19 %)':'Bäume und Ware (7 %)'}</button><button class="chip ${p.pausch?'on':''}" data-pl="agpa" data-v="${i}">Pauschal</button><b id="ag-g${i}" style="text-align:right">${eur(c.g[i])}</b></div></div>`).join('')}
-    ${f.pos.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Position</button>':''}
-    <div id="ag-sums" class="card pad" style="margin:0 0 8px">${agSums(f)}</div>
+    <div class="hint" style="margin-top:8px"><b id="ag-anrede">${esc(agAnrede(f.contact))}</b><br>${AG_EINL}</div>
+    <label class="f">Bäume (Preise netto)</label>
+    ${f.baeume.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-b${i}-bez" placeholder="Bezeichnung (Sorte, Größe)" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px"><input class="t" id="ag-b${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0"><input class="t" id="ag-b${i}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(p.einzel)}" style="min-width:0"></div></div>`).join('')}
+    ${f.baeume.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Baum-Position</button>':''}
+    <label class="f">Dienstleistungen (Services)</label>
+    <div class="chips" style="margin:0 0 8px"><button class="chip ${pa?'on':''}" data-pl="agpa" data-v="pausch">Pauschal</button><button class="chip ${pa?'':'on'}" data-pl="agpa" data-v="einzeln">Einzeln</button></div>
+    <div class="chips" style="margin:0 0 8px">${AG_SVC.map(([k,n])=>`<button class="chip ${sv.it[k].on?'on':''}" data-pl="agson" data-v="${k}">${n}</button>`).join('')}</div>
+    ${pa?`<input class="t" id="ag-spreis" inputmode="decimal" placeholder="Pauschalpreis netto für die gewählten Leistungen" value="${esc(sv.preis)}">`
+       :AG_SVC.filter(([k])=>sv.it[k].on).map(([k,n,u])=>`<div class="card pad" style="margin:0 0 8px"><div class="n">${n}</div><div class="mini" style="margin-top:6px"><input class="t" id="ag-s-${k}-menge" inputmode="decimal" placeholder="${u==='Stück'?'Anzahl':u==='km'?'Kilometer':'Meter'}" value="${esc(sv.it[k].menge)}" style="min-width:0"><input class="t" id="ag-s-${k}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(sv.it[k].einzel)}" style="min-width:0"></div></div>`).join('')||'<div class="hint">Leistungen oben antippen, die im Angebot stehen sollen.</div>'}
+    <div id="ag-sums" class="card pad" style="margin:8px 0">${agSums(f)}</div>
     <label class="f">Termine</label><textarea class="t" id="ag-termine" rows="3">${esc(f.termine)}</textarea>
     <label class="f">Gültig bis</label><input class="t" type="date" id="ag-gueltig" value="${esc(f.gueltig)}">
     <div class="mini" style="margin-top:10px"><button class="btn" data-pl="agsave" style="margin:0">${f.id?'Speichern':'Angebot erstellen'}</button><button class="btn sec" data-pl="agcancel" style="margin:0">Abbrechen</button></div>
