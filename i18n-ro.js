@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Alle, die für Touren in Frage kommen, auch ohne App-Konto. Die Kraft bestimmt die Besetzungsempfehlung. Personen mit App-Konto werden automatisch dazugenommen.": "Toți cei care vin în considerare pentru ture, și fără cont în aplicație. Forța determină recomandarea de echipă. Persoanele cu cont sunt adăugate automat.",
+"Fahrer: unbegrenzt (alle Touren gleichzeitig)": "Șoferi: nelimitat (toate turele simultan)",
+"+ Mitarbeiter": "+ Angajat",
+"Mitarbeiter für die Planung": "Angajați pentru planificare",
 "Empfehlung:": "Recomandare:",
 "Hier kommt der Token von account.heigit.org hinein. Damit berechnet die Tourenplanung die Straßenentfernungen kostenlos. Ohne Schlüssel nutzt sie Google (kostet nach 10.000 Abfragen im Monat etwas).": "Aici se introduce tokenul de la account.heigit.org. Cu el, planificarea turelor calculează gratuit distanțele rutiere. Fără cheie folosește Google (costă puțin după 10.000 de interogări pe lună).",
 "OpenRouteService-Schlüssel (Token aus dem HeiGIT-Konto) (gespeichert, wird nicht angezeigt)": "Cheie OpenRouteService (token din contul HeiGIT) (salvată, nu se afișează)",
