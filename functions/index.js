@@ -26,6 +26,7 @@ const T = {
   },
   repWork: { de: t => `Deine Meldung wird bearbeitet: ${t}`, ro: t => `Raportarea ta este în lucru: ${t}` },
   repDone: { de: t => `Deine Meldung ist erledigt: ${t}`, ro: t => `Raportarea ta este rezolvată: ${t}` },
+  newUser: { de: n => `Neue Freigabe nötig: ${n} hat sich registriert.`, ro: n => `Aprobare necesară: ${n} s-a înregistrat.` },
   question: { de: (b, t) => `Neue Frage zur App von ${b}: ${t}`, ro: (b, t) => `Întrebare nouă despre aplicație de la ${b}: ${t}` },
   title: { de: 'Hof Droste', ro: 'Hof Droste' },
   morning: {
@@ -382,6 +383,12 @@ exports.addrSuggest = onCall(async req => {
 
 
 /* Fragen zur App: Nachricht an den Admin */
+exports.userRegistered = onDocumentCreated('users/{uid}', async event => {
+  const d = event.data.data();
+  if (!d || d.approved !== false) return;
+  const admins = (await approvedUsers()).filter(u => u.role === 'admin' && u.id !== event.params.uid);
+  for (const u of admins) await pushTo(u, lang => T.newUser[lang](d.name || d.email || '?'));
+});
 exports.questionCreated = onDocumentCreated('questions/{id}', async event => {
   const q = event.data.data();
   const users = (await approvedUsers()).filter(u => u.role === 'admin' && u.id !== q.byUid);

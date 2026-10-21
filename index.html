@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 U';
+const APP_VERSION='2026-10-22 V';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2077,7 +2077,7 @@ function posLabel(p){
   return `${qs} × ${nm}${p.len?' '+mFmt(p.len):''}${['Baum','Deko','Laternenbaum'].includes(p.cat)&&posRest(p)?' ('+posRest(p)+')':''}`.replace(/\(\)/,'');
 }
 const orderLines=o=>(o.positions||[]).filter(p=>LINECATS.includes(p.cat));
-const orderService=o=>[...new Set((o.positions||[]).filter(p=>p.cat==='Service').map(p=>(p.text.match(/^(Aufstellen|Lieferung|Abholung)/i)||[''])[0]).filter(Boolean))].join(', ');
+const orderService=o=>{const s=[];(o.positions||[]).filter(p=>p.cat==='Service').forEach(p=>{const t=String(p.text||'');[['Lieferung',/lieferung|liefern/i],['Aufstellen',/aufstell/i],['Abholung',/abholung|abholen/i]].forEach(([n,re])=>{if(re.test(t)&&!s.includes(n))s.push(n)})});return s.join(', ')};
 const orderAddr=o=>[o.street,o.zipcity].filter(Boolean).join(', ');
 function orderToStop(o,order){
   const hints=(o.hints||[]).filter(Boolean).join(' · ');
@@ -2262,7 +2262,8 @@ async function ensureDepotLL(){
 }
 
 /* Neuer Tourenbau (22.10.2026): Einfügen nach Personenminuten, Zeitfenster mit Puffer, Kosten = Personen mal Dauer */
-const BUF=30,TREECAP=60,MAXSTOPS=25,NEWTOUR=15;
+const BUF=30,MAXSTOPS=25,NEWTOUR=15;
+const treeCap=()=>{const v=parseInt((S.hofInfo&&S.hofInfo.treeCap)||'');return v>0?v:60};
 const tmin=(a,b,P)=>{
   if(P&&P.mat&&a.mi!=null&&b.mi!=null){const s=P.mat[a.mi]&&P.mat[a.mi][b.mi];if(s!=null){const m=Math.ceil(s/60*1.1);return m<1?1:m}}
   const m=Math.round(havKm(a,b)*1.3/40*60);return m<1?1:m};
@@ -2274,11 +2275,12 @@ function orderCrewInfo(o,ds){
 }
 function evalTour(list,P,loose){
   if(!list.length)return {crew:0,dur:0,cost:0,eta:[]};
-  if(!loose&&(list.length>MAXSTOPS||(list.length>1&&list.reduce((a,x)=>a+x.n,0)>TREECAP)))return null;
+  if(!loose&&list.length>MAXSTOPS){P._why='mehr als '+MAXSTOPS+' Stopps';return null}
+  if(!loose&&list.length>1&&list.reduce((a,x)=>a+x.n,0)>treeCap()){P._why='Baumgrenze erreicht ('+list.reduce((a,x)=>a+x.n,0)+' von '+treeCap()+' Bäumen)';return null}
   const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0;
-  for(const x of list){c+=tmin(pos,x,P);if(x.ws!=null&&c<x.ws)c=x.ws;if(!loose&&x.we!=null&&c>x.we-BUF)return null;eta.push(c);c+=Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
+  for(const x of list){c+=tmin(pos,x,P);if(x.ws!=null&&c<x.ws)c=x.ws;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
   c+=tmin(pos,P.dep,P);const dur=c-P.start;
-  if(!loose&&dur>P.lim)return null;
+  if(!loose&&dur>P.lim){P._why='Tour würde zu lang ('+fmtMin(dur)+')';return null}
   return {crew,dur,cost:crew*(dur-brk),eta,brk};
 }
 function buildToursV2(orders,dep,P){
@@ -2290,11 +2292,12 @@ function buildToursV2(orders,dep,P){
   const tours=[],hist={};let tid=0;
   const addH=(o,t)=>{(hist[o.id]=hist[o.id]||[]).push(t)};
   for(const it of items){
-    let best=null;
-    tours.forEach((T,ti)=>{for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);const e=evalTour(l,P);if(!e)continue;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}});
+    let best=null;const rej=[];
+    tours.forEach((T,ti)=>{let ok=false,why='';for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);P._why='';const e=evalTour(l,P);if(!e){why=P._why||why;continue}ok=true;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}if(!ok&&why)rej.push(`Nicht möglich in {T${T.id}}: ${why}`)});
     let solo=evalTour([it],P),late=false;if(!solo){solo=evalTour([it],P,true);late=true}
+    rej.slice(0,3).forEach(x=>addH(it.o,x));
     if(best&&best.d<=solo.cost+solo.crew*NEWTOUR){const T=tours[best.ti];T.list.splice(best.p,0,it);T.e=best.e;addH(it.o,`Kommt in {T${T.id}}: kostet dort nur +${Math.round(best.d)} Personenminuten, eine eigene Fahrt hätte ${Math.round(solo.cost+solo.crew*NEWTOUR)} gekostet (inklusive ${NEWTOUR} Min Beladen am Hof je Person)`)}
-    else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost+solo.crew*NEWTOUR)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${TREECAP} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
+    else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost+solo.crew*NEWTOUR)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${treeCap()} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
   }
   for(let pass=0;pass<5;pass++){
     let moved=false;
@@ -2447,7 +2450,7 @@ function planBox(){
   const whyTxt=s=>String(s).replace(/\{T(\d+)\}/g,(m,id)=>bidx[id]!=null?'Vorschlag '+(bidx[id]+1):'eine Tour');
   const whyHtml=(t,i,rec)=>{const m=t.meta||{},L=[];
     L.push(`<li><b>Besetzung:</b> ${t.crewN>=3?'3 Personen':t.crewN===2?'2 Personen':'1 Person'}, bestimmt durch ${(m.crewWhy&&m.crewWhy.length?m.crewWhy.map(esc).join('; '):'die kleinen Aufträge dieser Tour')}.</li>`);
-    L.push(`<li><b>Umfang:</b> ${t.stops.length} Stopps (Grenze ${MAXSTOPS}), ${t.treesN||0} Bäume (Grenze ${TREECAP}), Tourzeit ca. ${fmtMin(Math.round(t.home-t.depart))} (Grenze ${fmtMin(cur.pd.budget*60+45)}). Kosten im Planer: ${m.cost||0} Personenminuten.</li>`);
+    L.push(`<li><b>Umfang:</b> ${t.stops.length} Stopps (Grenze ${MAXSTOPS}), ${t.treesN||0} Bäume (Grenze ${treeCap()}), Tourzeit ca. ${fmtMin(Math.round(t.home-t.depart))} (Grenze ${fmtMin(cur.pd.budget*60+45)}). Kosten im Planer: ${m.cost||0} Personenminuten.</li>`);
     const ws=t.stops.filter(s=>winEnd(s.o.window)!=null);
     if(ws.length)L.push(`<li><b>Zeitfenster:</b> ${ws.map(s=>{const we=winEnd(s.o.window);return esc(s.o.name)+' bis '+hmMin(we)+', Ankunft ca. '+hmMin(up5(s.eta))+', Puffer '+Math.round(we-s.eta)+' Min'}).join('; ')}.</li>`);
     (m.stopsWhy||[]).forEach(sw=>{const s=t.stops.find(x=>x.o.id===sw.id);if(s&&sw.hist.length)L.push(`<li><b>${esc(s.o.name)}:</b> ${sw.hist.map(x=>esc(whyTxt(x))).join('. ')}</li>`)});
@@ -2461,7 +2464,7 @@ function planBox(){
     <div class="p">Fahrt ${fmtMin(t.drive)} · Aufenthalt ${fmtMin(t.stay)} · Pausen ${t.pb} Min${t.wait?' · Warten '+fmtMin(t.wait):''}</div>
     ${brkTxt(t.road,t,t.home)?`<div class="p">${brkTxt(t.road,t,t.home)}</div>`:''}
     ${recs[i]&&recs[i].txt?`<div class="p"><b>Empfehlung:</b> ${recs[i].txt}</div>`:''}
-    <div class="p"><b>${t.treesN||0} Bäume</b>${t.maxLen?', längster '+mFmt(t.maxLen):''}${t.treesN>TREECAP?' · mehr als '+TREECAP+' Bäume':''}</div>
+    <div class="p"><b>${t.treesN||0} Bäume</b>${t.maxLen?', längster '+mFmt(t.maxLen):''}${t.treesN>treeCap()?' · mehr als '+treeCap()+' Bäume':''}</div>
     <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Beim Packen bohren: '+t.bohren:''}</div>
     ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(up5(s.eta))}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}${winTxt(s.o.window)?` <span class="p">· ${winTxt(s.o.window)}</span>`:''}</span></div><div class="p">${esc(orderAddr(s.o))} · Aufenthalt ${s.svc} Min</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
     ${whyHtml(t,i,recs[i])}
@@ -3084,6 +3087,8 @@ function vDaten(){
   <label class="f">OpenRouteService-Schlüssel (Token aus dem HeiGIT-Konto) ${S.hofInfo&&S.hofInfo.matrixSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
   <input class="t" id="hof-mxkey" type="password" autocomplete="off" placeholder="Schlüssel einfügen und bestätigen">
   <div class="hint" id="mxkey-msg">Hier kommt der Token von account.heigit.org hinein. Damit berechnet die Tourenplanung die Straßenentfernungen kostenlos. Ohne Schlüssel nutzt sie Google (kostet nach 10.000 Abfragen im Monat etwas).</div>
+  <label class="f">Höchstzahl Bäume pro Tour (Standard 60, für die Tourenplanung)</label>
+  <input class="t" id="hof-treecap" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.treeCap)||''))}" placeholder="60">
   <label class="f">Ersatzständer pro Tour: mindestens</label>
   <input class="t" id="hof-resmin" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveMin)||''))}" placeholder="2">
   <label class="f">Ersatzständer pro Tour: ein Ersatz je so viele Ständer</label>
@@ -3338,6 +3343,7 @@ document.addEventListener('change',ev=>{
     .catch(e=>{if(msg){msg.textContent='Nicht gespeichert: '+(e.code||e.message)+(e.code==='permission-denied'?'. Sind die neuen Firestore-Regeln veröffentlicht?':'');msg.style.color='var(--red)'}})}
   if(t.id==='hof-mxkey'&&t.value.trim()&&window.cloud&&window.cloud.setSecret){const kv=t.value.trim(),msg=document.getElementById('mxkey-msg');if(msg){msg.textContent='Wird gespeichert …';msg.style.color=''}
     window.cloud.setSecret('orsMatrix',kv).then(()=>{t.value='';S.hofInfo={...S.hofInfo,matrixSet:true};save();toast('Schlüssel gespeichert');render()}).catch(e=>{if(msg){msg.textContent='Nicht gespeichert: '+(e.code||e.message);msg.style.color='var(--red)'}})}
+  if(t.id==='hof-treecap'){S.hofInfo={...S.hofInfo,treeCap:t.value.trim()};save()}
   if(t.id==='hof-resmin'){S.hofInfo={...S.hofInfo,reserveMin:t.value.trim()};save()}
   if(t.id==='hof-svcDrop'){S.hofInfo={...S.hofInfo,svcDrop:t.value.trim()};save()}
   if(t.id==='hof-svcSet'){S.hofInfo={...S.hofInfo,svcSet:t.value.trim()};save()}
