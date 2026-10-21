@@ -314,7 +314,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 N';
+const APP_VERSION='2026-10-22 O';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2306,7 +2306,7 @@ async function runPlan(){
     for(let i=0;i<need.length;i+=40){const part=need.slice(i,i+40),r=await window.cloud.geocode({addresses:part.map(orderAddr)});part.forEach((o,j)=>{if(r.coords[j]){o.lat=r.coords[j].lat;o.lng=r.coords[j].lng}})}
     if(need.length)save();
     const located=sel.filter(o=>o.lat&&o.lng),missing=sel.filter(o=>!(o.lat&&o.lng));
-    const P=+pd.P||0,tours=[];
+    const P=+pd.P||0,tours=[],matRef={mat:null};
     const mkTour=async(size,sec,crewN,reqTxt)=>{
       let ordd=sec,legs;
       const hasW=sec.some(o=>winEnd(o.window)!=null);
@@ -2314,14 +2314,16 @@ async function runPlan(){
       else{const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),optimize:true,depart:nextDepart()});ordd=r.order.map(i=>sec[i]);legs=r.legs}
       const backMin=Math.round((legs[ordd.length]||0)/60),lg=legs.slice(0,ordd.length);
       const items=ordd.map((o,i)=>({leg:Math.round((lg[i]||0)/60),svc2:orderSvc(o),svc:orderSvc(o),ws:winStart(o.window),we:winEnd(o.window)}));
-      return {size,solo:false,stops:ordd.map((o,i)=>({o,svc:items[i].svc,eta:0,warn:''})),legs:lg,backMin,items,crewN:crewN,crew:reqTxt,
+      let devMin=0,devPct=0;
+      if(matRef.mat){try{const ix=ordd.map(o=>located.indexOf(o)+1);let es=0,pv=0;ix.forEach(i=>{es+=(matRef.mat[pv]&&matRef.mat[pv][i])||0;pv=i});es+=(matRef.mat[pv]&&matRef.mat[pv][0])||0;es=es*1.1/60;const gs=(lg.reduce((a,b)=>a+b,0)+(legs[ordd.length]||0))/60;if(gs>0){devMin=Math.round(gs-es);devPct=(gs-es)/gs}}catch(e){}}
+      return {size,solo:false,devMin,devPct,stops:ordd.map((o,i)=>({o,svc:items[i].svc,eta:0,warn:''})),legs:lg,backMin,items,crewN:crewN,crew:reqTxt,
         preDur:tourSched(itemsAt(items,crewN),backMin,495,{bf:false,lu:false}).home-495,drive:items.reduce((a,b)=>a+b.leg,0)+backMin,stay:items.reduce((a,b)=>a+b.svc,0),
         treesN:ordd.reduce((a,o)=>a+nTrees(o),0),maxLen:Math.max(0,...ordd.map(orderMaxTree)),
         stand:ordd.reduce((a,o)=>a+(o.positions||[]).filter(p=>p.cat==='Ständer').reduce((x,p)=>x+(+p.qty||0),0),0),bohren:ordd.reduce((a,o)=>a+orderBohren(o),0)};
     };
     pd.msg='Straßenentfernungen werden ermittelt …';render();
     let mat=null,matNote='';
-    try{const mx=await window.cloud.routeMatrix({points:[dep,...located].map(p=>({lat:p.lat,lng:p.lng}))});mat=mx.durations}
+    try{const mx=await window.cloud.routeMatrix({points:[dep,...located].map(p=>({lat:p.lat,lng:p.lng}))});mat=mx.durations;matRef.mat=mat}
     catch(e){matNote='Straßenentfernungen nicht verfügbar ('+((e&&(e.message||e.code))||'Fehler')+'), die Touren wurden mit geschätzten Entfernungen gebildet.'}
     pd.msg='Touren werden zusammengestellt …';render();
     const built=buildToursV2(located,dep,{start:timeToMin(pd.start),lim:pd.budget*60+45,date:pd.date,mat});
@@ -2338,6 +2340,7 @@ async function runPlan(){
     const overview=sch.D.map(d=>({n:d.n,ev:d.ev.map(e=>({tour:tours[e.idx],start:e.start,home:e.home,hof:e.hof}))}));
     tours.sort((a,b)=>a.depart-b.depart||a.slots[0]-b.slots[0]);
     const w=[];if(matNote)w.push(matNote);
+    tours.forEach((t,i)=>{if(t.devPct>0.25&&t.devMin>10)w.push(`Vorschlag ${i+1}: Google rechnet mit ${t.devMin} Min mehr Fahrzeit als die Straßenmatrix (Verkehr oder andere Route), bitte die Zeiten prüfen.`)});
     if(tours.some(t=>t.capped))w.push(`Mit ${Puse} Fahrern sind nicht alle Touren so besetzbar, wie sie es bräuchten (große Bäume oder viele Bäume am Stopp brauchen 2 bis 3 Personen).`);
     if(sch.late>0)w.push(`Bei ${sch.late} ${sch.late===1?'Stopp':'Stopps'} wird das Zeitfenster überschritten.`);
     if(sch.makespan>990)w.push(`Mit ${Puse} Fahrern sind die Touren erst ca. ${hmMin(up5(sch.makespan))} fertig.`);
