@@ -20,6 +20,11 @@ service firebase.storage {
       allow read: if member();
       allow write: if member() && okFile();
     }
+    // Angebots-PDFs (vom Mac-Dienst hochgeladen): nur Admin, Chef und Demo lesen
+    match /angebote/{file} {
+      allow read: if editor();
+      allow write: if false;
+    }
     // Bilder (Schonungen, Standpläne): alle freigegebenen Mitglieder lesen, nur Admin und Chef laden hoch
     match /{allPaths=**} {
       allow read: if member();

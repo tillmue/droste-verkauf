@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZN';
+const APP_VERSION='2026-10-22 ZO';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1728,12 +1728,15 @@ document.addEventListener('click',ev=>{
   if(a==='agnew'){cur.ag=agNew();cur.agOpen=true;window.scrollTo(0,0);return render()}
   if(a==='agedit'){const b=S.angebote.find(x=>x.id===v);if(!b)return;cur.ag=JSON.parse(JSON.stringify(b));cur.agOpen=true;window.scrollTo(0,0);return render()}
   if(a==='agcancel'){cur.agOpen=false;cur.ag=null;return render()}
-  if(a==='agpos'){if(cur.ag.pos.length<6)cur.ag.pos.push({bez:'',menge:'',einzel:'',art:'ware'});return render()}
+  if(a==='agpos'){if(cur.ag.pos.length<6)cur.ag.pos.push({bez:'',menge:'',einzel:'',art:'ware',pausch:false});return render()}
+  if(a==='agpa'){const q=cur.ag.pos[+v];q.pausch=!q.pausch;if(q.pausch){q.mengeOld=q.menge;q.menge='1'}else{q.menge=q.mengeOld||'';delete q.mengeOld}return render()}
+  if(a==='agfrom'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.ag=agFromBest(b);cur.agOpen=true;window.scrollTo(0,0);return render()}
+  if(a==='agdl'){const b=S.angebote.find(x=>x.id===v);if(!b)return;agDownload(b);return}
   if(a==='agart'){const q=cur.ag.pos[+v];q.art=q.art==='leist'?'ware':'leist';return render()}
   if(a==='agsave'){const f=cur.ag;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
     const c=agCalc(f),row={...f,name:f.name.trim(),netto:c.netto,brutto:c.brutto,updated:Date.now()};
     if(f.id){const b=S.angebote.find(x=>x.id===f.id);if(b){const was=agSig(b);Object.assign(b,row);if(b.sent&&agSig(b)!==was)b.sent=false}}
-    else S.angebote.push({...row,id:uid(),by:S.me,created:Date.now()});
+    else{const nid=uid();S.angebote.push({...row,id:nid,by:S.me,created:Date.now()});if(f.fromBestellung){const bb=S.bestellungen.find(x=>x.id===f.fromBestellung);if(bb)bb.angebotId=nid}}
     cur.agOpen=false;cur.ag=null;save();toast('Angebot gespeichert. Die PDF entsteht gleich auf dem Mac.');return render()}
   if(a==='agdel'){const b=S.angebote.find(x=>x.id===cur.ag.id);if(b&&confirm('Angebot ins Archiv verschieben?')){softDel(b);cur.agOpen=false;cur.ag=null;save();render()}return}
   if(a==='bfnew'){cur.bf=bfNew();cur.bOpen=true;window.scrollTo(0,0);return render()}
@@ -2682,6 +2685,23 @@ const agSums=f=>{const c=agCalc(f);return `<div class="kv"><span>Nettobetrag</sp
 function agInput(t){const f=cur.ag,k=t.id.slice(3);let m;
   if(m=k.match(/^p(\d)-(\w+)$/))f.pos[+m[1]][m[2]]=t.value;else f[k]=t.value;
   const c=agCalc(f);f.pos.forEach((p,i)=>{const e=document.getElementById('ag-g'+i);if(e)e.textContent=eur(c.g[i])});const e=document.getElementById('ag-sums');if(e)e.innerHTML=agSums(f)}
+function agFromBest(b){
+  const f=agNew();f.fromBestellung=b.id;f.name=b.name||'';f.contact=b.contact||'';
+  const adr=String((b.rgleich||!b.rechnung)?b.liefer:b.rechnung||'').split(/\n|,\s*(?=\d{5}\s)/).map(x=>x.trim()).filter(Boolean),m=adr.length&&adr[adr.length-1].match(/^\d{5}\s+.+/);
+  if(m){f.plzort=adr.pop();f.street=adr.join(', ')}else f.street=adr.join(', ');
+  const pos=[];
+  (b.pos||[]).filter(p=>p.sorte||p.anzahl).forEach(p=>pos.push({bez:[p.sorte,p.groesse].filter(Boolean).join(' '),menge:p.anzahl||'',einzel:'',art:'ware',pausch:false}));
+  const L=b.leist||{},add=(k,txt,unit,art)=>{const x=L[k];if(!x||x.jn!=='ja')return;const pr=String(x.preis||'').trim();
+    pos.push(pr&&k!=='sk'&&k!=='sg'?{bez:txt+' (pauschal)',menge:'1',mengeOld:x.anz||'',einzel:pr,art,pausch:true}:{bez:txt+(x.anz&&unit?' ('+x.anz+' '+unit+')':''),menge:x.anz||'',einzel:k==='sk'||k==='sg'?pr:'',art,pausch:false})};
+  add('sk','Ständer klein','','leist');add('sg','Ständer groß','','leist');add('auf','Aufstellen','m','leist');add('lie','Lieferung','km','leist');add('abh','Abholung','km','leist');
+  f.pos=pos.slice(0,6);while(f.pos.length<3)f.pos.push({bez:'',menge:'',einzel:'',art:'ware',pausch:false});
+  const t=[];if(b.datum)t.push('Lieferung: '+fmtDe(b.datum));else t.push('Lieferung: November 2026');if(L.abh&&L.abh.jn==='ja')t.push('Abholung: Januar 2027');t.push('Termine nach Absprache.');f.termine=t.join('\n');
+  return f}
+const agReady=b=>!!b.pdfAt&&b.pdfAt>=(b.updated||0);
+async function agDownload(b){
+  try{const url=await window.cloud.imageUrl('angebote/'+b.id+'.pdf'),r=await fetch(url),bl=await r.blob(),a=document.createElement('a'),name=(b.pdfName||'Angebot.pdf');
+    a.href=URL.createObjectURL(bl);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+  catch(e){toast('Download nicht möglich: '+((e&&(e.code||e.message))||'Fehler'))}}
 function agForm(){
   const f=cur.ag,c=agCalc(f);
   return `<div class="card pad formc"><label class="f">${f.id?'Angebot bearbeiten':'Neues Angebot'}</label>
@@ -2691,20 +2711,21 @@ function agForm(){
     <div class="mini" style="margin-top:8px"><input class="t" id="ag-plzort" placeholder="PLZ und Ort" value="${esc(f.plzort)}" style="min-width:0"><input class="t" type="date" id="ag-datum" value="${esc(f.datum)}" style="min-width:0"></div>
     <label class="f">Anrede und Einleitung</label><input class="t" id="ag-anrede" value="${esc(f.anrede)}"><textarea class="t" id="ag-einleitung" rows="2" style="margin-top:6px">${esc(f.einleitung)}</textarea>
     <label class="f">Positionen (Preise netto)</label>
-    ${f.pos.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-p${i}-bez" placeholder="Bezeichnung" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px"><input class="t" id="ag-p${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0"><input class="t" id="ag-p${i}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(p.einzel)}" style="min-width:0"></div><div class="mini" style="margin-top:6px;align-items:center"><button class="chip on" data-pl="agart" data-v="${i}">${p.art==='leist'?'Leistung (19 %)':'Bäume und Ware (7 %)'}</button><b id="ag-g${i}" style="text-align:right">${eur(c.g[i])}</b></div></div>`).join('')}
+    ${f.pos.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-p${i}-bez" placeholder="Bezeichnung" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px">${p.pausch?'':`<input class="t" id="ag-p${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0">`}<input class="t" id="ag-p${i}-einzel" inputmode="decimal" placeholder="${p.pausch?'Pauschalbetrag netto':'Einzelpreis netto'}" value="${esc(p.einzel)}" style="min-width:0"></div><div class="mini" style="margin-top:6px;align-items:center"><button class="chip on" data-pl="agart" data-v="${i}">${p.art==='leist'?'Leistung (19 %)':'Bäume und Ware (7 %)'}</button><button class="chip ${p.pausch?'on':''}" data-pl="agpa" data-v="${i}">Pauschal</button><b id="ag-g${i}" style="text-align:right">${eur(c.g[i])}</b></div></div>`).join('')}
     ${f.pos.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Position</button>':''}
     <div id="ag-sums" class="card pad" style="margin:0 0 8px">${agSums(f)}</div>
     <label class="f">Termine</label><textarea class="t" id="ag-termine" rows="3">${esc(f.termine)}</textarea>
     <label class="f">Gültig bis</label><input class="t" type="date" id="ag-gueltig" value="${esc(f.gueltig)}">
-    <div class="mini" style="margin-top:10px"><button class="btn" data-pl="agsave" style="margin:0">Speichern</button><button class="btn sec" data-pl="agcancel" style="margin:0">Abbrechen</button></div>
+    <div class="mini" style="margin-top:10px"><button class="btn" data-pl="agsave" style="margin:0">${f.id?'Speichern':'Angebot erstellen'}</button><button class="btn sec" data-pl="agcancel" style="margin:0">Abbrechen</button></div>
     ${f.sent?'<div class="hint">Abgesendet'+(f.sentAt?' am '+new Date(f.sentAt).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'')+'. Änderungen machen es wieder zum offenen Angebot.</div>':''}
     ${f.id?'<button class="btn red" data-pl="agdel">Angebot ins Archiv</button>':''}</div>`;
 }
 function vAngebote(kind,fahrer,plan){
   if(cur.agOpen&&cur.ag){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${agForm()}`;return}
   const all=(S.angebote||[]).filter(b=>!b.deleted).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>!b.sent);
-  const card=b=>`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'<b style="color:var(--green)">Abgesendet</b>':'Offen'}</span></div><div class="p">${fmtDe(b.datum)}${b.contact?' · '+esc(b.contact):''} · ${eur(b.brutto||0)} brutto</div><div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="agedit" data-v="${b.id}" style="margin:0">Bearbeiten</button></div></div>`;
-  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="agnew">+ Neues Angebot</button>${L.map(card).join('')||'<div class="hint">Keine offenen Angebote.</div>'}
+  const card=b=>`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'<b style="color:var(--green)">Abgesendet</b>':'Offen'}</span></div><div class="p">${fmtDe(b.datum)}${b.contact?' · '+esc(b.contact):''} · ${eur(b.brutto||0)} brutto</div><div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="agedit" data-v="${b.id}" style="margin:0">Bearbeiten</button>${agReady(b)?`<button class="btn" data-pl="agdl" data-v="${b.id}" style="margin:0">PDF herunterladen</button>`:'<span class="p" style="align-self:center">PDF wird auf dem Mac erstellt (bis zu 2 Min)</span>'}</div></div>`;
+  const bo=S.bestellungen.filter(x=>!x.deleted&&!x.sent&&!x.angebotId),bcard=x=>`<div class="card pad"><div class="n">${esc(x.name)}</div><div class="p">${x.datum?wdD(x.datum):'Termin offen'} · ${(x.pos||[]).reduce((a,p)=>a+(numOf(p.anzahl)||0),0)} Bäume${x.phone?' · '+esc(x.phone):''}</div><button class="btn sec" data-pl="agfrom" data-v="${x.id}" style="margin:8px 0 0">Angebot generieren</button></div>`;
+  $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="agnew">+ Neues Angebot</button>${bo.length?`<h3>Aus Bestellungen (noch nicht abgesendet)</h3>${bo.map(bcard).join('')}<h3>Angebote</h3>`:''}${L.map(card).join('')||'<div class="hint">Keine offenen Angebote.</div>'}
     <details data-det="angarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="agedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':'Offen'} · ${fmtDe(b.datum)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Angebote/[2]Absendbereit und [3]Abgesendet.</div></details>`;
 }
 function freeStopOrder(s){
