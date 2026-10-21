@@ -1,4 +1,8 @@
 window.RO_DICT={
+"Versionsverlauf": "Istoric versiuni",
+"In der Planung als Auftrag angelegt.": "Creat ca lucrare în planificare.",
+"Abgesendet": "Trimis",
+"Verschobene Bestellungen (Ordner Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.": "Comenzile mutate (dosar Abgesendet) apar aici ca Trimis și nu mai apar în listă.",
 "\"Nachmittags\" bis": "„După-amiaza” până la",
 "\"Nachmittags\" von": "„După-amiaza” de la",
 "\"Vormittags\" im Lieferschein bedeutet: bis (Pflicht, für die Tourenplanung)": "„Dimineața” în bonul de livrare înseamnă: până la (obligatoriu, pentru planificare)",

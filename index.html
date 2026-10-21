@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZJ';
+const APP_VERSION='2026-10-22 ZK';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1733,11 +1733,13 @@ document.addEventListener('click',ev=>{
   if(a==='bfrg'){cur.bf.rgleich=!cur.bf.rgleich;return render()}
   if(a==='bfpos'){if(cur.bf.pos.length<BPOS)cur.bf.pos.push({sorte:'',anzahl:'',groesse:'',preis:''});return render()}
   if(a==='bfsave'){const f=cur.bf;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
-    if(f.id){const b=S.bestellungen.find(x=>x.id===f.id);if(b)Object.assign(b,f,{name:f.name.trim(),updated:Date.now()})}
-    else S.bestellungen.push({...f,id:uid(),name:f.name.trim(),status:'aufgenommen',by:S.me,created:Date.now(),updated:Date.now()});
+    if(f.id){const b=S.bestellungen.find(x=>x.id===f.id);if(b){const ch=bfDiff(b,{...f,name:f.name.trim()});if(ch.length){const hist=(b.hist||[]).concat({at:Date.now(),by:S.me,ch}).slice(-60);Object.assign(b,f,{name:f.name.trim(),updated:Date.now()});b.hist=hist;b.sent=false}}}
+    else S.bestellungen.push({...f,id:uid(),name:f.name.trim(),status:'aufgenommen',by:S.me,created:Date.now(),updated:Date.now(),hist:[{at:Date.now(),by:S.me,ch:['Aufgenommen']}]});
     const wasPlan=f.id&&(S.bestellungen.find(x=>x.id===f.id)||{}).status==='uebernommen';cur.bOpen=false;cur.bf=null;save();toast(wasPlan?'Gespeichert. Der Auftrag in der Planung bleibt unverändert.':'Bestellung gespeichert');return render()}
   if(a==='bfdel'){const b=S.bestellungen.find(x=>x.id===cur.bf.id);if(b&&confirm('Bestellung ins Archiv verschieben?')){softDel(b);cur.bOpen=false;cur.bf=null;save();render()}return}
-  if(a==='bfplan'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;return askConfirm('Bestellung als Auftrag in die Planung übernehmen?','Ja, übernehmen',()=>{const o=bestToOrder(b);S.orders.push(o);b.status='uebernommen';b.orderId=o.id;save();cur.lkind='auf';toast('Als Auftrag übernommen');render()})}
+  if(a==='bfplan'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;
+    if(cur.bf&&cur.bf.id===v){const ch=bfDiff(b,cur.bf);if(ch.length){const hist=(b.hist||[]).concat({at:Date.now(),by:S.me,ch}).slice(-60);Object.assign(b,cur.bf,{name:(cur.bf.name||'').trim()||b.name,updated:Date.now()});b.hist=hist;b.sent=false}}
+    return askConfirm('Bestellung als Auftrag in die Planung übernehmen?','Ja, übernehmen',()=>{const o=bestToOrder(b);S.orders.push(o);b.status='uebernommen';b.orderId=o.id;cur.bOpen=false;cur.bf=null;save();cur.lkind='auf';toast('Als Auftrag übernommen');render()})}
   if(a==='resettest'){return askConfirm('Alle Touren (auch gestartete) ins Archiv, alle Aufträge zurück auf offen und Beispielaufträge auf heute setzen?','Ja, zurücksetzen',()=>{const td0=todayStr();S.tours.filter(t=>!t.deleted&&t.type!=='abholung').forEach(softDel);S.orders.filter(o=>!o.deleted).forEach(o=>{o.status='offen';o.tourId='';o.stopId='';delete o.plannedFor;if(o.demo){o.from=td0;o.to=td0}});cur.pd=null;cur.packTour='';cur.tex={};cur.lkind='auf';save();toast('Zurückgesetzt');render()})}
   if(a==='ttog'){cur.tex=cur.tex||{};const t0=S.tours.find(x=>x.id===v),cur0=cur.tex[v]!==undefined?!!cur.tex[v]:!!(t0&&t0.status==='gestartet');cur.tex[v]=!cur0;return render()}
   if(a==='info'){cur.info=cur.info||{};cur.info[v]=!cur.info[v];return render()}
@@ -2592,12 +2594,30 @@ function bestToOrder(b){
     window:b.zeitwunsch||(b.tageszeit==='vormittags'?'vormittags':b.tageszeit==='nachmittags'?'nachmittags':''),hints:[b.sonst].filter(Boolean),positions,status:'offen',tourId:'',stopId:'',
     place:L.auf.ort==='draussen'?'draußen':L.auf.ort==='drinnen'?'drinnen':'',fromBestellung:b.id};
 }
+const BF_L={name:'Name',art:'Art',phone:'Telefon',contact:'Ansprechperson',email:'E-Mail',liefer:'Lieferanschrift',rechnung:'Rechnungsanschrift',rgleich:'Rechnung wie Lieferanschrift',datum:'Datum',tageszeit:'Tageszeit',zeitwunsch:'Zeitwunsch',sonst:'Sonstiges',gesamt:'Gesamt',zahlung:'Zahlung',bezahlt:'Bezahlt am',kassiert:'Dankend erhalten',bestellt:'Bestellt am',kuerzel:'Kürzel'};
+const BF_LS={sk:'Ständer klein',sg:'Ständer groß',auf:'Aufstellen',lie:'Lieferung',abh:'Abholung'},BF_LF={jn:'',anz:' Anzahl',ort:' Ort',preis:' Preis'};
+function bfDiff(a,b){
+  const out=[],sh=v=>{v=v===true?'ja':v===false?'nein':String(v==null?'':v).replace(/\s*\n\s*/g,', ').trim();return v?(v.length>60?v.slice(0,57)+'...':v):'leer'},add=(l,x,y)=>{if(String(x==null?'':x)!==String(y==null?'':y))out.push(l+': '+sh(x)+' → '+sh(y))};
+  Object.keys(BF_L).forEach(k=>add(BF_L[k],a[k],b[k]));
+  const n=Math.max((a.pos||[]).length,(b.pos||[]).length);
+  for(let i=0;i<n;i++){const x=(a.pos||[])[i]||{},y=(b.pos||[])[i]||{};[['sorte','Sorte'],['anzahl','Anzahl'],['groesse','Größe'],['preis','Preis']].forEach(([f,l])=>add('Position '+(i+1)+' '+l,x[f],y[f]))}
+  Object.keys(BF_LS).forEach(k=>['jn','anz','ort','preis'].forEach(f=>{const x=((a.leist||{})[k]||{})[f],y=((b.leist||{})[k]||{})[f];if(x!==undefined||y!==undefined)add(BF_LS[k]+BF_LF[f],x,y)}));
+  return out;
+}
+function bfExtra(f){
+  if(!f.id)return '';
+  const hist=f.hist||[],fmt=at=>new Date(at).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const plan=f.status==='uebernommen'?'<div class="hint">In der Planung als Auftrag angelegt.</div>':'<button class="btn sec" data-pl="bfplan" data-v="'+f.id+'" style="margin:10px 0 0">In Planung übernehmen</button>';
+  const sent=f.sent?'<div class="hint">Abgesendet'+(f.sentAt?' am '+fmt(f.sentAt):'')+'.</div>':'';
+  const h=hist.length?'<details data-det="bhist" style="margin-top:12px"><summary>Versionsverlauf ('+hist.length+')</summary><div class="card">'+hist.slice().reverse().map(x=>'<div class="row" style="align-items:flex-start"><div style="min-width:0;flex:1"><div class="n">'+fmt(x.at)+' · '+esc(x.by||'')+'</div>'+(x.ch||[]).map(c=>'<div class="p">'+esc(c)+'</div>').join('')+'</div></div>').join('')+'</div></details>':'';
+  return plan+sent+h;
+}
 function bestCard(b){
   const tr=b.pos.reduce((a,p)=>a+(numOf(p.anzahl)||0),0),srv=[['sk','Ständer klein'],['sg','Ständer groß'],['auf','Aufstellen'],['lie','Lieferung'],['abh','Abholung']].filter(([k])=>b.leist[k].jn==='ja').map(x=>x[1]);
   return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.status==='uebernommen'?'<b style="color:var(--green)">In Planung</b>':'Aufgenommen'}</span></div>
     <div class="p">${b.datum?wdD(b.datum):'Termin offen'}${b.zeitwunsch?' · '+esc(b.zeitwunsch):b.tageszeit?' · '+esc(b.tageszeit):''}${b.phone?' · '+esc(b.phone):''}</div>
     <div class="p">${tr?tr+' Bäume':'Keine Bäume'}${srv.length?' · '+srv.join(', '):''}${b.gesamt?' · '+esc(b.gesamt):''}</div>
-    <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="bfedit" data-v="${b.id}" style="margin:0">Bearbeiten</button>${b.status==='uebernommen'?'':`<button class="btn" data-pl="bfplan" data-v="${b.id}" style="margin:0">In Planung übernehmen</button>`}</div></div>`;
+    <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="bfedit" data-v="${b.id}" style="margin:0">Bearbeiten</button></div></div>`;
 }
 function bfSuggest(k,v){
   clearTimeout(window['__bfs'+k]);const box=()=>document.getElementById('bf-sug-'+k);
@@ -2633,13 +2653,14 @@ function bestForm(){
     <div class="mini" style="margin-top:8px"><input class="t" id="bf-bezahlt" placeholder="Bezahlt am" value="${esc(f.bezahlt)}" style="min-width:0"><input class="t" id="bf-kassiert" placeholder="Dankend erhalten (Kürzel)" value="${esc(f.kassiert)}" style="min-width:0"></div>
     <label class="f">Bestellt am und aufgenommen von (Kürzel)</label><div class="mini"><input class="t" type="date" id="bf-bestellt" value="${esc(f.bestellt||'')}" style="min-width:0"><input class="t" id="bf-kuerzel" placeholder="Kürzel" value="${esc(f.kuerzel||'')}" style="min-width:0"></div>
     <div class="mini" style="margin-top:10px"><button class="btn" data-pl="bfsave" style="margin:0">Speichern</button><button class="btn sec" data-pl="bfcancel" style="margin:0">Abbrechen</button></div>
+    ${bfExtra(f)}
     ${f.id?'<button class="btn red" data-pl="bfdel">Bestellung ins Archiv</button>':''}</div>`;
 }
 function vBestellungen(kind,fahrer,plan){
   if(cur.bOpen&&cur.bf){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${bestForm()}`;return}
-  const all=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>String(b.bestellt||'').localeCompare(String(a.bestellt||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>b.status!=='uebernommen');
+  const all=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>String(b.bestellt||'').localeCompare(String(a.bestellt||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>b.status!=='uebernommen'&&!b.sent);
   $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Keine offenen Bestellungen.</div>'}
-    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/Absendbereit.</div></details>`;
+    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
 }
 function freeStopOrder(s){
   if(!s||!s.orderId)return;const o=S.orders.find(x=>x.id===s.orderId);if(!o||o.status!=='geplant'||(o.stopId&&o.stopId!==s.id))return;
