@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZE';
+const APP_VERSION='2026-10-22 ZF';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2211,16 +2211,17 @@ const nTrees=o=>orderTrees(o).reduce((a,p)=>a+(+p.qty||1),0);
 const SOLO=20;
 const up5=m=>Math.ceil(m/5)*5;
 const hmUp=ts=>{if(!ts)return '';const d=new Date(ts),m=Math.ceil((d.getHours()*60+d.getMinutes())/5)*5;return hmMin(m%1440)};
-const brkAdd=(c,s,rec,idx)=>{if(!s.b&&c>=570){if(rec)rec.push({k:'Frühstück',at:c,len:15,after:idx});c+=15;s.b=1}if(!s.l&&c>=750){if(rec)rec.push({k:'Mittag',at:c,len:30,after:idx});c+=30;s.l=1}return c};
+const brkAdd=(c,s,bfOn,luOn)=>{if(bfOn&&!s.b&&c>=570){c+=15;s.b=1}if(luOn&&!s.l&&c>=750){c+=30;s.l=1}return c};
 const SVC=()=>{const h0=S.hofInfo||{},n=(v,d)=>{const x=parseInt(v);return isNaN(x)?d:x};return {drop:n(h0.svcDrop,5),set:n(h0.svcSet,10),tree:n(h0.svcTree,1)}};
 function tourSched(items,back,start,fl){
   const n=items.length;
-  const run=br=>{let c=start,wait=0;const eta=[];items.forEach((it,i)=>{c+=it.leg;if(it.ws!=null&&c<it.ws){wait+=it.ws-c;c=it.ws}eta.push(c);c+=it.svc;if(br[i])c+=br[i].len});return {eta,end:c,home:c+back,wait}};
-  const br={};let r=run(br);
-  if(!fl.bf&&start<720&&r.home>720){const i=items.findIndex((it,k)=>r.eta[k]+it.svc>=570);if(i>=0&&i<n-1){br[i]={k:'Frühstück',len:15,after:i+1};r=run(br)}}
-  const bfRoad=Object.keys(br).length>0;
-  if(!fl.lu&&(fl.bf||bfRoad||start>=570)&&r.home>810){const i0=bfRoad?Math.max(...Object.keys(br).map(Number))+1:0,i=items.findIndex((it,k)=>k>=i0&&r.eta[k]+it.svc>=750);if(i>=0&&i<n-1){br[i]={k:'Mittag',len:30,after:i+1};r=run(br)}}
-  const road=Object.keys(br).map(k=>({...br[k],at:r.eta[k]+items[k].svc}));
+  const run=br=>{let c=start,wait=0;const eta=[];items.forEach((it,i)=>{c+=it.leg;if(it.ws!=null&&c<it.ws){wait+=it.ws-c;c=it.ws}eta.push(c);c+=it.svc;(br[i]||[]).forEach(b=>c+=b.len)});return {eta,end:c,home:c+back,wait}};
+  const br={},put=(i,b)=>{(br[i]=br[i]||[]).push(b)};let r=run(br);
+  const firstAt=(t,from)=>{const i=items.findIndex((it,k)=>k>=from&&r.eta[k]+it.svc>=t);return i>=0?i:n-1};
+  if(!fl.bf&&start<690&&r.home>=690){put(firstAt(570,0),{k:'Frühstück',len:15});r=run(br)}
+  const bfIdx=Object.keys(br).length?Math.max(...Object.keys(br).map(Number)):-1;
+  if(!fl.lu&&start<=750&&r.home>=870){put(firstAt(750,Math.max(0,bfIdx)),{k:'Mittag',len:30});r=run(br)}
+  const road=[];Object.keys(br).map(Number).sort((x,y)=>x-y).forEach(k=>{let at=r.eta[k]+items[k].svc;br[k].forEach(b=>{const rec=items.some((it,j)=>j>k&&it.we!=null&&it.we-r.eta[j]<60);road.push({...b,at,after:k+1,rec});at+=b.len})});
   return {...r,road,late:items.reduce((a,it,k)=>a+(it.we!=null&&r.eta[k]>it.we?1:0),0)};
 }
 function scheduleDrivers(defs,P){
@@ -2229,8 +2230,8 @@ function scheduleDrivers(defs,P){
     const need=Math.min(def.crewN,P),pick=D.slice().sort((a,b)=>a.avail-b.avail||a.n-b.n).slice(0,need);
     const start0=Math.max(...pick.map(d=>d.avail)),its=itemsAt(def.items,need),start=(its.length&&its[0].ws!=null)?Math.max(start0,its[0].ws-its[0].leg):start0,fl={bf:pick[0].bf,lu:pick[0].lu},r=tourSched(its,def.back,start,fl);
     let t=r.home,bf=fl.bf||r.road.some(x=>x.k==='Frühstück'),lu=fl.lu||r.road.some(x=>x.k==='Mittag');const hof=[];
-    if(!bf&&start<720&&t>=540){hof.push({k:'Frühstück',at:t,len:15});t+=15;bf=true}
-    if(!lu&&t>=720){hof.push({k:'Mittag',at:t,len:30});t+=30;lu=true}
+    if(!bf&&start<690&&t>=540&&t<690){hof.push({k:'Frühstück',at:t,len:15});t+=15;bf=true}
+    if(!lu&&t>=720&&t<=870){hof.push({k:'Mittag',at:t,len:30});t+=30;lu=true}
     pick.forEach(d=>{d.avail=t+RELOAD;d.bf=bf;d.lu=lu;d.ev.push({idx:def.i,start,home:r.home,hof})});
     res[def.i]={...r,start,its,bfPre:fl.bf,luPre:fl.lu,slots:pick.map(d=>d.n),capped:def.crewN>P,hof};late+=r.late;
   });
@@ -2243,9 +2244,10 @@ function planSim(t){
   return {eta,start,end:r.end,home:r.home,dur:r.home-start,drive:items.reduce((a,b)=>a+b.leg,0)+back,stay:items.reduce((a,b)=>a+b.svc,0),wait:r.wait,road:r.road,pb:r.road.reduce((a,b)=>a+b.len,0)};
 }
 const tourDur=t=>planSim(t).dur;
-const brkTxt=(road,t,home)=>{const b=road.find(x=>x.k==='Frühstück'),l=road.find(x=>x.k==='Mittag'),p=[];
-  if(b)p.push('Frühstück unterwegs');else if(!t.bfPre&&(t.depart||495)<720)p.push('Frühstück am Hof');
-  if(l)p.push('Mittag unterwegs');else if(!t.luPre&&home>=720)p.push('Mittag am Hof');
+const brkTxt=(road,t,home)=>{const b=road.find(x=>x.k==='Frühstück'),l=road.find(x=>x.k==='Mittag'),p=[],st=t.depart||495;
+  const rt=x=>x.rec?` (Empfehlung: um ${hmMin(up5(x.at))}, wegen Zeitfenstern danach)`:' (Zeitpunkt frei)';
+  if(b)p.push('Frühstück unterwegs, 15 Min eingeplant'+rt(b));else if(!t.bfPre&&st<690&&home<690)p.push('Frühstück am Hof');
+  if(l)p.push('Mittag unterwegs, 30 Min eingeplant'+rt(l));else if(!t.luPre&&home>=720&&home<=870)p.push('Mittag am Hof');
   return p.join('<br>')};
 const hmMin=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const timeToMin=s=>{const m=(s||'07:30').match(/(\d{1,2})[:.](\d{2})/);return m?(+m[1])*60+(+m[2]):450};
@@ -2279,10 +2281,15 @@ function orderCrewInfo(o,ds){
 }
 function evalTour(list,P,loose){
   if(!list.length)return {crew:0,dur:0,cost:0,eta:[]};
+  const e0=evalTour0(list,P,true,false,false);if(!e0)return null;
+  const end=P.start+e0.w0+e0.dur,bfOn=P.start<690&&end>=690,luOn=P.start<=750&&end+(bfOn?15:0)>=870;
+  return evalTour0(list,P,loose,bfOn,luOn);
+}
+function evalTour0(list,P,loose,bfOn,luOn){
   if(!loose&&list.length>MAXSTOPS){P._why='mehr als '+MAXSTOPS+' Stopps';return null}
   if(!loose&&list.length>1&&list.reduce((a,x)=>a+x.n,0)>treeCap()){P._why='Baumgrenze erreicht ('+list.reduce((a,x)=>a+x.n,0)+' von '+treeCap()+' Bäumen)';return null}
   const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0,rem=list.reduce((a,x)=>a+x.n,0),loadC=0,w0=0,first=true;
-  for(const x of list){const tl=tmin(pos,x,P);loadC+=rem*tl;rem-=x.n;c+=tl;if(x.ws!=null&&c<x.ws){if(first)w0=x.ws-c;c=x.ws}first=false;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=x.sv?x.sv[crew]||x.sv[2]:Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
+  for(const x of list){const tl=tmin(pos,x,P);loadC+=rem*tl;rem-=x.n;c+=tl;if(x.ws!=null&&c<x.ws){if(first)w0=x.ws-c;c=x.ws}first=false;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=x.sv?x.sv[crew]||x.sv[2]:Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs,bfOn,luOn);brk+=c-c0;pos=x}
   c+=tmin(pos,P.dep,P);const dur=c-P.start-w0;
   if(!loose&&P.dayEnd&&c>P.dayEnd){P._why='Rückkehr nach '+hmMin(P.dayEnd)+' Uhr';return null}
   if(!loose&&dur>P.lim){P._why='Tour würde zu lang ('+fmtMin(dur)+')';return null}
@@ -2375,7 +2382,10 @@ async function runPlan(){
     const w=[];if(matNote)w.push(matNote);
     tours.forEach((t,i)=>{if(t.devPct>0.25&&t.devMin>10)w.push(`Vorschlag ${i+1}: Google rechnet mit ${t.devMin} Min mehr Fahrzeit als die Straßenmatrix (Verkehr oder andere Route), bitte die Zeiten prüfen.`)});
     if(tours.some(t=>t.capped))w.push(`Mit ${Puse} Fahrern sind nicht alle Touren so besetzbar, wie sie es bräuchten (große Bäume oder viele Bäume am Stopp brauchen 2 bis 3 Personen).`);
-    if(sch.late>0)w.push(`Bei ${sch.late} ${sch.late===1?'Stopp':'Stopps'} wird das Zeitfenster überschritten.`);
+    const de=(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0,bad=r=>r.late>0||(de&&r.makespan>de);
+    if(P&&pd.P!=='max'&&bad(sch)){let need=0;for(let q=P+1;q<=24;q++){if(!bad(scheduleDrivers(defs,q))){need=q;break}}
+      w.push(need?`Mit ${P} Personen geht es nicht: ${sch.late>0?sch.late+(sch.late===1?' Stopp liegt':' Stopps liegen')+' außerhalb des Zeitfensters':'die Rückkehr liegt nach '+hmMin(de)+' Uhr'}. Es werden mindestens ${need} Personen benötigt.`:`Mit ${P} Personen geht es nicht, auch mit bis zu 24 Personen nicht (Zeitfenster zu eng).`)}
+    else if(sch.late>0)w.push(`Bei ${sch.late} ${sch.late===1?'Stopp':'Stopps'} wird das Zeitfenster überschritten.`);
     if(sch.makespan>990)w.push(`Mit ${Puse} Fahrern sind die Touren erst ca. ${hmMin(up5(sch.makespan))} fertig.`);
     pd.res={tours,missing,warn:w.join(' '),puse:Puse,auto:!P,unl:pd.P==='max',ftry:pd.ftry,overview};pd.msg='';
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
