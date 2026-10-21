@@ -273,6 +273,7 @@ window.RO_DICT={
 "Mittag unterwegs": "Prânz în drum",
 "Frühstück unterwegs": "Mic dejun în drum",
 "Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen eine halbe Minute je Baum, höchstens 60 Min). Eine Person braucht 40 % länger, drei Personen (große Bäume) 20 % länger als zwei.": "Durata: supliment pentru fiecare brad în plus (factor, standard 1; primii brazi contează descrescător, de la 11 brazi o jumătate de minut per brad, maxim 60 min). O persoană are nevoie de 40 % mai mult, trei persoane (brazi mari) de 20 % mai mult decât două.",
+"Aufenthalt an Stopps: Korrektur in Prozent (Standard 100, Tabelle aus Erfahrungswerten für 1, 2 und 3 Personen)": "Durata la opriri: corecție în procente (standard 100, tabel din valori de experiență pentru 1, 2 și 3 persoane)",
 "Aufenthalt je Stopp in Minuten bei zwei Personen: abladen und aufstellen (Standard 10)": "Durata la oprire în minute cu două persoane: descărcare și montare (standard 10)",
 "Aufenthalt je Stopp in Minuten bei zwei Personen: nur abladen (Standard 5)": "Durata la oprire în minute cu două persoane: doar descărcare (standard 5)",
 "Mittag 30 Min unterwegs eingerechnet": "Prânz 30 min în drum inclus",

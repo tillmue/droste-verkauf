@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZD';
+const APP_VERSION='2026-10-22 ZE';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2198,7 +2198,9 @@ const orderOpen=o=>!o.deleted&&o.status!=='geplant'&&o.status!=='erledigt';
 const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),0),ls=tr.map(p=>+p.len||0).filter(Boolean),mn=ls.length?Math.min(...ls):0,mx=ls.length?Math.max(...ls):0;
   if(n<=0)return '';if(n===1)return mFmt(mx)||'1 Baum';return `${n} Stk.`+(mx?' · '+(mn===mx?mFmt(mx):mFmt(mn).replace(' m','')+' bis '+mFmt(mx)):'')};
 const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>+p.len||0));
-const orderSvc=o=>svcMin({service:orderService(o),lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat}))});
+const orderSvx=o=>({service:orderService(o),name:o.name,lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat,l:p.len||null}))});
+const orderSvc=o=>svcMin(orderSvx(o),2);
+const orderSv=o=>{const x=orderSvx(o);return {1:svcMin(x,1),2:svcMin(x,2),3:svcMin(x,3)}};
 const winTimes=w=>[...String(w||'').matchAll(/(\d{1,2}):(\d{2})/g)].map(m=>(+m[1])*60+(+m[2]));
 const tHM=(s,d)=>{const m=String(s||'').match(/(\d{1,2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):d};
 const winDefs=()=>{const h0=S.hofInfo||{};return {amTo:tHM(h0.amEnd,720),pmFrom:tHM(h0.pmFrom,780),pmTo:tHM(h0.pmTo,1020)}};
@@ -2280,7 +2282,7 @@ function evalTour(list,P,loose){
   if(!loose&&list.length>MAXSTOPS){P._why='mehr als '+MAXSTOPS+' Stopps';return null}
   if(!loose&&list.length>1&&list.reduce((a,x)=>a+x.n,0)>treeCap()){P._why='Baumgrenze erreicht ('+list.reduce((a,x)=>a+x.n,0)+' von '+treeCap()+' Bäumen)';return null}
   const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0,rem=list.reduce((a,x)=>a+x.n,0),loadC=0,w0=0,first=true;
-  for(const x of list){const tl=tmin(pos,x,P);loadC+=rem*tl;rem-=x.n;c+=tl;if(x.ws!=null&&c<x.ws){if(first)w0=x.ws-c;c=x.ws}first=false;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
+  for(const x of list){const tl=tmin(pos,x,P);loadC+=rem*tl;rem-=x.n;c+=tl;if(x.ws!=null&&c<x.ws){if(first)w0=x.ws-c;c=x.ws}first=false;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=x.sv?x.sv[crew]||x.sv[2]:Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs);brk+=c-c0;pos=x}
   c+=tmin(pos,P.dep,P);const dur=c-P.start-w0;
   if(!loose&&P.dayEnd&&c>P.dayEnd){P._why='Rückkehr nach '+hmMin(P.dayEnd)+' Uhr';return null}
   if(!loose&&dur>P.lim){P._why='Tour würde zu lang ('+fmtMin(dur)+')';return null}
@@ -2290,7 +2292,7 @@ function buildToursV2(orders,dep,P){
   dep={...dep,mi:0};P={...P,dep};
   const items=orders.map(o=>{const ci=orderCrewInfo(o,P.date);let ws=winStart(o.window),we=winEnd(o.window);
     if(ci.win){ws=Math.max(ws==null?0:ws,ci.win[0]);we=we==null?ci.win[1]:Math.min(we,ci.win[1])}
-    return {o,lat:o.lat,lng:o.lng,mi:orders.indexOf(o)+1,k:ci.k,ci,ws,we,svc2:orderSvc(o),n:nTrees(o),must:(o.to||o.from||'')<=P.date?1:0}});
+    return {o,lat:o.lat,lng:o.lng,mi:orders.indexOf(o)+1,k:ci.k,ci,ws,we,svc2:orderSvc(o),sv:orderSv(o),n:nTrees(o),must:(o.to||o.from||'')<=P.date?1:0}});
   items.sort((a,b)=>(b.k-a.k)||(b.must-a.must)||((a.we==null)-(b.we==null))||((a.we||0)-(b.we||0)));
   const tours=[],hist={};let tid=0;
   const addH=(o,t)=>{(hist[o.id]=hist[o.id]||[]).push(t)};
@@ -2342,7 +2344,7 @@ async function runPlan(){
       if(sec.length===1||hasW){const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),roundTrip:true,depart:nextDepart()});legs=r.legs}
       else{const r=await window.cloud.routeLegs({origin:depot(),stops:sec.map(orderAddr),optimize:true,depart:nextDepart()});ordd=r.order.map(i=>sec[i]);legs=r.legs}
       const backMin=Math.round((legs[ordd.length]||0)/60),lg=legs.slice(0,ordd.length);
-      const items=ordd.map((o,i)=>({leg:Math.round((lg[i]||0)/60),svc2:orderSvc(o),svc:orderSvc(o),ws:winStart(o.window),we:winEnd(o.window)}));
+      const items=ordd.map((o,i)=>({leg:Math.round((lg[i]||0)/60),svc2:orderSvc(o),sv:orderSv(o),svc:orderSvc(o),ws:winStart(o.window),we:winEnd(o.window)}));
       let devMin=0,devPct=0;
       if(matRef.mat){try{const ix=ordd.map(o=>located.indexOf(o)+1);let es=0,pv=0;ix.forEach(i=>{es+=(matRef.mat[pv]&&matRef.mat[pv][i])||0;pv=i});es+=(matRef.mat[pv]&&matRef.mat[pv][0])||0;es=es*1.05/60;const gs=(lg.reduce((a,b)=>a+b,0)+(legs[ordd.length]||0))/60;if(gs>0){devMin=Math.round(gs-es);devPct=(gs-es)/gs}}catch(e){}}
       return {size,solo:false,meta:meta||{},bid:(meta||{}).bid,devMin,devPct,stops:ordd.map((o,i)=>({o,svc:items[i].svc,eta:0,warn:''})),legs:lg,backMin,items,crewN:crewN,crew:reqTxt,
@@ -2727,9 +2729,18 @@ const depot=()=>(S.hofInfo&&S.hofInfo.depot)||'Im Gattberg 19, 49191 Belm';
 const fmtMin=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' Std '+(m%60?m%60+' Min':''):m+' Min'};
 const stopTrees=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>a+(+l.q||0),0);
 const CF={1:1.4,2:1,3:1.2};
-const svcMin=(x,n)=>{const c=SVC(),base=/aufstellen/i.test(x.service||'')?c.set:c.drop,tr=stopTrees(x),extra=Math.round(c.tree*2*Math.sqrt(Math.min(Math.max(0,tr-1),10))+Math.max(0,tr-11)*c.tree*0.5);return Math.round(Math.min(60,base+extra)*(CF[n||2]||1))};
+const SVC_A={1:[[1,8],[3,12],[5,16],[10,20],[20,27],[50,30]],2:[[1,8],[3,11],[5,15],[10,18],[20,25],[50,25]],3:[[1,8],[3,10],[5,14],[10,15],[20,19],[50,20]]};
+const SVC_B={1:[[1,12],[2,17],[3,25],[5,30],[10,45]],2:[[1,12],[2,15],[3,20],[5,25],[10,35]],3:[[1,12],[2,14],[3,16],[5,20],[10,30]]};
+const SVC_B1={1:[12,13,14],2:[12,10,12],3:[12,10,12]};
+const svcInterp=(pts,t,tail)=>{if(t<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++){if(t<=pts[i][0]){const a=pts[i-1],b=pts[i];return a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0])}}const a=pts[pts.length-2],b=pts[pts.length-1];return Math.min(90,b[1]+Math.max(0,tail)*(b[1]-a[1])/(b[0]-a[0])*(t-b[0]))};
+const stopMaxLen=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>Math.max(a,+l.l||0),0);
+const svcExtra=nm=>/kirche|kirchen|pfarr|kapelle/i.test(nm||'')?5:/krankenhaus|klinik|hospital/i.test(nm||'')?10:0;
+const svcMin=(x,n)=>{n=[1,2,3].includes(n)?n:2;const aufst=/aufstellen/i.test(x.service||''),tr=Math.max(1,stopTrees(x)),L=stopMaxLen(x);
+  let v;if(aufst){if(tr===1){const k=L>4?2:L>2.5?1:0;v=SVC_B1[n][k]}else v=svcInterp(SVC_B[n],tr,0.6)}else{v=svcInterp(SVC_A[n],tr,0)}
+  if(!aufst&&tr>=10&&(x.standId||(x.name&&standByName(x.name))))v*={1:0.71,2:0.6,3:0.52}[n];
+  const pc=parseInt((S.hofInfo||{}).svcPct);v=v*(isNaN(pc)||pc<=0?1:pc/100)+svcExtra(x.name);return Math.round(v)};
 const tourCrewN=t=>(t.slots&&t.slots.length)||(t.driver&&t.codriver?2:crewNum(tourStops(t)));
-const itemsAt=(items,n)=>items.map(it=>({...it,svc:Math.round(it.svc2*(CF[n]||1))}));
+const itemsAt=(items,n)=>items.map(it=>({...it,svc:it.sv?it.sv[n]||it.sv[2]:Math.round(it.svc2*(CF[n]||1))}));
 function etaTimes(t){
   const st=tourStops(t),legs=t.legs||[],out={};if(!t.startedAt||!legs.length)return out;
   let cur=t.startedAt+(t.pausedMs||0);const bs={};
@@ -3103,12 +3114,8 @@ function vDaten(){
   <input class="t" id="hof-resmin" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveMin)||''))}" placeholder="2">
   <label class="f">Ersatzständer pro Tour: ein Ersatz je so viele Ständer</label>
   <input class="t" id="hof-resevery" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveEvery)||''))}" placeholder="9">
-  <label class="f">Aufenthalt je Stopp in Minuten bei zwei Personen: nur abladen (Standard 5)</label>
-  <input class="t" id="hof-svcDrop" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcDrop)||''))}" placeholder="5">
-  <label class="f">Aufenthalt je Stopp in Minuten bei zwei Personen: abladen und aufstellen (Standard 10)</label>
-  <input class="t" id="hof-svcSet" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcSet)||''))}" placeholder="10">
-  <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen eine halbe Minute je Baum, höchstens 60 Min). Eine Person braucht 40 % länger, drei Personen (große Bäume) 20 % länger als zwei.</label>
-  <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="1">
+  <label class="f">Aufenthalt an Stopps: Korrektur in Prozent (Standard 100, Tabelle aus Erfahrungswerten für 1, 2 und 3 Personen)</label>
+  <input class="t" id="hof-svcPct" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcPct)||''))}" placeholder="100">
   <label class="f">MwSt-Satz in Prozent (Standard 7,8)</label>
   <input class="t" id="hof-vat" inputmode="decimal" value="${esc(String((S.hofInfo&&S.hofInfo.vat)||''))}" placeholder="7,8">
   <label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
@@ -3359,9 +3366,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='hof-dayend'){S.hofInfo={...S.hofInfo,dayEnd:t.value.trim()};save()}
   if(t.id==='hof-treecap'){S.hofInfo={...S.hofInfo,treeCap:t.value.trim()};save()}
   if(t.id==='hof-resmin'){S.hofInfo={...S.hofInfo,reserveMin:t.value.trim()};save()}
-  if(t.id==='hof-svcDrop'){S.hofInfo={...S.hofInfo,svcDrop:t.value.trim()};save()}
-  if(t.id==='hof-svcSet'){S.hofInfo={...S.hofInfo,svcSet:t.value.trim()};save()}
-  if(t.id==='hof-svcTree'){S.hofInfo={...S.hofInfo,svcTree:t.value.trim()};save()}
+  if(t.id==='hof-svcPct'){S.hofInfo={...S.hofInfo,svcPct:t.value.trim()};save()}
   if(t.id==='hof-resevery'){S.hofInfo={...S.hofInfo,reserveEvery:t.value.trim()};save()}
   if(t.id==='hof-vat'){S.hofInfo={...S.hofInfo,vat:t.value.trim()};save()}
   if(t.id==='hof-paypal'){S.hofInfo={...S.hofInfo,paypal:t.value.trim()};save()}
