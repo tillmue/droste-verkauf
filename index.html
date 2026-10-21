@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZP';
+const APP_VERSION='2026-10-22 ZQ';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1730,12 +1730,13 @@ document.addEventListener('click',ev=>{
   if(a==='agcancel'){cur.agOpen=false;cur.ag=null;return render()}
   if(a==='agpos'){if(cur.ag.baeume.length<6)cur.ag.baeume.push({bez:'',menge:'',einzel:''});return render()}
   if(a==='agpa'){cur.ag.svc.mode=v==='pausch'?'pausch':'einzeln';return render()}
+  if(a==='agt'){cur.ag.anrt=cur.ag.anrt===v?'':v;return render()}
   if(a==='agson'){const k=cur.ag.svc.it[v];k.on=!k.on;return render()}
   if(a==='agfrom'){const b=S.bestellungen.find(x=>x.id===v);if(!b)return;cur.ag=agFromBest(b);cur.agOpen=true;window.scrollTo(0,0);return render()}
   if(a==='agdl'){const b=S.angebote.find(x=>x.id===v);if(!b)return;agDownload(b);return}
   if(a==='agsave'){const f=cur.ag;if(!(f.name||'').trim())return alert('Bitte Name oder Firma eingeben.');
     const pos=agPos(f);if(pos.length>6)return alert('Das Angebot hat Platz für 6 Zeilen. Bitte Bäume oder Leistungen zusammenfassen (zum Beispiel pauschal).');
-    f.pos=pos;f.vat=vatRate();f.anrede=agAnrede(f.contact);f.einleitung=AG_EINL;
+    f.pos=pos;f.vat=vatRate();f.anrede=agAnrede(f.contact,f.anrt);f.einleitung=AG_EINL;
     const c=agCalc(f),row={...f,name:f.name.trim(),netto:c.netto,brutto:c.brutto,updated:Date.now()};
     if(f.id){const b=S.angebote.find(x=>x.id===f.id);if(b){const was=agSig(b);Object.assign(b,row);if(b.sent&&agSig(b)!==was)b.sent=false}}
     else{const nid=uid();S.angebote.push({...row,id:nid,by:S.me,created:Date.now()});if(f.fromBestellung){const bb=S.bestellungen.find(x=>x.id===f.fromBestellung);if(bb)bb.angebotId=nid}}
@@ -2681,10 +2682,12 @@ function vBestellungen(kind,fahrer,plan){
 const AG_EINL='vielen Dank für Ihre Anfrage. Gern bieten wir Ihnen an:';
 const AG_SVC=[['lie','Lieferung','km'],['auf','Aufstellen','m'],['abh','Abholung','km'],['sk','Ständer klein','Stück'],['sg','Ständer groß','Stück']];
 const agSvcNew=()=>({mode:'einzeln',preis:'',it:Object.fromEntries(AG_SVC.map(([k])=>[k,{on:false,menge:'',einzel:''}]))});
-const agAnrede=c=>{c=String(c||'').trim();if(!c)return 'Sehr geehrte Damen und Herren,';
-  let m=c.match(/^(?:herrn?|hr\.?)\s+(.+)$/i);if(m)return 'Sehr geehrter Herr '+m[1].trim()+',';
-  m=c.match(/^(?:frau|fr\.?)\s+(.+)$/i);if(m)return 'Sehr geehrte Frau '+m[1].trim()+',';
-  return 'Guten Tag '+c+','};
+const agNach=n=>{const w=n.split(/\s+/).filter(Boolean);let i=w.length-1;while(i>0&&/^(von|van|de|der|den|zu|zur|vom|ten|ter|da|di|le|la)$/i.test(w[i-1]))i--;return w.slice(i).join(' ')};
+const agAnrede=(c,t)=>{c=String(c||'').trim();if(!c)return 'Sehr geehrte Damen und Herren,';
+  let m=c.match(/^(?:herrn?|hr\.?)\s+(.+)$/i),g=m?'herr':'';if(!m){m=c.match(/^(?:frau|fr\.?)\s+(.+)$/i);g=m?'frau':''}
+  const nm=m?m[1].trim():c;g=g||t||'';
+  if(g==='herr')return 'Sehr geehrter Herr '+agNach(nm)+',';if(g==='frau')return 'Sehr geehrte Frau '+agNach(nm)+',';
+  return 'Guten Tag '+nm+','};
 const agNew=()=>({id:null,name:'',contact:'',street:'',plzort:'',datum:todayStr(),
   baeume:[...Array(2)].map(()=>({bez:'',menge:'',einzel:''})),svc:agSvcNew(),termine:'Lieferung: November 2026\nAbholung: Januar 2027\nTermine nach Absprache.',gueltig:shiftDate(todayStr(),14)});
 function agPos(f){const out=[];(f.baeume||[]).filter(x=>x.bez||x.menge||x.einzel).forEach(x=>out.push({bez:x.bez,menge:x.menge,einzel:x.einzel,art:'ware'}));
@@ -2700,7 +2703,7 @@ function agInput(t){const f=cur.ag,k=t.id.slice(3);let m;
   if(m=k.match(/^b(\d)-(\w+)$/))f.baeume[+m[1]][m[2]]=t.value;
   else if(m=k.match(/^s-(\w+)-(\w+)$/))f.svc.it[m[1]][m[2]]=t.value;
   else if(k==='spreis')f.svc.preis=t.value;
-  else{f[k]=t.value;if(k==='contact'){const e=document.getElementById('ag-anrede');if(e)e.textContent=agAnrede(t.value)}}
+  else{f[k]=t.value;if(k==='contact'){const e=document.getElementById('ag-anrede');if(e)e.textContent=agAnrede(t.value,f.anrt)}}
   const e=document.getElementById('ag-sums');if(e)e.innerHTML=agSums(f)}
 function agFromBest(b){
   const f=agNew();f.fromBestellung=b.id;f.name=b.name||'';f.contact=b.contact||'';
@@ -2721,10 +2724,11 @@ function agForm(){
   const sv=f.svc,pa=sv.mode==='pausch';
   return `<div class="card pad formc"><label class="f">${f.id?'Angebot bearbeiten':'Neues Angebot'}</label>
     <input class="t" id="ag-name" placeholder="Firma / Name" value="${esc(f.name)}">
-    <input class="t" id="ag-contact" placeholder="Ansprechperson (z. B. Herr Werner)" value="${esc(f.contact)}" style="margin-top:8px">
+    <input class="t" id="ag-contact" placeholder="Ansprechperson (z. B. Max Muster)" value="${esc(f.contact)}" style="margin-top:8px">
+    <div class="chips" style="margin:6px 0 0"><button class="chip ${f.anrt==='herr'?'on':''}" data-pl="agt" data-v="herr">Herr</button><button class="chip ${f.anrt==='frau'?'on':''}" data-pl="agt" data-v="frau">Frau</button></div>
     <input class="t" id="ag-street" placeholder="Straße und Hausnummer" value="${esc(f.street)}" style="margin-top:8px">
     <div class="mini" style="margin-top:8px"><input class="t" id="ag-plzort" placeholder="PLZ und Ort" value="${esc(f.plzort)}" style="min-width:0"><input class="t" type="date" id="ag-datum" value="${esc(f.datum)}" style="min-width:0"></div>
-    <div class="hint" style="margin-top:8px"><b id="ag-anrede">${esc(agAnrede(f.contact))}</b><br>${AG_EINL}</div>
+    <div class="hint" style="margin-top:8px"><b id="ag-anrede">${esc(agAnrede(f.contact,f.anrt))}</b><br>${AG_EINL}</div>
     <label class="f">Bäume (Preise netto)</label>
     ${f.baeume.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-b${i}-bez" placeholder="Bezeichnung (Sorte, Größe)" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px"><input class="t" id="ag-b${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0"><input class="t" id="ag-b${i}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(p.einzel)}" style="min-width:0"></div></div>`).join('')}
     ${f.baeume.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Baum-Position</button>':''}
