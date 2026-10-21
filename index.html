@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZF';
+const APP_VERSION='2026-10-22 ZG';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1240,7 +1240,7 @@ function archivHtml(){
 }
 function rollTasks(){
   const td=todayStr();let n=0;
-  S.tasks.forEach(t=>{if(!t.deleted&&!t.done&&t.type!=='termin'&&t.date&&t.date<td){t.movedFrom=t.movedFrom||t.date;t.date=td;n++}});
+  S.tasks.forEach(t=>{if(!t.demo&&!t.deleted&&!t.done&&t.type!=='termin'&&t.date&&t.date<td){t.movedFrom=t.movedFrom||t.date;t.date=td;n++}});
   if(n){save();if(window.APP&&window.APP.softRender)softRender()}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'))){rollTasks()}});
