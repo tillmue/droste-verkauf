@@ -1,4 +1,7 @@
 window.RO_DICT={
+"Schlüssel für die Entfernungsmatrix (OpenRouteService, kostenlos) (gespeichert, wird nicht angezeigt)": "Cheie pentru matricea de distanțe (OpenRouteService, gratuit) (salvată, nu se afișează)",
+"Schlüssel für die Entfernungsmatrix (OpenRouteService, kostenlos) (noch nicht hinterlegt)": "Cheie pentru matricea de distanțe (OpenRouteService, gratuit) (încă nesetată)",
+"Straßenentfernungen werden ermittelt …": "Se calculează distanțele rutiere …",
 "Auto mit Anhänger": "Auto cu remorcă",
 "Auto": "Auto",
 "Kein Führerschein": "Fără permis",

@@ -238,6 +238,58 @@ exports.routeLegs = onCall(async req => {
   return { legs };
 });
 
+
+/* Entfernungsmatrix (Fahrzeit in Sekunden zwischen allen Punkten) fuer die Tourenplanung.
+   Bevorzugt OpenRouteService (kostenlos, Schluessel in secrets/orsMatrix), sonst Google Routes API (secrets/maps, Essentials, ohne Verkehr). */
+exports.routeMatrix = onCall({ timeoutSeconds: 120 }, async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
+  const u = await db.collection('users').doc(req.auth.uid).get();
+  if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
+  const pts = (req.data && req.data.points) || [];
+  const n = pts.length;
+  if (!Array.isArray(pts) || n < 2 || n > 60 || pts.some(p => typeof p.lat !== 'number' || typeof p.lng !== 'number')) throw new HttpsError('invalid-argument', '2 bis 60 Punkte mit Koordinaten nötig');
+  const mk = await db.doc('secrets/orsMatrix').get();
+  if (mk.exists && mk.data().key) {
+    const key = mk.data().key, per = Math.max(1, Math.floor(2500 / n)), out = [];
+    for (let s = 0; s < n; s += per) {
+      const src = []; for (let i = s; i < Math.min(n, s + per); i++) src.push(i);
+      const r = await fetch(`${ORS}/v2/matrix/driving-car`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: key }, body: JSON.stringify({ locations: pts.map(p => [p.lng, p.lat]), sources: src, metrics: ['duration'] }) });
+      const j = await r.json();
+      if (r.status === 401 || r.status === 403) throw new HttpsError('failed-precondition', 'OpenRouteService lehnt den Schlüssel ab (Daten, Einstellungen).');
+      if (r.status === 429) throw new HttpsError('resource-exhausted', 'OpenRouteService: Limit erreicht, bitte kurz warten.');
+      if (!r.ok || !j.durations) throw new HttpsError('unavailable', String((j.error && (j.error.message || j.error)) || 'Matrix nicht verfügbar'));
+      j.durations.forEach(row => out.push(row.map(v => (v == null ? null : Math.round(v)))));
+    }
+    return { durations: out, source: 'ors' };
+  }
+  const k = await db.doc('secrets/maps').get();
+  if (!k.exists || !k.data().key) throw new HttpsError('failed-precondition', 'Kein Schlüssel für die Entfernungsmatrix hinterlegt (Daten, Einstellungen).');
+  const D = Array.from({ length: n }, () => Array(n).fill(null));
+  for (let i = 0; i < n; i++) D[i][i] = 0;
+  const CH = 25, blocks = Math.ceil(n / CH);
+  for (let a = 0; a < blocks; a++) for (let b = a; b < blocks; b++) {
+    const oi = [], di = [];
+    for (let i = a * CH; i < Math.min(n, (a + 1) * CH); i++) oi.push(i);
+    for (let j = b * CH; j < Math.min(n, (b + 1) * CH); j++) di.push(j);
+    const wp = i => ({ waypoint: { location: { latLng: { latitude: pts[i].lat, longitude: pts[i].lng } } } });
+    const res = await fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key, 'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,status,condition' },
+      body: JSON.stringify({ origins: oi.map(wp), destinations: di.map(wp), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE' })
+    });
+    const j = await res.json();
+    if (!res.ok || !Array.isArray(j)) throw new HttpsError('unavailable', (j.error && j.error.message) || (Array.isArray(j) && j[0] && j[0].error && j[0].error.message) || 'Matrix nicht verfügbar');
+    j.forEach(e => {
+      if (e.condition && e.condition !== 'ROUTE_EXISTS') return;
+      const sec = parseInt(String(e.duration || '').replace('s', ''), 10);
+      if (isNaN(sec)) return;
+      const I = oi[e.originIndex], J = di[e.destinationIndex];
+      D[I][J] = sec; if (D[J][I] == null) D[J][I] = sec;
+    });
+  }
+  return { durations: D, source: 'google' };
+});
+
 /* Adressen in Koordinaten umwandeln (Geocoding API, Schlüssel aus secrets/maps) */
 exports.geocode = onCall(async req => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');

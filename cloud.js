@@ -282,6 +282,7 @@ function initCloud(FB) {
       if (tok) await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayRemove(tok) }).catch(() => {});
       try { await FB.deleteToken(FB.getMessaging(app)); } catch (e) {}
     },
+    async routeMatrix(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeMatrix')(p); return r.data; },
     async routeLegs(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeLegs')(p); return r.data; },
     async addrSuggest(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'addrSuggest')(p); return r.data; },
     async driveKm(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'driveKm')(p); return r.data; },
