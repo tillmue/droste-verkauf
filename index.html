@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZQ';
+const APP_VERSION='2026-10-22 ZR';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2681,7 +2681,7 @@ function vBestellungen(kind,fahrer,plan){
 }
 const AG_EINL='vielen Dank für Ihre Anfrage. Gern bieten wir Ihnen an:';
 const AG_SVC=[['lie','Lieferung','km'],['auf','Aufstellen','m'],['abh','Abholung','km'],['sk','Ständer klein','Stück'],['sg','Ständer groß','Stück']];
-const agSvcNew=()=>({mode:'einzeln',preis:'',it:Object.fromEntries(AG_SVC.map(([k])=>[k,{on:false,menge:'',einzel:''}]))});
+const agSvcNew=()=>({mode:'einzeln',preis:'',it:Object.fromEntries(AG_SVC.map(([k])=>[k,{on:false,preis:''}]))});
 const agNach=n=>{const w=n.split(/\s+/).filter(Boolean);let i=w.length-1;while(i>0&&/^(von|van|de|der|den|zu|zur|vom|ten|ter|da|di|le|la)$/i.test(w[i-1]))i--;return w.slice(i).join(' ')};
 const agAnrede=(c,t)=>{c=String(c||'').trim();if(!c)return 'Sehr geehrte Damen und Herren,';
   let m=c.match(/^(?:herrn?|hr\.?)\s+(.+)$/i),g=m?'herr':'';if(!m){m=c.match(/^(?:frau|fr\.?)\s+(.+)$/i);g=m?'frau':''}
@@ -2692,13 +2692,13 @@ const agNew=()=>({id:null,name:'',contact:'',street:'',plzort:'',datum:todayStr(
   baeume:[...Array(2)].map(()=>({bez:'',menge:'',einzel:''})),svc:agSvcNew(),termine:'Lieferung: November 2026\nAbholung: Januar 2027\nTermine nach Absprache.',gueltig:shiftDate(todayStr(),14)});
 function agPos(f){const out=[];(f.baeume||[]).filter(x=>x.bez||x.menge||x.einzel).forEach(x=>out.push({bez:x.bez,menge:x.menge,einzel:x.einzel,art:'ware'}));
   const sv=f.svc||agSvcNew(),on=AG_SVC.filter(([k])=>sv.it[k].on);
-  if(sv.mode==='pausch'){if(on.length||sv.preis)out.push({bez:'Pauschale: '+(on.map(x=>x[1]).join(', ').replace(/, ([^,]*)$/,' und $1')||'Leistungen'),menge:'1',einzel:sv.preis,art:'leist',pausch:true})}
-  else on.forEach(([k,n,u])=>{const x=sv.it[k];out.push({bez:n+(u&&u!=='Stück'&&x.menge?' ('+x.menge+' '+u+')':''),menge:x.menge,einzel:x.einzel,art:'leist'})});
+  if(sv.mode==='pausch'){if(on.length||sv.preis)out.push({bez:'Pauschale: '+(on.map(x=>x[1]).join(', ').replace(/, ([^,]*)$/,' und $1')||'Leistungen'),menge:'',einzel:'',gesamt:sv.preis,art:'leist',pausch:true})}
+  else on.forEach(([k,n])=>out.push({bez:n,menge:'',einzel:'',gesamt:sv.it[k].preis,art:'leist'}));
   return out}
 const agSig=f=>JSON.stringify([f.name,f.contact,f.street,f.plzort,f.datum,f.anrede,f.einleitung,f.pos,f.termine,f.gueltig]);
-function agCalc(f){const r=f.vat||vatRate(),g=agPos(f).map(p=>Math.round(numOf(p.menge)*numOf(p.einzel)*100)/100),netto=Math.round(g.reduce((a,x)=>a+x,0)*100)/100,m=Math.round(netto*r)/100;
-  return {g,netto,m,r,brutto:Math.round((netto+m)*100)/100}}
-const agSums=f=>{const c=agCalc(f);return `<div class="kv"><span>Nettobetrag</span><b>${eur(c.netto)}</b></div><div class="kv"><span>MwSt. ${String(c.r).replace('.',',')} %</span><b>${eur(c.m)}</b></div><div class="kv"><span><b>Gesamtbetrag brutto</b></span><b>${eur(c.brutto)}</b></div>${c.g.length>6?'<div class="hint" style="color:var(--red)">Mehr als 6 Zeilen: bitte zusammenfassen.</div>':''}`};
+function agCalc(f){const r=f.vat||vatRate(),g=agPos(f).map(p=>p.gesamt!==undefined?Math.round(numOf(p.gesamt)*100)/100:Math.round(numOf(p.menge)*numOf(p.einzel)*100)/100),brutto=Math.round(g.reduce((a,x)=>a+x,0)*100)/100,netto=Math.round(brutto/(1+r/100)*100)/100;
+  return {g,netto,m:Math.round((brutto-netto)*100)/100,r,brutto}}
+const agSums=f=>{const c=agCalc(f);return `<div class="kv"><span>Nettobetrag</span><b>${eur(c.netto)}</b></div><div class="kv"><span>MwSt. ${String(c.r).replace('.',',')} % (enthalten)</span><b>${eur(c.m)}</b></div><div class="kv"><span><b>Gesamtbetrag brutto</b></span><b>${eur(c.brutto)}</b></div>${c.g.length>6?'<div class="hint" style="color:var(--red)">Mehr als 6 Zeilen: bitte zusammenfassen.</div>':''}`};
 function agInput(t){const f=cur.ag,k=t.id.slice(3);let m;
   if(m=k.match(/^b(\d)-(\w+)$/))f.baeume[+m[1]][m[2]]=t.value;
   else if(m=k.match(/^s-(\w+)-(\w+)$/))f.svc.it[m[1]][m[2]]=t.value;
@@ -2710,7 +2710,7 @@ function agFromBest(b){
   const adr=String((b.rgleich||!b.rechnung)?b.liefer:b.rechnung||'').split(/\n|,\s*(?=\d{5}\s)/).map(x=>x.trim()).filter(Boolean),m=adr.length&&adr[adr.length-1].match(/^\d{5}\s+.+/);
   if(m){f.plzort=adr.pop();f.street=adr.join(', ')}else f.street=adr.join(', ');
   f.baeume=(b.pos||[]).filter(p=>p.sorte||p.anzahl).map(p=>({bez:[p.sorte,p.groesse].filter(Boolean).join(' '),menge:p.anzahl||'',einzel:''})).slice(0,6);while(f.baeume.length<2)f.baeume.push({bez:'',menge:'',einzel:''});
-  const L=b.leist||{};let sum=0,pr=false;AG_SVC.forEach(([k])=>{const x=L[k];if(!x||x.jn!=='ja')return;f.svc.it[k]={on:true,menge:x.anz||'',einzel:(k==='sk'||k==='sg')?(x.preis||''):''};if(k!=='sk'&&k!=='sg'&&String(x.preis||'').trim()){pr=true;sum+=numOf(x.preis)}});
+  const L=b.leist||{};let sum=0,pr=false;AG_SVC.forEach(([k])=>{const x=L[k];if(!x||x.jn!=='ja')return;f.svc.it[k]={on:true,preis:String(x.preis||'').trim()};if(String(x.preis||'').trim()){pr=true;sum+=numOf(x.preis)}});
   if(pr){f.svc.mode='pausch';f.svc.preis=String(Math.round(sum*100)/100).replace('.',',')}
   const t=[];if(b.datum)t.push('Lieferung: '+fmtDe(b.datum));else t.push('Lieferung: November 2026');if(L.abh&&L.abh.jn==='ja')t.push('Abholung: Januar 2027');t.push('Termine nach Absprache.');f.termine=t.join('\n');
   return f}
@@ -2729,14 +2729,14 @@ function agForm(){
     <input class="t" id="ag-street" placeholder="Straße und Hausnummer" value="${esc(f.street)}" style="margin-top:8px">
     <div class="mini" style="margin-top:8px"><input class="t" id="ag-plzort" placeholder="PLZ und Ort" value="${esc(f.plzort)}" style="min-width:0"><input class="t" type="date" id="ag-datum" value="${esc(f.datum)}" style="min-width:0"></div>
     <div class="hint" style="margin-top:8px"><b id="ag-anrede">${esc(agAnrede(f.contact,f.anrt))}</b><br>${AG_EINL}</div>
-    <label class="f">Bäume (Preise netto)</label>
-    ${f.baeume.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-b${i}-bez" placeholder="Bezeichnung (Sorte, Größe)" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px"><input class="t" id="ag-b${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0"><input class="t" id="ag-b${i}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(p.einzel)}" style="min-width:0"></div></div>`).join('')}
-    ${f.baeume.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Baum-Position</button>':''}
+    <label class="f">Ware (Bäume und Zubehör, Preise brutto)</label>
+    ${f.baeume.map((p,i)=>`<div class="card pad" style="margin:0 0 8px"><input class="t" id="ag-b${i}-bez" placeholder="Bezeichnung (Sorte, Größe)" value="${esc(p.bez)}"><div class="mini" style="margin-top:6px"><input class="t" id="ag-b${i}-menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge)}" style="min-width:0"><input class="t" id="ag-b${i}-einzel" inputmode="decimal" placeholder="Einzelpreis brutto" value="${esc(p.einzel)}" style="min-width:0"></div></div>`).join('')}
+    ${f.baeume.length<6?'<button class="btn sec" data-pl="agpos" style="margin:0 0 8px">+ Ware</button>':''}
     <label class="f">Dienstleistungen (Services)</label>
     <div class="chips" style="margin:0 0 8px"><button class="chip ${pa?'on':''}" data-pl="agpa" data-v="pausch">Pauschal</button><button class="chip ${pa?'':'on'}" data-pl="agpa" data-v="einzeln">Einzeln</button></div>
     <div class="chips" style="margin:0 0 8px">${AG_SVC.map(([k,n])=>`<button class="chip ${sv.it[k].on?'on':''}" data-pl="agson" data-v="${k}">${n}</button>`).join('')}</div>
-    ${pa?`<input class="t" id="ag-spreis" inputmode="decimal" placeholder="Pauschalpreis netto für die gewählten Leistungen" value="${esc(sv.preis)}">`
-       :AG_SVC.filter(([k])=>sv.it[k].on).map(([k,n,u])=>`<div class="card pad" style="margin:0 0 8px"><div class="n">${n}</div><div class="mini" style="margin-top:6px"><input class="t" id="ag-s-${k}-menge" inputmode="decimal" placeholder="${u==='Stück'?'Anzahl':u==='km'?'Kilometer':'Meter'}" value="${esc(sv.it[k].menge)}" style="min-width:0"><input class="t" id="ag-s-${k}-einzel" inputmode="decimal" placeholder="Einzelpreis netto" value="${esc(sv.it[k].einzel)}" style="min-width:0"></div></div>`).join('')||'<div class="hint">Leistungen oben antippen, die im Angebot stehen sollen.</div>'}
+    ${pa?`<input class="t" id="ag-spreis" inputmode="decimal" placeholder="Pauschalpreis brutto für die gewählten Leistungen" value="${esc(sv.preis)}">`
+       :AG_SVC.filter(([k])=>sv.it[k].on).map(([k,n])=>`<div class="card pad" style="margin:0 0 8px"><div class="n">${n}</div><input class="t" id="ag-s-${k}-preis" inputmode="decimal" placeholder="Preis brutto" value="${esc(sv.it[k].preis)}" style="margin-top:6px"></div>`).join('')||'<div class="hint">Leistungen oben antippen, die im Angebot stehen sollen.</div>'}
     <div id="ag-sums" class="card pad" style="margin:8px 0">${agSums(f)}</div>
     <label class="f">Termine</label><textarea class="t" id="ag-termine" rows="3">${esc(f.termine)}</textarea>
     <label class="f">Gültig bis</label><input class="t" type="date" id="ag-gueltig" value="${esc(f.gueltig)}">
