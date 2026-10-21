@@ -298,6 +298,9 @@ nav button.on{background:var(--blue);color:#fff}
 #who{flex:0 1 auto;min-width:0;max-width:92px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;background:none;border:0;color:var(--text);padding:0 0 0 2px;margin:0;text-align:left;font:inherit}
 #who b{display:block;font-size:14px;line-height:1.15;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #who small{display:block;font-size:11px;color:var(--mut);line-height:1.2;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app[data-tab="einstellungen"] .blk>details>summary{color:var(--text);font-size:17px;padding:4px 0}
+#app[data-tab="einstellungen"] .blk>details[open]>summary{margin-bottom:10px}
+#app[data-tab="einstellungen"] .blk>details>.card.pad{background:none;border:0;padding:0;margin:0 0 6px}
 </style>
 </head>
 <body>
@@ -314,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 O';
+const APP_VERSION='2026-10-22 P';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -576,8 +579,23 @@ function planViewer(getUrl){
     document.body.appendChild(d);
 }
 
+function settingsGroup(app){
+  const kids=[...app.children];if(kids.filter(k=>k.tagName==='H2').length<2)return;
+  let cd=null;
+  kids.forEach(el=>{
+    if(el.tagName==='H2'){
+      const t=el.textContent.trim(),m=t.match(/^(.*?)\s*\((\d+)\)$/),base=m?m[1]:t,key='set-'+base.toLowerCase().replace(/[^a-z0-9äöüß]+/g,'-');
+      const sec=document.createElement('section');sec.className='blk';const d=document.createElement('details');d.dataset.det=key;
+      if(cur.det[key]!==undefined?cur.det[key]:/Freigabe|Fragen/.test(base))d.open=true;
+      const sm=document.createElement('summary'),sp=document.createElement('span');sp.textContent=base;sm.appendChild(sp);
+      if(m){const p=document.createElement('span');p.className='pill o';p.style.marginLeft='auto';p.style.marginRight='10px';p.textContent=m[2];sm.appendChild(p)}
+      d.appendChild(sm);sec.appendChild(d);app.insertBefore(sec,el);el.remove();cd=d;
+    }else if(cd)cd.appendChild(el);
+  });
+}
 function blockify(){
   const app=$('#app');if(!app)return;app.dataset.tab=tab;
+  if(tab==='einstellungen'&&isAdmin()){settingsGroup(app);return}
   if(!['lieferungen','feld','preise'].includes(tab)||document.body.classList.contains('run'))return;
   const mk=(title,pillTxt)=>{const s=document.createElement('section');s.className='blk';if(title){const hd=document.createElement('div');hd.className='blk-h';const h3=document.createElement('h3');h3.textContent=title;hd.appendChild(h3);if(pillTxt){const p=document.createElement('span');p.className='pill';p.textContent=pillTxt;hd.appendChild(p)}s.appendChild(hd)}return s};
   const kids=[...app.children];
@@ -951,7 +969,7 @@ function approveAsk(n,cb){
   d.addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k==null&&e.target!==d)return;d.remove();if(k==='1')cb(true);else if(k==='0')cb(false)});
   document.body.appendChild(d);
 }
-const KRAFT=[['normal','Normal'],['kraeftig','Kräftig'],['sehr','Sehr kräftig']],LIZ=[['','Unbekannt'],['keiner','Kein Führerschein'],['auto','Auto'],['anhaenger','Auto mit Anhänger']];
+const KRAFT=[['normal','Normal'],['kraeftig','Kräftig'],['sehr','Sehr kräftig']],LIZ=[['','Schein: unbekannt'],['keiner','Kein Schein'],['auto','Schein: Auto'],['anhaenger','Mit Anhänger']];
 const traitsOf=n=>({kraft:'normal',lizenz:'',...((S.traits||{})[n]||{})});
 function einstSheet(){
   const L=S.people.filter(p=>S.approved[p]!==false),has0=p=>S.penalties.some(x=>!x.deleted&&x.person===p&&x.reason==='Einstand in die App');
@@ -2982,7 +3000,7 @@ function vDaten(){
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${k===''?'Führerschein: unbekannt':l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
