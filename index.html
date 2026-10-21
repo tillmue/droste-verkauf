@@ -3108,7 +3108,7 @@ function vDaten(){
   <label class="f">Aufenthalt je Stopp in Minuten bei zwei Personen: abladen und aufstellen (Standard 10)</label>
   <input class="t" id="hof-svcSet" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcSet)||''))}" placeholder="10">
   <label class="f">Aufenthalt: Zuschlag je weiterem Baum (Faktor, Standard 1; die ersten Bäume zählen abnehmend, ab 11 Bäumen eine halbe Minute je Baum, höchstens 60 Min). Eine Person braucht 40 % länger, drei Personen (große Bäume) 20 % länger als zwei.</label>
-  <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="1">
+  <input class="t" id="hof-svcTree" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.svcTree)||''))}" placeholder="2">
   <label class="f">MwSt-Satz in Prozent (Standard 7,8)</label>
   <input class="t" id="hof-vat" inputmode="decimal" value="${esc(String((S.hofInfo&&S.hofInfo.vat)||''))}" placeholder="7,8">
   <label class="f">PayPal-Link für den QR-Code (Reiter Preise)</label>
