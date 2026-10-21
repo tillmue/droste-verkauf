@@ -92,6 +92,7 @@ function initCloud(FB) {
     T.toast(err && err.code === 'permission-denied' ? 'Keine Berechtigung für diese Änderung' : 'Speichern fehlgeschlagen, wird erneut versucht');
   }
 
+  const ghosts = {}; /* auf dem Server gelöschte Dokumente, die dieses Gerät noch lokal hat: nie neu schreiben */
   function sync() {
     if (!uid || !profile || profile.approved !== true) return;
     for (const [name, d] of Object.entries(defs)) {
@@ -100,21 +101,23 @@ function initCloud(FB) {
       d.get().forEach(([id, o], i) => { cur[id] = clean(d.ordered ? { ...o, _o: i } : o); });
       const last = lastSynced[name] || (lastSynced[name] = {});
       for (const id in cur) {
+        if (ghosts[name] && ghosts[name][id]) continue;
         const j = stable(cur[id]);
         if (last[id] !== j) {
           const prev = last[id] ? JSON.parse(last[id]) : null;
           last[id] = j;
-          if (d.maps && prev) {
-            /* nur geänderte Teile schreiben (z. B. einzelne Häkchen oder Stopps), damit sich gleichzeitige Änderungen nicht überschreiben */
-            const patch = {};
+          /* Bekannte Dokumente werden nur aktualisiert (updateDoc), nie neu angelegt: ein altes Gerät kann so nichts wiederbringen, was auf dem Server gelöscht wurde. */
+          const gone = e => { if (e && (e.code === 'not-found' || /not-found/.test(String(e.code || '')))) { (ghosts[name] = ghosts[name] || {})[id] = 1; return; } permissionNote(name, id, e); };
+          if (prev) {
+            const args = [];
             for (const key of Object.keys(cur[id])) {
-              if (d.maps.includes(key)) {
-                const pm = prev[key] || {}, cm = cur[id][key] || {}, sub = {};
-                for (const k in cm) if (stable(cm[k]) !== stable(pm[k])) sub[k] = cm[k];
-                if (Object.keys(sub).length) patch[key] = sub;
-              } else if (stable(cur[id][key]) !== stable(prev[key])) patch[key] = cur[id][key];
+              if (d.maps && d.maps.includes(key)) {
+                const pm = prev[key] || {}, cm = cur[id][key] || {};
+                for (const k in cm) if (stable(cm[k]) !== stable(pm[k])) args.push(new FB.FieldPath(key, k), cm[k]);
+              } else if (stable(cur[id][key]) !== stable(prev[key])) args.push(new FB.FieldPath(key), cur[id][key]);
             }
-            if (Object.keys(patch).length) FB.setDoc(FB.doc(db, name, id), patch, { merge: true }).catch(e => permissionNote(name, id, e));
+            for (const key of Object.keys(prev)) if (!(key in cur[id]) && !(d.maps && d.maps.includes(key))) args.push(new FB.FieldPath(key), FB.deleteField());
+            if (args.length) FB.updateDoc(FB.doc(db, name, id), ...args).catch(gone);
           } else {
             FB.setDoc(FB.doc(db, name, id), cur[id]).catch(e => permissionNote(name, id, e));
           }
@@ -155,7 +158,7 @@ function initCloud(FB) {
       if (parts.some(p => !p)) return;
       const all = {}; parts.forEach(p => Object.assign(all, p.m));
       const map = {}; for (const id in all) map[id] = clean(all[id]);
-      lastSynced[name] = {}; for (const id in map) lastSynced[name][id] = stable(map[id]);
+      ghosts[name] = {}; lastSynced[name] = {}; for (const id in map) lastSynced[name][id] = stable(map[id]);
       pending[name] = parts.some(p => p.pend);
       d.put(map);
       hydrated[name] = true;
