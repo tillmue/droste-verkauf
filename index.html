@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 P';
+const APP_VERSION='2026-10-22 Q';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3012,12 +3012,9 @@ function vDaten(){
   <h2>Einstellungen</h2>
   <div class="card pad"><label class="f">Startpunkt für Routen (Hof)</label>
   <input class="t" id="hof-depot" value="${esc((S.hofInfo&&S.hofInfo.depot)||'')}" placeholder="Im Gattberg 19, 49191 Belm">
-  <label class="f">Routing-Schlüssel (OpenRouteService) für Fahrzeiten ${S.hofInfo&&S.hofInfo.mapsSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
-  <input class="t" id="hof-mapskey" type="password" autocomplete="off" placeholder="Schlüssel einfügen und bestätigen">
-  <div class="hint" id="mapskey-msg"></div>
-  <label class="f">Schlüssel für die Entfernungsmatrix (OpenRouteService, kostenlos) ${S.hofInfo&&S.hofInfo.matrixSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
+  <label class="f">OpenRouteService-Schlüssel (Token aus dem HeiGIT-Konto) ${S.hofInfo&&S.hofInfo.matrixSet?'(gespeichert, wird nicht angezeigt)':'(noch nicht hinterlegt)'}</label>
   <input class="t" id="hof-mxkey" type="password" autocomplete="off" placeholder="Schlüssel einfügen und bestätigen">
-  <div class="hint" id="mxkey-msg">Ohne diesen Schlüssel nutzt die Tourenplanung die Google-Matrix (kostet nach den ersten 10.000 Abfragen im Monat etwas).</div>
+  <div class="hint" id="mxkey-msg">Hier kommt der Token von account.heigit.org hinein. Damit berechnet die Tourenplanung die Straßenentfernungen kostenlos. Ohne Schlüssel nutzt sie Google (kostet nach 10.000 Abfragen im Monat etwas).</div>
   <label class="f">Ersatzständer pro Tour: mindestens</label>
   <input class="t" id="hof-resmin" inputmode="numeric" value="${esc(String((S.hofInfo&&S.hofInfo.reserveMin)||''))}" placeholder="2">
   <label class="f">Ersatzständer pro Tour: ein Ersatz je so viele Ständer</label>
