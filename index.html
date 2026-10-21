@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 Q';
+const APP_VERSION='2026-10-22 R';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2389,14 +2389,51 @@ async function optimizeTour(t){
 }
 const infoBtn=k=>`<button class="infoi" data-pl="info" data-v="${k}" aria-label="Info">i</button>`;
 const infoBox=(k,t)=>(cur.info&&cur.info[k])?`<div class="hint infobox">${t}</div>`:'';
+
+/* Besetzungsempfehlung: wer passt nach Kraft und Führerschein (nur Vorschlag, die Zuweisung bleibt von Hand) */
+const KRAFTL={normal:'normal',kraeftig:'kräftig',sehr:'sehr kräftig'},KRANK={normal:0,kraeftig:1,sehr:2};
+function stopsNeeds(stops){
+  const arr=Array.isArray(stops)?stops:Object.values(stops||{});
+  const L=Math.max(0,...arr.flatMap(s=>(s.lines||[]).filter(l=>['Baum','Laternenbaum'].includes(l.c)).map(l=>+l.l||0)));
+  const crew=crewNum(arr);
+  return {crew,sehr:L>5?2:L>4?1:0,kr:crew===1&&arr.some(s=>/aufstellen/i.test(s.service||''))};
+}
+function recommendCrew(needs,used,anh){
+  const pool=S.people.filter(p=>S.approved[p]!==false&&realRole(p)!=='demo'&&!used.has(p)).map(p=>({p,...traitsOf(p)}));
+  const lic=x=>x.lizenz==='auto'||x.lizenz==='anhaenger',licOk=x=>anh?x.lizenz==='anhaenger':lic(x);
+  const rk=x=>KRANK[x.kraft]||0;let rest=pool.slice();
+  const take=(fn,cmp)=>{const c=rest.filter(fn).sort(cmp);if(!c.length)return null;rest=rest.filter(y=>y!==c[0]);return c[0]};
+  const picked=[],miss=[];
+  for(let i=0;i<needs.sehr;i++){const x=take(y=>rk(y)>=2,(a,b)=>(lic(a)-lic(b)));if(x)picked.push(x);else miss.push('sehr kräftig')}
+  let drv=picked.find(licOk)||null;if(drv)picked.splice(picked.indexOf(drv),1);
+  if(!drv){drv=take(y=>licOk(y)&&(!needs.kr||rk(y)>=1),(a,b)=>rk(a)-rk(b));if(!drv)miss.push(anh?'Fahrer mit Anhängerführerschein':'Fahrer mit Führerschein')}
+  const others=picked.slice();
+  while(others.length<needs.crew-1){const x=take(()=>true,(a,b)=>rk(b)-rk(a));if(!x)break;others.push(x)}
+  const lab=x=>`${x.p} (${KRAFTL[x.kraft]}${x.lizenz==='anhaenger'?', Anhänger':x.lizenz==='auto'?', Auto':''})`;
+  const parts=[];if(drv)parts.push('Fahrer: '+lab(drv));
+  others.slice(0,needs.crew-1).forEach((x,i)=>parts.push((needs.crew>2?'Beifahrer '+(i+1):'Beifahrer')+': '+lab(x)));
+  const people=[drv,...others].filter(Boolean).map(x=>x.p);
+  return {txt:parts.join(' · ')+(miss.length?(parts.length?' · ':'')+'<span style="color:var(--orange)">Nicht passend vorhanden: '+miss.join(', ')+' (Daten, Team pflegen)</span>':''),people};
+}
+function recLine(t){
+  const nd=stopsNeeds(t.stops),crew=Math.max(nd.crew,(t.slots&&t.slots.length)||0);
+  if(t.driver&&(crew<2||t.codriver)&&crew<3)return '';
+  const used=new Set();S.tours.filter(x=>!x.deleted&&x.id!==t.id&&x.date===t.date).forEach(x=>{if(x.driver)used.add(x.driver);if(x.codriver)used.add(x.codriver)});
+  if(t.driver)used.add(t.driver);if(t.codriver)used.add(t.codriver);
+  const r=recommendCrew({...nd,crew},used,!!(t.trailer&&t.trailer.trim()));
+  return r.txt?`<div class="p"><b>Empfehlung:</b> ${r.txt}</div>`:'';
+}
 function planBox(){
   if(!cur.pd||cur.pd.date<todayStr())initPlan();
   const pd=cur.pd,cands=planCandidates(pd.date),res=pd.res;
   const slotTxt=t=>t.slots.map(n=>'Fahrer '+n).join(' + ');
+  const recs=[];
+  if(res)res.tours.forEach((t,i)=>{const used=new Set();recs.forEach(r=>{if(r.t.depart<t.home&&t.depart<r.t.home)r.people.forEach(p=>used.add(p))});const nd=stopsNeeds(t.stops.map(s=>({lines:orderLines(s.o).map(p=>({c:p.cat,l:p.len,q:p.qty})),service:orderService(s.o),name:s.o.name})));const r=recommendCrew({...nd,crew:Math.max(nd.crew,t.crewN||1)},used,false);recs[i]={t,people:r.people,txt:r.txt}});
   const tourCard2=(t,i)=>`<div class="card pad"><div class="n"><span class="tdot" style="background:${TCOL[i%TCOL.length][2]}"></span>${t.solo?'Einzelfahrt':'Vorschlag '+(i+1)} · ${t.crewN>=3?'Dreierteam':t.crewN===2?'Zweierteam':'Einzelperson'} · ${slotTxt(t)}</div>
     <div class="p">${t.stops.length} Stopps · Abfahrt ca. ${hmMin(up5(t.depart))}, zurück am Hof ca. ${hmMin(up5(t.home))} · ${crewHintTxt(t.crew)}</div>
     <div class="p">Fahrt ${fmtMin(t.drive)} · Aufenthalt ${fmtMin(t.stay)} · Pausen ${t.pb} Min${t.wait?' · Warten '+fmtMin(t.wait):''}</div>
     ${brkTxt(t.road,t,t.home)?`<div class="p">${brkTxt(t.road,t,t.home)}</div>`:''}
+    ${recs[i]&&recs[i].txt?`<div class="p"><b>Empfehlung:</b> ${recs[i].txt}</div>`:''}
     <div class="p"><b>${t.treesN||0} Bäume</b>${t.maxLen?', längster '+mFmt(t.maxLen):''}${t.treesN>TREECAP?' · mehr als '+TREECAP+' Bäume':''}</div>
     <div class="p">${t.stand?'Ständer: '+t.stand:''}${t.stand&&t.bohren?' · ':''}${t.bohren?'Beim Packen bohren: '+t.bohren:''}</div>
     ${t.stops.map((s,k)=>`<div class="row" style="display:block"><div style="display:flex;gap:8px;align-items:baseline"><b style="color:var(--link)">ca. ${hmMin(up5(s.eta))}</b><span class="n" style="flex:1;min-width:0">${k+1}. ${esc(s.o.name)}${winTxt(s.o.window)?` <span class="p">· ${winTxt(s.o.window)}</span>`:''}</span></div><div class="p">${esc(orderAddr(s.o))} · Aufenthalt ${s.svc} Min</div>${s.warn?`<div class="p" style="color:var(--orange)">${s.warn}</div>`:''}</div>`).join('')}
@@ -2725,7 +2762,7 @@ function tourCard(t,plan){
     <div class="p">${st.length} Stopps · ${trees} Bäume${done?' · '+done+' geliefert':''}</div>
     <div class="p">${t.driver?'Fahrer: <span class="who">'+esc(t.driver)+'</span>':orange(sl[0]?'Fahrer '+sl[0]+' (noch offen)':'Fahrer offen')} · ${t.codriver?'Beifahrer: <span class="who">'+esc(t.codriver)+'</span>':(sl[1]?'Fahrer '+sl[1]+' als Beifahrer (offen)':'Beifahrer offen')}</div>
     <div class="p">${t.vehicle?'Fahrzeug: <span class="who">'+esc(t.vehicle)+'</span>':orange('Fahrzeug offen')} · ${t.trailer?'Anhänger: <span class="who">'+esc(t.trailer)+'</span>':'Anhänger offen'}</div>
-    ${dur?`<div class="p">${dur}</div>`:''}${ps?`<div class="p">Packen: <span class="pbadge" style="color:${ps[1]}">${ps[0]}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>`;
+    ${plan?recLine(t):''}${dur?`<div class="p">${dur}</div>`:''}${ps?`<div class="p">Packen: <span class="pbadge" style="color:${ps[1]}">${ps[0]}</span></div>`:''}${stat}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}</div>`;
   const assign=plan?`<div class="mini" style="margin-top:8px">${tsel(t,'driver','Fahrer zuweisen',S.people)}${tsel(t,'codriver','Beifahrer zuweisen',S.people)}</div><div class="mini" style="margin-top:8px">${tsel(t,'vehicle','Fahrzeug zuweisen',vlist(t.date))}${tsel(t,'trailer','Anhänger zuweisen',trailersList())}</div>`:'';
   const durBtns=plan&&st.length?`<div class="mini" style="margin:8px 0 4px"><button class="btn sec" data-pl="tlegs" data-v="${t.id}" style="margin:0">Fahrzeiten berechnen</button>${!stt&&st.length>1?`<button class="btn sec" data-pl="topt" data-v="${t.id}" style="margin:0">Reihenfolge optimieren</button>`:''}</div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div></div></div></div>`).join('')}</div></details>`:'';

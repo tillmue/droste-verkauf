@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Empfehlung:": "Recomandare:",
 "Hier kommt der Token von account.heigit.org hinein. Damit berechnet die Tourenplanung die Straßenentfernungen kostenlos. Ohne Schlüssel nutzt sie Google (kostet nach 10.000 Abfragen im Monat etwas).": "Aici se introduce tokenul de la account.heigit.org. Cu el, planificarea turelor calculează gratuit distanțele rutiere. Fără cheie folosește Google (costă puțin după 10.000 de interogări pe lună).",
 "OpenRouteService-Schlüssel (Token aus dem HeiGIT-Konto) (gespeichert, wird nicht angezeigt)": "Cheie OpenRouteService (token din contul HeiGIT) (salvată, nu se afișează)",
 "OpenRouteService-Schlüssel (Token aus dem HeiGIT-Konto) (noch nicht hinterlegt)": "Cheie OpenRouteService (token din contul HeiGIT) (încă nesetată)",
