@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZU';
+const APP_VERSION='2026-10-22 ZV';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -586,7 +586,7 @@ function settingsGroup(app){
     if(el.tagName==='H2'){
       const t=el.textContent.trim(),m=t.match(/^(.*?)\s*\((\d+)\)$/),base=m?m[1]:t,key='set-'+base.toLowerCase().replace(/[^a-z0-9äöüß]+/g,'-');
       const sec=document.createElement('section');sec.className='blk';const d=document.createElement('details');d.dataset.det=key;
-      if(cur.det[key]!==undefined?cur.det[key]:/Freigabe|Fragen/.test(base))d.open=true;
+      if(cur.det[key]!==undefined?cur.det[key]:(/Freigabe|Fragen/.test(base)||(base==='Anwesenheit'&&attOpen(S.me).length>0)))d.open=true;
       const sm=document.createElement('summary'),sp=document.createElement('span');sp.textContent=base;sm.appendChild(sp);
       if(m){const p=document.createElement('span');p.className='pill o';p.style.marginLeft='auto';p.style.marginRight='10px';p.textContent=m[2];sm.appendChild(p)}
       d.appendChild(sm);sec.appendChild(d);app.insertBefore(sec,el);el.remove();cd=d;
@@ -898,7 +898,7 @@ function freigaben(){
     <div class="mini" style="margin-top:12px"><button class="btn green" data-appr="${esc(n)}" style="margin:0">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;color:var(--red)">Ablehnen</button></div></div>`).join('')}`;
 }
 function vProfil(){
-  $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>`;
+  $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>${anwBlock()}`;
 }
 /* ---------- Wetter (Bright Sky, Daten des Deutschen Wetterdienstes) ---------- */
 const WX={lat:52.3125,lon:8.1475,ort:'Hof Droste, Belm'};
@@ -1468,15 +1468,14 @@ function attOverview(){
     return `<details data-det="att-${d}"><summary style="padding:8px 0"><b>${wdD(d)}</b> · ${attTxt(c)}</summary>${who||'<div class="p">Keine Angaben.</div>'}</details>`}).join('');
   const no=names?S.people.filter(n=>roleOf(n)!=='demo'&&!Object.values((attDoc(n)||{}).days||{}).some(Boolean)):[];
   return blk('Wer ist da?',`${rows||'<div class="row"><span class="p">Noch keine Tage.</span></div>'}${no.length?`<div class="hint" style="margin-top:8px">Noch keine Angaben von: ${no.map(esc).join(', ')}</div>`:''}`,{pill:pill(days.length,'g')})}
-function planAnw(){
+function anwBlock(){
   const me=S.me,days=attDays(),td=todayStr(),future=days.filter(d=>d>=td),past=days.filter(d=>d<td),open=attOpen(me).length;
   const opts=sel=>`<option value="">offen</option>`+ATT.map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${l}</option>`).join('');
   const row=d=>`<div class="row"><div class="n" style="min-width:92px">${wdD(d)}</div><select class="t" data-att="${d}" style="max-width:190px">${opts(attOf(me,d))}</select></div>`;
   return `${blk('Meine Anwesenheit',`<div class="hint" style="margin:0 0 8px">Ab ${fmtDe(attFrom())} bis ${fmtDe(attTo())}. Du kannst alles jederzeit ändern. Rolf bekommt morgens eine Zusammenfassung der Änderungen.</div>
     <div class="mini" style="margin-bottom:8px"><select class="t" id="att-bulk" style="min-width:0"><option value="">Alle offenen Tage setzen auf …</option>${ATT.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select><button class="btn sec" data-pl="attbulk" style="margin:0">Anwenden</button></div>
     ${future.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}
-    ${past.length?`<details data-det="attpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(open?open+' offen':'komplett',open?'o':'g')})}
-  ${has('anwSee')?attOverview():''}`}
+    ${past.length?`<details data-det="attpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(open?open+' offen':'komplett',open?'o':'g')})}`}
 const mealOf=ds=>((S.meals||[]).find(x=>x.id===ds)||{}).text||'';
 function mealSet(ds,txt){let m=(S.meals||[]).find(x=>x.id===ds);if(!m){m={id:ds,date:ds};S.meals.push(m)}m.text=txt.trim();m.by=S.me;m.updated=Date.now();save()}
 function vKueche(){
@@ -1484,20 +1483,20 @@ function vKueche(){
   const seg=`<div class="seg ptabs">${[['essen','Essen'],['einkauf','Einkauf'],['anw','Wer ist da?']].map(([k,l])=>`<button class="${kt===k?'on':''}" data-pl="ktab" data-v="${k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(kt==='essen'){
-    const row=d=>{const c=attCounts(d);return `<div class="row" style="display:block"><div><b>${wdD(d)}</b></div>${c?`<div style="font-size:17px;margin:2px 0 0"><b>${c.fr}</b> Frühstück · <b>${c.mi}</b> Mittagessen${c.viell?' <span class="p">(+'+c.viell+' vielleicht)</span>':''}</div>`:''}<input class="t" data-meal="${d}" placeholder="Was gibt es?" value="${esc(mealOf(d))}" style="margin-top:6px"></div>`};
-    const days=attDays(),fut=days.filter(d=>d>=td),past=days.filter(d=>d<td);
-    body=blk('Essensplan',`${fut.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}${past.length?`<details data-det="mealpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(fut.length,'g')})}
+    const row=d=>{const c=attCounts(d);return `<div class="row" style="display:block"><div><b>${wdD(d)}</b></div>${c?`<div style="display:flex;gap:8px;margin:6px 0 0"><div style="flex:1;border:1px solid var(--line);border-radius:12px;padding:8px 10px"><small class="p">Frühstück</small><div style="font-size:24px;font-weight:700;line-height:1.1">${c.fr}</div></div><div style="flex:1;border:1px solid var(--line);border-radius:12px;padding:8px 10px"><small class="p">Mittagessen</small><div style="font-size:24px;font-weight:700;line-height:1.1">${c.mi}</div></div></div>${c.viell?`<div class="p" style="margin-top:4px">+ ${c.viell} vielleicht</div>`:''}`:''}<input class="t" data-meal="${d}" placeholder="Was gibt es?" value="${esc(mealOf(d))}" style="margin-top:6px"></div>`};
+    const fut=attDays().filter(d=>d>=td);
+    body=blk('Essensplan',`${fut.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}`,{pill:pill(fut.length,'g')})}
   else if(kt==='einkauf')body=planEinkauf('kueche');
   else body=attOverview();
   $('#app').innerHTML=`${backupWarn()}${seg}${body}`;
 }
 function vPlan(){
-  const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'],has('einkauf')?['einkauf','Einkauf']:null,['anw','Anwesenheit'],['arch','Archiv']].filter(Boolean);
+  const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'],has('einkauf')?['einkauf','Einkauf']:null,['arch','Archiv']].filter(Boolean);
   if(!ptabs.some(x=>x[0]===cur.ptab))cur.ptab='aufg';
   const seg=`<div class="seg ptabs">${ptabs.map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
   const np=isAdmin()?pendingNames().length:0;
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
-  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,anw:planAnw,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
+  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
 }
 const canHof=()=>has('lieferungen')||has('lieferplanung');
 function calItems(ct,ds){
@@ -1597,6 +1596,7 @@ function shopForm(){
   return `<div class="card pad formc"><label class="f">${f.id?'Eintrag bearbeiten':'Neuer Eintrag'}</label>
     <input class="t" id="shf-text" placeholder="Was muss gekauft werden?" value="${esc(f.text)}">
     <textarea class="t" id="shf-note" rows="3" placeholder="Notiz (Menge, Marke, Laden)" style="margin-top:8px">${esc(f.note||'')}</textarea>
+    ${has('einkauf')&&has('kueche')?`<select class="t" id="shf-list" style="margin-top:8px"><option value="hof" ${(f.list||'hof')==='hof'?'selected':''}>Liste: Hof</option><option value="kueche" ${f.list==='kueche'?'selected':''}>Liste: Küche</option></select>`:''}
     <select class="t" id="shf-state" style="margin-top:8px"><option value="kauf" ${sel('kauf',f.state)}>Einkaufen</option><option value="best" ${sel('best',f.state)}>Bestellt</option><option value="erl" ${sel('erl',f.state)}>Erledigt</option></select>
     ${f.photo?(pu?`<img class="rimg" src="${pu}" alt="" data-pl="fzoom" data-v="${esc(pu)}">`:'<div class="hint">Foto wird geladen …</div>'):''}
     ${photoPick('hp-photo',!!f.photo,cur.hfile)}
@@ -1659,7 +1659,7 @@ document.addEventListener('click',ev=>{
   if(a==='dtaskd'){cur.sheet='task';cur.tf=newTf(cur.cday);cur.tf.person=S.me;cur.tfile=null;cur.tfOpen=false;return render()}
   if(a==='enew'){cur.ef=newEf(calOf(cur.ctab),cur.cday);cur.sheet='event';return render()}
   if(a==='ktab'){cur.ktab=v;return render()}
-  if(a==='goatt'){tab='plan';cur.ptab='anw';window.scrollTo(0,0);return render()}
+  if(a==='goatt'){tab='einstellungen';window.scrollTo(0,0);return render()}
   if(a==='attbulk'){const el=document.getElementById('att-bulk'),v2=el&&el.value;if(!v2)return alert('Bitte erst auswählen, worauf die offenen Tage gesetzt werden sollen.');attOpen(S.me).forEach(d=>attSet(d,v2));toast('Gespeichert');return render()}
   if(a==='shs'){cur.shs=v;return render()}
   if(a==='shnew'){cur.shf={id:null,text:'',note:'',state:cur.shs==='best'?'best':'kauf',photo:'',list:cur.shlist||'hof'};cur.hfile=null;cur.sheet='shop';return render()}
@@ -3212,6 +3212,8 @@ function vDaten(){
   <div class="card pad">${accountBlock()}</div>
   ${questionsBlock()}
   ${freigaben()}
+  <h2>Anwesenheit</h2>
+  ${anwBlock()}
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
