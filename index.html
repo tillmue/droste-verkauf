@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZT';
+const APP_VERSION='2026-10-22 ZU';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1451,14 +1451,21 @@ const attDoc=n=>(S.attendance||[]).find(x=>x.name===n);
 const attOf=(n,ds)=>((attDoc(n)||{}).days||{})[ds]||'';
 function attSet(ds,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}d.days[ds]=v;d.updated=Date.now();save()}
 const attOpen=n=>{const td=todayStr();return attDays().filter(d=>d>=td&&!attOf(n,d))};
+const attTxt=c=>`Frühstück ${c.fr} · Mittag ${c.mi}${c.viell?' · vielleicht '+c.viell:''}`;
+function attCalc(rows){
+  const c={fr:0,mi:0,viell:0,ja:0,vm:0,nm:0,nein:0};
+  rows.forEach(([n,v])=>{if(c[v]===undefined)return;c[v]++;const st=!!(S.pstand||{})[n];
+    if((v==='ja'||v==='vm')&&(!st||(S.pbf||{})[n]))c.fr++;
+    if((v==='ja'||v==='vm'||v==='nm')&&!st)c.mi++});
+  return c}
 function attCounts(ds){
-  if(has('anwSee')){const c={ja:0,vm:0,nm:0,viell:0,nein:0};(S.attendance||[]).forEach(x=>{const v=(x.days||{})[ds];if(c[v]!==undefined)c[v]++});return {...c,mi:c.ja+c.vm,ab:c.ja+c.nm}}
-  const c=(S.attStats||{})[ds];if(!c)return null;return {...c,mi:(c.ja||0)+(c.vm||0),ab:(c.ja||0)+(c.nm||0)}}
+  if(has('anwSee'))return attCalc((S.attendance||[]).map(x=>[x.name,(x.days||{})[ds]]));
+  const c=(S.attStats||{})[ds];return c?{fr:c.fr||0,mi:c.mi||0,viell:c.viell||0}:null}
 function attOverview(){
   const td=todayStr(),days=attDays().filter(d=>d>=td),names=has('anwSee');
-  const rows=days.map(d=>{const c=attCounts(d)||{mi:0,ab:0,viell:0};
+  const rows=days.map(d=>{const c=attCounts(d)||{fr:0,mi:0,viell:0};
     const who=names?ATT.map(([k,l])=>{const n=(S.attendance||[]).filter(x=>(x.days||{})[d]===k).map(x=>x.name);return n.length?`<div class="p"><b>${l}:</b> ${n.map(esc).join(', ')}</div>`:''}).join(''):'';
-    return `<details data-det="att-${d}"><summary style="padding:8px 0"><b>${wdD(d)}</b> · Mittag ${c.mi} · Abend ${c.ab}${c.viell?' · vielleicht '+c.viell:''}</summary>${who||'<div class="p">Keine Angaben.</div>'}</details>`}).join('');
+    return `<details data-det="att-${d}"><summary style="padding:8px 0"><b>${wdD(d)}</b> · ${attTxt(c)}</summary>${who||'<div class="p">Keine Angaben.</div>'}</details>`}).join('');
   const no=names?S.people.filter(n=>roleOf(n)!=='demo'&&!Object.values((attDoc(n)||{}).days||{}).some(Boolean)):[];
   return blk('Wer ist da?',`${rows||'<div class="row"><span class="p">Noch keine Tage.</span></div>'}${no.length?`<div class="hint" style="margin-top:8px">Noch keine Angaben von: ${no.map(esc).join(', ')}</div>`:''}`,{pill:pill(days.length,'g')})}
 function planAnw(){
@@ -1477,7 +1484,7 @@ function vKueche(){
   const seg=`<div class="seg ptabs">${[['essen','Essen'],['einkauf','Einkauf'],['anw','Wer ist da?']].map(([k,l])=>`<button class="${kt===k?'on':''}" data-pl="ktab" data-v="${k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(kt==='essen'){
-    const row=d=>{const c=attCounts(d);return `<div class="row" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b>${wdD(d)}</b>${c?`<span class="p">Mittag ${c.mi} · Abend ${c.ab}${c.viell?' · vielleicht '+c.viell:''}</span>`:''}</div><input class="t" data-meal="${d}" placeholder="Was gibt es?" value="${esc(mealOf(d))}" style="margin-top:6px"></div>`};
+    const row=d=>{const c=attCounts(d);return `<div class="row" style="display:block"><div><b>${wdD(d)}</b></div>${c?`<div style="font-size:17px;margin:2px 0 0"><b>${c.fr}</b> Frühstück · <b>${c.mi}</b> Mittagessen${c.viell?' <span class="p">(+'+c.viell+' vielleicht)</span>':''}</div>`:''}<input class="t" data-meal="${d}" placeholder="Was gibt es?" value="${esc(mealOf(d))}" style="margin-top:6px"></div>`};
     const days=attDays(),fut=days.filter(d=>d>=td),past=days.filter(d=>d<td);
     body=blk('Essensplan',`${fut.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}${past.length?`<details data-det="mealpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(fut.length,'g')})}
   else if(kt==='einkauf')body=planEinkauf('kueche');
@@ -1571,6 +1578,7 @@ function planArch(){
   ${list.length>lim?'<button class="btn sec" data-pl="amore">Mehr anzeigen</button>':''}`;
 }
 const shopState=x=>x.done?'erl':x.ordered?'best':'kauf';
+const shopTs=at=>new Date(at).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 function planEinkauf(lst){
   lst=lst||'hof';cur.shlist=lst;
   const live=S.shopping.filter(x=>!x.deleted&&(x.list||'hof')===lst),st=cur.shs||'kauf';
@@ -1578,7 +1586,7 @@ function planEinkauf(lst){
   by.kauf.sort((a,b)=>(b.at||0)-(a.at||0));by.best.sort((a,b)=>(b.at||0)-(a.at||0));by.erl.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const list=by[st].slice(0,st==='erl'?40:200);
   const row=x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${x.done?'on':''}" data-pl="shopdone" data-v="${x.id}">${x.done?'✓':''}</button>
-    <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${esc(x.text)}</div><div class="p">${esc(x.by||'')}${x.done&&x.doneBy?' · gekauft von '+esc(x.doneBy):''}</div>${x.note?`<div class="p" style="font-style:italic">${esc(x.note.length>80?x.note.slice(0,80)+' …':x.note)}</div>`:''}</div></div>
+    <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${esc(x.text)}</div><div class="p">${x.by?'Von '+esc(x.by):''}${x.at?' am '+shopTs(x.at):''}</div>${x.done&&x.doneBy?`<div class="p">Abgehakt von ${esc(x.doneBy)}${x.doneAt?' am '+shopTs(x.doneAt):''}</div>`:''}${x.note?`<div class="p" style="font-style:italic">${esc(x.note.length>80?x.note.slice(0,80)+' …':x.note)}</div>`:''}</div></div>
     ${x.photo?thumbBtn(x.photo,'shopen',x.id):''}<button class="rowedit" data-pl="shopen" data-v="${x.id}" aria-label="Eintrag bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>`;
   const seg=`<div class="seg">${[['kauf','Einkaufen ('+by.kauf.length+')'],['best','Bestellt ('+by.best.length+')'],['erl','Erledigt ('+by.erl.length+')']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="shs" data-v="${k}">${l}</button>`).join('')}</div>`;
   return `<button class="qtile g" data-pl="shnew" style="width:100%;flex-direction:row;justify-content:center;gap:12px;margin:4px 0 12px"><b>+</b>Neuer Eintrag</button>${seg}
@@ -3207,7 +3215,7 @@ function vDaten(){
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Mitarbeiter für die Planung</h2>
@@ -3395,6 +3403,7 @@ document.addEventListener('change',ev=>{
       S.notes.forEach(n=>{if(n.owner===old)n.owner=nw});if(S.me===old)S.me=nw;save();render();
     }
   }
+  if(t.dataset.pbf!=null){const n=S.people[+t.dataset.pbf];S.pbf=S.pbf||{};if(t.value)S.pbf[n]=true;else delete S.pbf[n];if(window.cloud&&window.cloud.setBf)window.cloud.setBf(n,!!t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));render();return}
   if(t.dataset.pstand!=null){const n=S.people[+t.dataset.pstand];S.pstand=S.pstand||{};if(t.value)S.pstand[n]=t.value;else delete S.pstand[n];if(window.cloud&&window.cloud.setStand)window.cloud.setStand(n,t.value).catch(e=>alert('Fehlgeschlagen: '+(e.code||e.message)));render();return}
   if(t.dataset.role!=null){
     const n=S.people[+t.dataset.role];

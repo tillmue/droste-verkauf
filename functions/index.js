@@ -397,6 +397,23 @@ exports.questionCreated = onDocumentCreated('questions/{id}', async event => {
 
 /* Anwesenheit: Zahlen pro Tag ohne Namen (für die Küche), Änderungs-Log für Rolf */
 const ATT_TXT = { ja: ['ganztags', 'toată ziua'], vm: ['bis mittags', 'până la prânz'], nm: ['ab mittags', 'de la prânz'], viell: ['vielleicht', 'poate'], nein: ['nein', 'nu'] };
+/* Zahlen je Tag: Frühstück (ganztags oder bis mittags; Standpersonal nur mit Haken "Frühstück am Hof"), Mittag (alle Anwesenden außer Standpersonal) */
+async function recomputeAtt() {
+  const users = {};
+  (await db.collection('users').get()).forEach(d => { const u = d.data(); users[u.name] = { stand: !!u.stand, bf: !!u.bfHof }; });
+  const days = {};
+  (await db.collection('attendance').get()).forEach(x => {
+    const d = x.data(), u = users[d.name] || {};
+    for (const [ds, v] of Object.entries(d.days || {})) {
+      const c = days[ds] || (days[ds] = { fr: 0, mi: 0, ja: 0, vm: 0, nm: 0, viell: 0, nein: 0 });
+      if (c[v] === undefined) continue;
+      c[v]++;
+      if ((v === 'ja' || v === 'vm') && (!u.stand || u.bf)) c.fr++;
+      if ((v === 'ja' || v === 'vm' || v === 'nm') && !u.stand) c.mi++;
+    }
+  });
+  await db.collection('stats').doc('attendance').set({ days, at: Date.now() });
+}
 exports.attendanceWrite = onDocumentWritten('attendance/{id}', async event => {
   const a = event.data.after.exists ? event.data.after.data() : null;
   const b = event.data.before.exists ? event.data.before.data() : null;
@@ -406,10 +423,12 @@ exports.attendanceWrite = onDocumentWritten('attendance/{id}', async event => {
   for (const d of Object.keys(ad)) {
     if (bd[d] && bd[d] !== ad[d] && d >= today) await db.collection('attLog').add({ name: a.name, date: d, from: bd[d], to: ad[d], at: now });
   }
-  const snap = await db.collection('attendance').get();
-  const days = {};
-  snap.forEach(x => { for (const [ds, v] of Object.entries(x.data().days || {})) { const c = days[ds] || (days[ds] = { ja: 0, vm: 0, nm: 0, viell: 0, nein: 0 }); if (c[v] !== undefined) c[v]++; } });
-  await db.collection('stats').doc('attendance').set({ days, at: now });
+  await recomputeAtt();
+});
+exports.attUserChanged = onDocumentWritten('users/{uid}', async event => {
+  const a = event.data.after.exists ? event.data.after.data() : null, b = event.data.before.exists ? event.data.before.data() : null;
+  if (!a || (b && (b.stand || '') === (a.stand || '') && !!b.bfHof === !!a.bfHof && b.name === a.name)) return;
+  await recomputeAtt();
 });
 exports.attDigest = onSchedule({ schedule: '30 7 * * *', timeZone: TZ }, async () => {
   const cur = db.doc('fn/attDigest');
