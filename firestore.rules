@@ -12,7 +12,7 @@ service cloud.firestore {
     function perms() { return get(userDoc(request.auth.uid)).data.get('perms', {}); }
     // Rechte je Rolle stehen in settings/roles (Admin stellt sie in der App um); fehlt das Dokument, gelten die alten Voreinstellungen
     function rolesDoc() { return /databases/$(database)/documents/settings/roles; }
-    function legacyDflt(k) { return role() == 'chef' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || (role() == 'schonung' && k == 'feld') || (role() == 'fahrer' && k == 'lieferungen') || (role() != 'schonung' && k == 'instagram'); }
+    function legacyDflt(k) { return role() == 'chef' || (role() == 'verkauf' && k in ['verkauf', 'zahlen']) || (role() == 'schonung' && k == 'feld') || (role() == 'fahrer' && k == 'lieferungen') || (role() == 'kueche' && k in ['kueche', 'anwCount', 'preise']) || (role() != 'schonung' && k == 'instagram'); }
     function dflt(k) { return role() == 'demo' || (exists(rolesDoc()) ? get(rolesDoc()).data.get(role(), {}).get(k, legacyDflt(k)) == true : legacyDflt(k)); }
     function myName() { return get(userDoc(request.auth.uid)).data.name; }
     function perm(k) { return isMember() && (role() == 'admin' || perms().get(k, dflt(k)) == true); }
@@ -115,7 +115,22 @@ service cloud.firestore {
 
     // Einkaufsliste: Recht "einkauf"
     match /shopping/{id} {
-      allow read, create, update: if perm('einkauf');
+      allow read, create, update: if perm('einkauf') || perm('kueche');
+      allow delete: if false;
+    }
+
+    // Anwesenheit: jede Person ihr eigenes Dokument (Name), Rolf und Admin lesen alle; die Küche sieht nur Zahlen (stats/attendance)
+    match /attendance/{id} {
+      allow read: if perm('anwSee') || (isMember() && resource.data.name == myName());
+      allow create: if isMember() && request.resource.data.name == myName();
+      allow update: if isMember() && resource.data.name == myName() && request.resource.data.name == myName();
+      allow delete: if false;
+    }
+
+    // Essensplan: alle lesen, Küche, Chef und Admin tragen ein
+    match /meals/{id} {
+      allow read: if isMember();
+      allow create, update: if perm('kueche');
       allow delete: if false;
     }
 

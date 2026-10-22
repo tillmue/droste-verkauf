@@ -317,7 +317,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-22 ZS';
+const APP_VERSION='2026-10-22 ZT';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -357,7 +357,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.attendance=S.attendance||[];S.meals=S.meals||[];S.attStats=S.attStats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -532,8 +532,8 @@ function render(){
   if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
   if(tab==='auswertung'&&!isAdmin())tab='einstellungen';
-  const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,has('lieferungen')?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null].filter(Boolean);
-  {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
+  const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,has('lieferungen')?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
+  {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise','kueche'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   if(homeMode()){
     if(tab==='home'){nav.style.display='none';$('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();$('#hstat').textContent=headerStat();vHome(items,oc);return}
@@ -542,7 +542,7 @@ function render(){
   nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('')}
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
   $('#hstat').textContent=headerStat();hofbarUpdate();
-  ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,feld:vFeld,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,einstellungen:vDaten,anleitung:vAnleitung,auswertung:vAuswertung})[tab]();
+  ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,feld:vFeld,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,kueche:vKueche,einstellungen:vDaten,anleitung:vAnleitung,auswertung:vAuswertung})[tab]();
   {const pt=pausedTour();if(pt)$('#app').insertAdjacentHTML('afterbegin',`<div class="tbanner" data-pl="tresume" data-v="${pt.id}" style="margin-top:4px">${esc(tourName(pt))} pausiert, tippen zum Fortsetzen →</div>`)}
   if(tab==='staende'||tab==='erfassen'||tab==='zahlen'){const sg=standSeg();if(sg)$('#app').insertAdjacentHTML('afterbegin',sg)}
   blockify();
@@ -789,8 +789,8 @@ document.addEventListener('input',ev=>{
 });
 
 /* ---------- Benutzer und Rollen (Testversion, später Login) ---------- */
-const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team',allrounder:'Allrounder',schonung:'Schonung',fahrer:'Fahrer',demo:'Demo'};
-const ASROLES=['admin','chef','verkauf','team','allrounder','schonung','fahrer'];
+const ROLE={admin:'Admin',chef:'Chef',verkauf:'Verkauf',team:'Team',allrounder:'Allrounder',schonung:'Schonung',fahrer:'Fahrer',kueche:'Küche',demo:'Demo'};
+const ASROLES=['admin','chef','verkauf','team','allrounder','schonung','fahrer','kueche'];
 const realRole=n=>(S.roles&&S.roles[n])||'team';
 let asRole='admin';try{asRole=localStorage.getItem('droste-asrole')||'admin'}catch(e){}
 const roleOf=n=>{const r=realRole(n);return(r==='demo'&&n===S.me)?(ASROLES.includes(asRole)?asRole:'admin'):r};
@@ -798,13 +798,13 @@ const isAdmin=()=>roleOf(S.me)==='admin';
 const RIGHTS=[
   ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Feld','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
   ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
-  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],
-  ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],
+  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],
+  ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],['anwSee','Anwesenheit aller mit Namen sehen','Fremde Daten sehen'],['anwCount','Anwesenheit als Zahlen sehen (Küche)','Fremde Daten sehen'],
   ['calEdit','Saison- und Instagram-Kalender bearbeiten','Bearbeiten'],['lieferplanung','Touren planen','Bearbeiten'],['tasksGive','Aufgaben abgeben und verteilen','Bearbeiten']];
 const PERMS=RIGHTS.map(r=>[r[0],r[1]]);
-const ROLECOLS=[['chef','Ch'],['verkauf','Ve'],['team','Te'],['allrounder','Al'],['schonung','Sc'],['fahrer','Fa']];
+const ROLECOLS=[['chef','Ch'],['verkauf','Ve'],['team','Te'],['allrounder','Al'],['schonung','Sc'],['fahrer','Fa'],['kueche','Kü']];
 const DEF_ROLECFG=(()=>{const all={};RIGHTS.forEach(r=>all[r[0]]=true);const pick=l=>{const o={};RIGHTS.forEach(r=>o[r[0]]=l.includes(r[0]));return o};
-  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),allrounder:pick(['instagram','staende','preise','kalender','tasksGive']),schonung:pick(['feld']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender'])}})();
+  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),allrounder:pick(['instagram','staende','preise','kalender','tasksGive']),schonung:pick(['feld']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender']),kueche:pick(['kueche','anwCount','preise'])}})();
 function presetFor(role){
   const o={};if(role==='admin'||role==='demo'){RIGHTS.forEach(r=>o[r[0]]=true);return o}
   const rc={...(DEF_ROLECFG[role]||{}),...(((S&&S.rolesCfg)||{})[role]||{})};RIGHTS.forEach(r=>o[r[0]]=!!rc[r[0]]);return o}
@@ -1028,7 +1028,7 @@ function vIch(){
   const pens=S.penalties.filter(p=>!p.deleted),openPen=pens.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0)),paidPen=pens.filter(p=>p.paid).sort((a,b)=>(b.paidAt||b.at||0)-(a.paidAt||a.at||0));
   const penSum={};pens.forEach(p=>{const x=penSum[p.person]||(penSum[p.person]={o:0,b:0});x[p.paid?'b':'o']+=(p.qty||1)});
   const penRow=(p,paid)=>`<div class="row"><div style="min-width:0"><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')}</div><div class="p">Vergeben von ${esc(p.by||'?')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div><div style="display:flex;gap:6px;flex:none">${!paid&&isAdmin()?`<button class="btn sec" data-pl="penpaid" data-v="${p.id}" style="margin:0;width:auto;padding:8px 14px">bezahlt</button>`:''}${isAdmin()?`<button class="btn no" data-pl="pendel" data-v="${p.id}" style="margin:0;width:auto;padding:8px 12px" aria-label="Löschen">×</button>`:''}</div></div>`;
-  const nRep=openReports().length;
+  const nRep=openReports().length,attDue=td>=attFrom()&&attOpen(me).length,mealToday=mealOf(td);
   const hello=now.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});
   const pn=cur.pen;
   const pill=(n,c)=>`<span class="pill ${c||''}">${n}</span>`;
@@ -1041,10 +1041,11 @@ function vIch(){
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
   ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(t.title)}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
-  ${blk('Meine Aufgaben heute',`${today.map(t=>taskRow(t,true,true)).join('')||'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>'}
+  ${mealToday?blk('Essen heute',`<div class="p" style="padding:2px 0 10px;font-size:16px;color:var(--text)">${esc(mealToday)}</div>`,{pill:pill('heute','g')}):''}
+  ${blk('Meine Aufgaben heute',`${attDue?`<div class="row" data-pl="goatt" style="cursor:pointer"><div style="min-width:0"><div class="n">Anwesenheit ausfüllen</div><div class="p">${attDue} ${attDue===1?'Tag':'Tage'} noch offen, tippen zum Ausfüllen</div></div></div>`:''}${today.map(t=>taskRow(t,true,true)).join('')||(attDue?'':'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>')}
     ${doneTodayL.length?`<div class="p" style="margin:12px 0 2px;font-weight:600">Heute erledigt (${doneTodayL.length}), zum Zurückholen antippen</div>${doneTodayL.map(t=>taskRow(t,true,true)).join('')}`:''}
     ${free?`<div class="tbanner o" data-pl="gopen" style="margin:10px 0 6px">${free} offene Aufgabe${free>1?'n':''} ohne Zuständigen, such dir eine aus →</div>`:''}
-    <button class="btn sec" data-pl="goarch" style="margin:10px 0 6px">Aufgabenarchiv</button>`,{pill:pill(today.length,today.length?'o':'g')})}
+    <button class="btn sec" data-pl="goarch" style="margin:10px 0 6px">Aufgabenarchiv</button>`,{pill:pill(today.length+(attDue?1:0),today.length||attDue?'o':'g')})}
   ${myTours.length?blk('Meine Tour',myTours.map(t=>{const st=tourStops(t);return `<div class="row" data-pl="goliefer" data-v="${t.date}|lief" style="cursor:pointer;display:block"><div class="n"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div><div class="p">${wdD(t.date)} · ${esc(t.vehicle||'')}</div><div class="p"><b>${t.driver===me?'Fahrer':'Beifahrer'}</b> · ${st.length} Stopps${t.status==='gestartet'?' · <b style="color:var(--orange)">läuft</b>':''}</div></div>`}).join(''),{pill:pill(myTours.length)}):''}
   ${sb?blk('Verkauf heute',`<div class="kv" style="padding:6px 0 10px"><span>Alle Stände</span><span>${sb.q} Stk. · ${eur0(sb.r)}</span></div>`,{tone:'',pill:pill('heute','g')}):''}
   ${blk('Meine Zahlen',`<div class="tiles" style="margin:6px 0 10px">
@@ -1301,9 +1302,9 @@ function planMeld(){
   return `<button class="qtile o" data-pl="drep" style="width:100%;flex-direction:row;justify-content:center;gap:12px;margin:4px 0 12px"><b>!</b>Neue Meldung</button>${seg}${list.map(card).join('')||'<div class="hint">Keine Meldungen in dieser Ansicht.</div>'}`;
 }
 const homeMode=()=>{try{return localStorage.getItem('droste-home')==='1'}catch(e){return false}};
-const ICO={'ich': '<rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/>', 'plan': '<rect x="3" y="5" width="18" height="16" rx="2.4"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 15l2.4 2.4L16 12"/>', 'staende': '<path d="M3.5 9.5L5 4h14l1.5 5.5"/><path d="M3.5 9.5a2.8 2.8 0 0 0 5.5 0 2.8 2.8 0 0 0 6 0 2.8 2.8 0 0 0 5.5 0"/><path d="M5 12.5V20h14v-7.5"/><path d="M10 20v-4.5h4V20"/>', 'lieferungen': '<path d="M2 6.5h12.5V17H2z"/><path d="M14.5 10h4l3 3.2V17h-7z"/><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/>', 'feld': '<path d="M12 2.5l4.6 6.5h-2.7L18 15H6l4.1-6H7.4z"/><path d="M12 15v6"/>', 'preise': '<path d="M18 6.2A7.2 7.2 0 1 0 18 17.8"/><path d="M4 10.2h9.5M4 13.8h9.5"/>'};
+const ICO={'kueche': '<path d="M4 11h16v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M2.5 11h19"/><path d="M8 8V5M12 8V3M16 8V5"/>', 'ich': '<rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/>', 'plan': '<rect x="3" y="5" width="18" height="16" rx="2.4"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 15l2.4 2.4L16 12"/>', 'staende': '<path d="M3.5 9.5L5 4h14l1.5 5.5"/><path d="M3.5 9.5a2.8 2.8 0 0 0 5.5 0 2.8 2.8 0 0 0 6 0 2.8 2.8 0 0 0 5.5 0"/><path d="M5 12.5V20h14v-7.5"/><path d="M10 20v-4.5h4V20"/>', 'lieferungen': '<path d="M2 6.5h12.5V17H2z"/><path d="M14.5 10h4l3 3.2V17h-7z"/><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/>', 'feld': '<path d="M12 2.5l4.6 6.5h-2.7L18 15H6l4.1-6H7.4z"/><path d="M12 15v6"/>', 'preise': '<path d="M18 6.2A7.2 7.2 0 1 0 18 17.8"/><path d="M4 10.2h9.5M4 13.8h9.5"/>'};
 const icon=k=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]||''}</svg>`;
-const HICON={ich:icon('ich'),plan:icon('plan'),staende:icon('staende'),lieferungen:icon('lieferungen'),feld:icon('feld'),preise:icon('preise')};
+const HICON={ich:icon('ich'),plan:icon('plan'),staende:icon('staende'),lieferungen:icon('lieferungen'),feld:icon('feld'),preise:icon('preise'),kueche:icon('kueche')};
 function vHome(items,oc){
   const nRep=seeAllReports()?openReports().length:0;
   $('#app').innerHTML=`<h2 style="margin-top:4px">Hallo ${esc(S.me)}</h2><div class="hgrid">${items.map(i=>{const b=i[0]==='plan'&&oc?oc:i[0]==='plan'&&nRep?nRep:0;return `<button class="htile" data-pl="gotab" data-v="${i[0]}"><span class="hic">${HICON[i[0]]||i[1]}${b?`<i class="hbd">${b}</i>`:''}</span><span>${i[2]}</span></button>`}).join('')}</div>`;
@@ -1443,13 +1444,53 @@ function eventForm(){
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="ecancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="esave" style="margin:0">${f.id?'Speichern':'Hinzufügen'}</button></div>
     ${f.id?'<button class="btn red" data-pl="edel">Löschen</button>':''}${f.id&&f.series?'<button class="btn red" data-pl="edelser">Ganze Serie ins Archiv</button>':''}</div>`;
 }
+const ATT=[['ja','Ja, ganztags'],['vm','Nur bis mittags'],['nm','Nur ab mittags'],['viell','Vielleicht'],['nein','Nein']];
+const attFrom=()=>(S.hofInfo&&S.hofInfo.attFrom)||'2026-11-15',attTo=()=>(S.hofInfo&&S.hofInfo.attTo)||'2026-12-24';
+const attDays=()=>{const o=[];let d=attFrom();const e=attTo();while(d<=e&&o.length<120){o.push(d);d=shiftDate(d,1)}return o};
+const attDoc=n=>(S.attendance||[]).find(x=>x.name===n);
+const attOf=(n,ds)=>((attDoc(n)||{}).days||{})[ds]||'';
+function attSet(ds,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}d.days[ds]=v;d.updated=Date.now();save()}
+const attOpen=n=>{const td=todayStr();return attDays().filter(d=>d>=td&&!attOf(n,d))};
+function attCounts(ds){
+  if(has('anwSee')){const c={ja:0,vm:0,nm:0,viell:0,nein:0};(S.attendance||[]).forEach(x=>{const v=(x.days||{})[ds];if(c[v]!==undefined)c[v]++});return {...c,mi:c.ja+c.vm,ab:c.ja+c.nm}}
+  const c=(S.attStats||{})[ds];if(!c)return null;return {...c,mi:(c.ja||0)+(c.vm||0),ab:(c.ja||0)+(c.nm||0)}}
+function attOverview(){
+  const td=todayStr(),days=attDays().filter(d=>d>=td),names=has('anwSee');
+  const rows=days.map(d=>{const c=attCounts(d)||{mi:0,ab:0,viell:0};
+    const who=names?ATT.map(([k,l])=>{const n=(S.attendance||[]).filter(x=>(x.days||{})[d]===k).map(x=>x.name);return n.length?`<div class="p"><b>${l}:</b> ${n.map(esc).join(', ')}</div>`:''}).join(''):'';
+    return `<details data-det="att-${d}"><summary style="padding:8px 0"><b>${wdD(d)}</b> · Mittag ${c.mi} · Abend ${c.ab}${c.viell?' · vielleicht '+c.viell:''}</summary>${who||'<div class="p">Keine Angaben.</div>'}</details>`}).join('');
+  const no=names?S.people.filter(n=>roleOf(n)!=='demo'&&!Object.values((attDoc(n)||{}).days||{}).some(Boolean)):[];
+  return blk('Wer ist da?',`${rows||'<div class="row"><span class="p">Noch keine Tage.</span></div>'}${no.length?`<div class="hint" style="margin-top:8px">Noch keine Angaben von: ${no.map(esc).join(', ')}</div>`:''}`,{pill:pill(days.length,'g')})}
+function planAnw(){
+  const me=S.me,days=attDays(),td=todayStr(),future=days.filter(d=>d>=td),past=days.filter(d=>d<td),open=attOpen(me).length;
+  const opts=sel=>`<option value="">offen</option>`+ATT.map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${l}</option>`).join('');
+  const row=d=>`<div class="row"><div class="n" style="min-width:92px">${wdD(d)}</div><select class="t" data-att="${d}" style="max-width:190px">${opts(attOf(me,d))}</select></div>`;
+  return `${blk('Meine Anwesenheit',`<div class="hint" style="margin:0 0 8px">Ab ${fmtDe(attFrom())} bis ${fmtDe(attTo())}. Du kannst alles jederzeit ändern. Rolf bekommt morgens eine Zusammenfassung der Änderungen.</div>
+    <div class="mini" style="margin-bottom:8px"><select class="t" id="att-bulk" style="min-width:0"><option value="">Alle offenen Tage setzen auf …</option>${ATT.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select><button class="btn sec" data-pl="attbulk" style="margin:0">Anwenden</button></div>
+    ${future.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}
+    ${past.length?`<details data-det="attpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(open?open+' offen':'komplett',open?'o':'g')})}
+  ${has('anwSee')?attOverview():''}`}
+const mealOf=ds=>((S.meals||[]).find(x=>x.id===ds)||{}).text||'';
+function mealSet(ds,txt){let m=(S.meals||[]).find(x=>x.id===ds);if(!m){m={id:ds,date:ds};S.meals.push(m)}m.text=txt.trim();m.by=S.me;m.updated=Date.now();save()}
+function vKueche(){
+  const kt=['essen','einkauf','anw'].includes(cur.ktab)?cur.ktab:'essen',td=todayStr();
+  const seg=`<div class="seg ptabs">${[['essen','Essen'],['einkauf','Einkauf'],['anw','Wer ist da?']].map(([k,l])=>`<button class="${kt===k?'on':''}" data-pl="ktab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  let body='';
+  if(kt==='essen'){
+    const row=d=>{const c=attCounts(d);return `<div class="row" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b>${wdD(d)}</b>${c?`<span class="p">Mittag ${c.mi} · Abend ${c.ab}${c.viell?' · vielleicht '+c.viell:''}</span>`:''}</div><input class="t" data-meal="${d}" placeholder="Was gibt es?" value="${esc(mealOf(d))}" style="margin-top:6px"></div>`};
+    const days=attDays(),fut=days.filter(d=>d>=td),past=days.filter(d=>d<td);
+    body=blk('Essensplan',`${fut.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}${past.length?`<details data-det="mealpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(fut.length,'g')})}
+  else if(kt==='einkauf')body=planEinkauf('kueche');
+  else body=attOverview();
+  $('#app').innerHTML=`${backupWarn()}${seg}${body}`;
+}
 function vPlan(){
-  const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'],has('einkauf')?['einkauf','Einkauf']:null,['arch','Archiv']].filter(Boolean);
+  const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'],has('einkauf')?['einkauf','Einkauf']:null,['anw','Anwesenheit'],['arch','Archiv']].filter(Boolean);
   if(!ptabs.some(x=>x[0]===cur.ptab))cur.ptab='aufg';
   const seg=`<div class="seg ptabs">${ptabs.map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
   const np=isAdmin()?pendingNames().length:0;
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
-  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
+  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,anw:planAnw,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
 }
 const canHof=()=>has('lieferungen')||has('lieferplanung');
 function calItems(ct,ds){
@@ -1530,8 +1571,9 @@ function planArch(){
   ${list.length>lim?'<button class="btn sec" data-pl="amore">Mehr anzeigen</button>':''}`;
 }
 const shopState=x=>x.done?'erl':x.ordered?'best':'kauf';
-function planEinkauf(){
-  const live=S.shopping.filter(x=>!x.deleted),st=cur.shs||'kauf';
+function planEinkauf(lst){
+  lst=lst||'hof';cur.shlist=lst;
+  const live=S.shopping.filter(x=>!x.deleted&&(x.list||'hof')===lst),st=cur.shs||'kauf';
   const by={kauf:[],best:[],erl:[]};live.forEach(x=>by[shopState(x)].push(x));
   by.kauf.sort((a,b)=>(b.at||0)-(a.at||0));by.best.sort((a,b)=>(b.at||0)-(a.at||0));by.erl.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const list=by[st].slice(0,st==='erl'?40:200);
@@ -1608,16 +1650,19 @@ document.addEventListener('click',ev=>{
   if(a==='amore'){cur.alim=(cur.alim||60)+60;return render()}
   if(a==='dtaskd'){cur.sheet='task';cur.tf=newTf(cur.cday);cur.tf.person=S.me;cur.tfile=null;cur.tfOpen=false;return render()}
   if(a==='enew'){cur.ef=newEf(calOf(cur.ctab),cur.cday);cur.sheet='event';return render()}
+  if(a==='ktab'){cur.ktab=v;return render()}
+  if(a==='goatt'){tab='plan';cur.ptab='anw';window.scrollTo(0,0);return render()}
+  if(a==='attbulk'){const el=document.getElementById('att-bulk'),v2=el&&el.value;if(!v2)return alert('Bitte erst auswählen, worauf die offenen Tage gesetzt werden sollen.');attOpen(S.me).forEach(d=>attSet(d,v2));toast('Gespeichert');return render()}
   if(a==='shs'){cur.shs=v;return render()}
-  if(a==='shnew'){cur.shf={id:null,text:'',note:'',state:cur.shs==='best'?'best':'kauf',photo:''};cur.hfile=null;cur.sheet='shop';return render()}
-  if(a==='shopen'){const x=S.shopping.find(y=>y.id===v);if(!x)return;cur.shf={id:x.id,text:x.text||'',note:x.note||'',state:shopState(x),photo:x.photo||''};cur.hfile=null;cur.sheet='shop';return render()}
+  if(a==='shnew'){cur.shf={id:null,text:'',note:'',state:cur.shs==='best'?'best':'kauf',photo:'',list:cur.shlist||'hof'};cur.hfile=null;cur.sheet='shop';return render()}
+  if(a==='shopen'){const x=S.shopping.find(y=>y.id===v);if(!x)return;cur.shf={id:x.id,text:x.text||'',note:x.note||'',state:shopState(x),photo:x.photo||'',list:x.list||'hof'};cur.hfile=null;cur.sheet='shop';return render()}
   if(a==='shcancel'){return closeSheet()}
   if(a==='shdel'){const x=S.shopping.find(y=>y.id===(cur.shf&&cur.shf.id));if(!x)return;return askConfirm('Eintrag ins Archiv verschieben?','Ja, löschen',()=>{softDel(x);save();closeSheet()})}
   if(a==='shsave'){const f=cur.shf;if(!f||!f.text.trim())return alert('Bitte eintragen, was gekauft werden soll.');
     (async()=>{const id=f.id||uid();let photo=f.photo||'';
       if(cur.hfile&&window.cloud&&window.cloud.uploadImage){try{toast('Foto wird hochgeladen …');photo=await window.cloud.uploadImage('einkauf/'+id+'.jpg',await shrinkImage(cur.hfile,1600));delete IMG[photo];delete IMGERR[photo]}catch(e){alert('Das Foto konnte nicht hochgeladen werden. Der Eintrag wird ohne Foto gespeichert.');photo=f.photo||''}}
       let x=S.shopping.find(y=>y.id===id);if(!x){x={id,by:S.me,at:Date.now(),done:false};S.shopping.push(x)}
-      x.text=f.text.trim();x.note=(f.note||'').trim();x.photo=photo;
+      x.text=f.text.trim();x.note=(f.note||'').trim();x.photo=photo;x.list=f.list||'hof';
       x.ordered=f.state==='best';
       if(f.state==='erl'){if(!x.done){x.done=true;x.doneBy=S.me;x.doneAt=Date.now()}}else{x.done=false;delete x.doneBy;delete x.doneAt}
       save();closeSheet();toast('Gespeichert')})();return}
@@ -1885,6 +1930,8 @@ document.addEventListener('change',ev=>{
   if(t.id==='pd-date'&&cur.pd){cur.pd.date=t.value;cur.pd.sel={};planCandidates(t.value).forEach(x=>{cur.pd.sel[x.o.id]=true});cur.pd.res=null;render()}
   if(t.id==='pd-start'&&cur.pd)cur.pd.start=t.value||'07:30';
   if(t.id==='pd-p'&&cur.pd)cur.pd.P=t.value;
+  if(t.dataset&&t.dataset.att){attSet(t.dataset.att,t.value);return}
+  if(t.dataset&&t.dataset.meal){mealSet(t.dataset.meal,t.value);return}
   if(t.dataset&&t.dataset.mv&&cur.pd&&t.value!==''){planMove(t.dataset.mv,t.value==='new'?'new':+t.value);t.value='';return}
   if(t.dataset.tset){const [id,f]=t.dataset.tset.split('|'),tt=S.tours.find(x=>x.id===id);if(tt){tt[f]=t.value;save();render()}}
   if(t.dataset.tveh){const tt=S.tours.find(x=>x.id===t.dataset.tveh);if(tt){tt.vehicle=t.value;save();render()}}
@@ -2660,7 +2707,7 @@ function vBestellungen(kind,fahrer,plan){
   if(cur.bOpen&&cur.bf){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${bestForm()}`;return}
   const all=S.bestellungen.filter(b=>!b.deleted).sort((a,b)=>String(b.bestellt||'').localeCompare(String(a.bestellt||''))||(b.created||0)-(a.created||0)),L=all.filter(b=>b.status!=='uebernommen'&&!b.sent);
   $('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}<button class="btn add" data-pl="bfnew">+ Neue Bestellung aufnehmen</button>${L.map(bestCard).join('')||'<div class="hint">Keine offenen Bestellungen.</div>'}
-    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/Saison_2026/Bestellungen/[2]Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner [3]Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
+    <details data-det="bestarch"><summary>Archiv (${all.length})</summary><div class="card">${all.map(b=>`<div class="row" data-pl="bfedit" data-v="${b.id}" style="cursor:pointer"><div class="n">${esc(b.name)}</div><span class="p">${b.sent?'Abgesendet':b.status==='uebernommen'?'In Planung':'Aufgenommen'} · ${fmtDe(b.bestellt)}</span></div>`).join('')||'<div class="row"><span class="p">Noch nichts im Archiv.</span></div>'}</div><div class="hint">Die festen PDFs liegen auf dem Mac in Droste/[2]Saison_2026/[1]Bestellungen/[2]Absendbereit.</div><div class="hint">Verschobene Bestellungen (Ordner [3]Abgesendet) erscheinen hier als Abgesendet und nicht mehr in der Liste.</div></details>`;
 }
 function freeStopOrder(s){
   if(!s||!s.orderId)return;const o=S.orders.find(x=>x.id===s.orderId);if(!o||o.status!=='geplant'||(o.stopId&&o.stopId!==s.id))return;
@@ -3202,6 +3249,10 @@ function vDaten(){
   <textarea class="t" id="hof-veh" rows="3">${esc(vehiclesList().join('\n'))}</textarea>
   <label class="f">Verkaufsbeginn (bis dahin zeigt das Wetter den Hof, danach den Stand der Person)</label>
   <input class="t" type="date" id="hof-salesStart" value="${esc((S.hofInfo&&S.hofInfo.salesStart)||'')}">
+  <label class="f">Anwesenheit und Essen: erster Tag (Standard 15.11.2026)</label>
+  <input class="t" type="date" id="hof-attfrom" value="${esc((S.hofInfo&&S.hofInfo.attFrom)||'')}">
+  <label class="f">Anwesenheit und Essen: letzter Tag (Standard 24.12.2026)</label>
+  <input class="t" type="date" id="hof-attto" value="${esc((S.hofInfo&&S.hofInfo.attTo)||'')}">
   <label class="f">Partnerstände, die nur Bäume von uns bekommen (Name | Adresse, einer pro Zeile)</label>
   <textarea class="t" id="hof-partner" rows="5">${esc(partnersList().map(p=>p.n+' | '+p.a).join('\n'))}</textarea>
   <label class="f">Anhänger für Touren (einer pro Zeile)</label>
@@ -3450,6 +3501,8 @@ document.addEventListener('change',ev=>{
   if(t.id==='fadd'&&t.value){feldChange(curOrt(),t.value,1,'netz');return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-mach'){S.hofInfo={...S.hofInfo,machines:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
+  if(t.id==='hof-attfrom'){S.hofInfo={...S.hofInfo,attFrom:t.value};save()}
+  if(t.id==='hof-attto'){S.hofInfo={...S.hofInfo,attTo:t.value};save()}
   if(t.id==='hof-salesStart'){S.hofInfo={...S.hofInfo,salesStart:t.value};wxData=null;save()}
   if(t.id==='hof-partner'){S.hofInfo={...S.hofInfo,partners:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
   if(t.id==='hof-trl'){S.hofInfo={...S.hofInfo,trailers:t.value.split('\n').map(x=>x.trim()).filter(Boolean)};save()}

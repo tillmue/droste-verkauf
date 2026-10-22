@@ -37,16 +37,18 @@ function initCloud(FB) {
     events:   { get: () => T.S.events.map(x => [x.id, x]), put: m => { T.S.events = Object.values(m); }, del: true },
     notes:    { get: () => T.S.notes.map(x => [x.id, x]),  put: m => { T.S.notes = Object.values(m); }, del: false },
     settings: { get: () => { const h = T.S.hofInfo || {}, out = [];
-                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || (h.trailers && h.trailers.length) || h.svcDrop || h.svcSet || h.svcTree || h.svcPct || h.partners || h.salesStart || h.machines || h.vat || h.reserveMin || h.reserveEvery || h.depot || h.mapsSet || h.amEnd || h.pmFrom || h.pmTo || h.dayEnd || h.treeCap || h.matrixSet || h.depotLL || (h.crew && h.crew.length) || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
+                  if (h.address || h.paypal || h.orte || (h.vehicles && h.vehicles.length) || (h.trailers && h.trailers.length) || h.svcDrop || h.svcSet || h.svcTree || h.svcPct || h.attFrom || h.attTo || h.partners || h.salesStart || h.machines || h.vat || h.reserveMin || h.reserveEvery || h.depot || h.mapsSet || h.amEnd || h.pmFrom || h.pmTo || h.dayEnd || h.treeCap || h.matrixSet || h.depotLL || (h.crew && h.crew.length) || (h.schonungen && Object.keys(h.schonungen).length)) out.push(['hof', h]);
                   if (T.S.rolesCfg && Object.keys(T.S.rolesCfg).length) out.push(['roles', T.S.rolesCfg]);
                   return out; },
-                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], trailers: h.trailers || [], partners: h.partners || '', salesStart: h.salesStart || '', svcDrop: h.svcDrop || '', svcSet: h.svcSet || '', svcTree: h.svcTree || '', svcPct: h.svcPct || '', orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', reserveMin: h.reserveMin || '', reserveEvery: h.reserveEvery || '', depot: h.depot || '', mapsSet: !!h.mapsSet, matrixSet: !!h.matrixSet, treeCap: h.treeCap || '', dayEnd: h.dayEnd || '', amEnd: h.amEnd || '', pmFrom: h.pmFrom || '', pmTo: h.pmTo || '', depotLL: h.depotLL || null, crew: h.crew || [], schonungen: h.schonungen || {} };
+                put: m => { const h = m.hof || {}; T.S.hofInfo = { address: h.address || '', paypal: h.paypal || '', vehicles: h.vehicles || [], trailers: h.trailers || [], partners: h.partners || '', salesStart: h.salesStart || '', svcDrop: h.svcDrop || '', svcSet: h.svcSet || '', svcTree: h.svcTree || '', svcPct: h.svcPct || '', attFrom: h.attFrom || '', attTo: h.attTo || '', orte: h.orte || '', machines: h.machines || '', vat: h.vat || '', reserveMin: h.reserveMin || '', reserveEvery: h.reserveEvery || '', depot: h.depot || '', mapsSet: !!h.mapsSet, matrixSet: !!h.matrixSet, treeCap: h.treeCap || '', dayEnd: h.dayEnd || '', amEnd: h.amEnd || '', pmFrom: h.pmFrom || '', pmTo: h.pmTo || '', depotLL: h.depotLL || null, crew: h.crew || [], schonungen: h.schonungen || {} };
                             const rc = m.roles || {}; const changed = JSON.stringify(rc) !== JSON.stringify(T.S.rolesCfg || {}); T.S.rolesCfg = rc; if (changed && T.rolesChanged) setTimeout(() => T.rolesChanged(), 0); }, del: true },
     packs:    { get: () => T.S.packs.map(x => [x.id, x]), put: m => { T.S.packs = Object.values(m); }, del: false, maps: ['checks'] },
     feld:     { get: () => T.S.feld.map(x => [x.id, x]), put: m => { T.S.feld = Object.values(m); }, del: false, maps: ['bal'] },
     tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops', 'loaded', 'pack'] },
     questions:{ get: () => T.S.questions.map(x => [x.id, x]), put: m => { T.S.questions = Object.values(m); }, del: false },
-    stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; }, del: false },
+    stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; T.S.attStats = (m.attendance && m.attendance.days) || {}; }, del: false },
+    attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days'] },
+    meals:    { get: () => (T.S.meals || []).map(x => [x.id, x]), put: m => { T.S.meals = Object.values(m); }, del: false },
     reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
     orders:   { get: () => T.S.orders.map(x => [x.id, x]), put: m => { T.S.orders = Object.values(m); }, del: true },
     bestellungen: { get: () => T.S.bestellungen.map(x => [x.id, x]), put: m => { T.S.bestellungen = Object.values(m); }, del: false },
@@ -146,6 +148,7 @@ function initCloud(FB) {
     if (name === 'questions' && !['admin', 'demo'].includes(profile.role)) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     if (name === 'tours' && !T.permFor(profile, 'toursAll') && !T.permFor(profile, 'lieferplanung'))
       qs = [FB.query(base, FB.where('driver', '==', profile.name)), FB.query(base, FB.where('codriver', '==', profile.name))];
+    if (name === 'attendance' && !T.permFor(profile, 'anwSee')) qs = [FB.query(base, FB.where('name', '==', profile.name))];
     if (name === 'reports' && !T.permFor(profile, 'reportsAll')) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
     if (name === 'tasks' && !T.permFor(profile, 'tasksAll'))
@@ -183,7 +186,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.attendance = []; S.meals = []; S.attStats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -195,7 +198,8 @@ function initCloud(FB) {
     if (T.permFor(p, 'verkauf') || T.permFor(p, 'zahlen')) ['moves', 'sales'].forEach(listen);
     if (T.permFor(p, 'lieferungen') || T.permFor(p, 'lieferplanung')) { listen('tours'); listen('days'); }
     if (T.permFor(p, 'lieferplanung')) { listen('orders'); listen('bestellungen'); }
-    if (T.permFor(p, 'einkauf')) listen('shopping');
+    if (T.permFor(p, 'einkauf') || T.permFor(p, 'kueche')) listen('shopping');
+    listen('attendance'); listen('meals');
     if (T.permFor(p, 'feld')) listen('feld');
   }
 

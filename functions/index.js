@@ -395,6 +395,37 @@ exports.questionCreated = onDocumentCreated('questions/{id}', async event => {
   for (const u of users) await pushTo(u, lang => T.question[lang](q.by || '?', q.text || ''));
 });
 
+/* Anwesenheit: Zahlen pro Tag ohne Namen (für die Küche), Änderungs-Log für Rolf */
+const ATT_TXT = { ja: ['ganztags', 'toată ziua'], vm: ['bis mittags', 'până la prânz'], nm: ['ab mittags', 'de la prânz'], viell: ['vielleicht', 'poate'], nein: ['nein', 'nu'] };
+exports.attendanceWrite = onDocumentWritten('attendance/{id}', async event => {
+  const a = event.data.after.exists ? event.data.after.data() : null;
+  const b = event.data.before.exists ? event.data.before.data() : null;
+  const ad = (a && a.days) || {}, bd = (b && b.days) || {};
+  if (JSON.stringify(ad) === JSON.stringify(bd)) return;
+  const today = berlinDate(), now = Date.now();
+  for (const d of Object.keys(ad)) {
+    if (bd[d] && bd[d] !== ad[d] && d >= today) await db.collection('attLog').add({ name: a.name, date: d, from: bd[d], to: ad[d], at: now });
+  }
+  const snap = await db.collection('attendance').get();
+  const days = {};
+  snap.forEach(x => { for (const [ds, v] of Object.entries(x.data().days || {})) { const c = days[ds] || (days[ds] = { ja: 0, vm: 0, nm: 0, viell: 0, nein: 0 }); if (c[v] !== undefined) c[v]++; } });
+  await db.collection('stats').doc('attendance').set({ days, at: now });
+});
+exports.attDigest = onSchedule({ schedule: '30 7 * * *', timeZone: TZ }, async () => {
+  const cur = db.doc('fn/attDigest');
+  const last = (await cur.get()).data()?.last || 0;
+  const today = berlinDate();
+  const items = (await db.collection('attLog').where('at', '>', last).get()).docs.map(d => d.data()).filter(x => x.date >= today).sort((x, y) => x.date.localeCompare(y.date));
+  await cur.set({ last: Date.now() });
+  if (!items.length) return;
+  const fmt = (x, li) => `${x.name} ${x.date.slice(8)}.${x.date.slice(5, 7)}.: ${ATT_TXT[x.from] ? ATT_TXT[x.from][li] : x.from} → ${ATT_TXT[x.to] ? ATT_TXT[x.to][li] : x.to}`;
+  const users = (await approvedUsers()).filter(u => u.role === 'chef');
+  for (const u of users) await pushTo(u, lang => {
+    const li = lang === 'ro' ? 1 : 0, more = items.length > 6 ? ` (+${items.length - 6})` : '';
+    return (lang === 'ro' ? 'Prezență modificată: ' : 'Anwesenheit geändert: ') + items.slice(0, 6).map(x => fmt(x, li)).join('; ') + more;
+  });
+});
+
 /* 2. Morgennachricht */
 exports.morning = onSchedule({ schedule: '0 7 * * *', timeZone: TZ }, async () => {
   const today = berlinDate();
