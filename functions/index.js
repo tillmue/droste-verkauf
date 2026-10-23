@@ -97,9 +97,9 @@ exports.tourAssigned = onDocumentWritten('tours/{id}', async event => {
   const users = await approvedUsers();
   const name = 'Tour' + (TCOLOR[after.color] ? ' ' + TCOLOR[after.color] : '');
   const date = after.date ? `${after.date.slice(8)}.${after.date.slice(5, 7)}.` : '';
-  for (const role of ['driver', 'codriver']) {
-    const who = role === 'driver' ? after.driver : after.codriver;
-    if (!who || (before && (role === 'driver' ? before.driver : before.codriver) === who)) continue;
+  for (const role of ['driver', 'codriver', 'codriver2']) {
+    const who = after[role];
+    if (!who || (before && before[role] === who)) continue;
     const u = users.find(x => x.name === who);
     if (u) await pushTo(u, lang => T.newTour[lang](name, date, role));
   }

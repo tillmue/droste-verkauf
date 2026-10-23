@@ -147,7 +147,7 @@ function initCloud(FB) {
     if (name === 'notes' && profile.role !== 'admin') qs = [FB.query(base, FB.where('ownerUid', '==', uid))];
     if (name === 'questions' && !['admin', 'demo'].includes(profile.role)) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     if (name === 'tours' && !T.permFor(profile, 'toursAll') && !T.permFor(profile, 'lieferplanung'))
-      qs = [FB.query(base, FB.where('driver', '==', profile.name)), FB.query(base, FB.where('codriver', '==', profile.name))];
+      qs = [FB.query(base, FB.where('driver', '==', profile.name)), FB.query(base, FB.where('codriver', '==', profile.name)), FB.query(base, FB.where('codriver2', '==', profile.name))];
     if (name === 'attendance' && !T.permFor(profile, 'anwSee')) qs = [FB.query(base, FB.where('name', '==', profile.name))];
     if (name === 'reports' && !T.permFor(profile, 'reportsAll')) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
