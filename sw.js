@@ -16,5 +16,7 @@ self.addEventListener('notificationclick',e=>{
   }));
 });
 self.addEventListener('fetch',e=>{
-  e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request)));
+  /* Immer beim Server nachfragen (kein HTTP-Cache von GitHub Pages, sonst bleibt bis zu 10 Minuten die alte Version) */
+  const req=e.request.method==='GET'&&e.request.url.startsWith(self.location.origin)?new Request(e.request.url,{cache:'no-cache',credentials:'same-origin'}):e.request;
+  e.respondWith(fetch(req).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request)));
 });
