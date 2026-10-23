@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Droste">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#2c463d">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -303,7 +303,7 @@ nav button.on{background:var(--blue);color:#fff}
 #app[data-tab="einstellungen"] .blk>details>.card.pad{background:none;border:0;padding:0;margin:0 0 6px}
 .seg.stg button{display:flex;flex-direction:column;align-items:center;gap:2px;white-space:normal;line-height:1.1;font-size:12px;padding:7px 2px}.seg.stg .sc{font-size:16px;font-weight:800}
 /* iOS: Kopfzeile fest statt klebend (sonst legt iOS 26 den Unschärfe-Verlauf der Statusleiste über sie), Seite immer mindestens so hoch wie der Bildschirm (sonst rutscht die untere Leiste auf kurzen Seiten hoch) */
-header{position:fixed;top:0;left:0;right:0}
+header{position:fixed;top:0;left:0;right:0;-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;isolation:isolate}
 body{padding-top:var(--hh,72px);min-height:calc(100vh + 1px);min-height:calc(100dvh + 1px)}
 body.run{padding-top:0}
 .chk{display:inline-flex;align-items:center;justify-content:center;line-height:1}
@@ -328,7 +328,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 G';
+const APP_VERSION='2026-10-23 H';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
