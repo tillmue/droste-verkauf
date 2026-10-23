@@ -318,7 +318,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 E';
+const APP_VERSION='2026-10-23 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1858,6 +1858,8 @@ document.addEventListener('click',ev=>{
     cur.spf=null;save();closeSheet();toast(geo?'Gespeichert, Standort erkannt':'Gespeichert (Standort nur als Link)');return}
   if(a==='spdel'){const x=S.treeSpots.find(y=>y.id===(cur.spf&&cur.spf.id));if(!x)return;return askConfirm('Standort ins Archiv verschieben?','Ja, löschen',()=>{softDel(x);cur.spf=null;save();closeSheet()})}
   if(a==='spdone'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;if(x.status==='gesaegt'){x.status='offen';delete x.doneBy;delete x.doneAt}else{x.status='gesaegt';x.doneBy=S.me;x.doneAt=Date.now()}save();return render()}
+  if(a==='tpack'){const t=S.tours.find(x=>x.id===v);if(t){t.toPack=!t.toPack;save();toast(t.toPack?'Tour ist beim Packen':'Tour wieder in der Planung');render()}return}
+  if(a==='topackall'){const d=cur.lday;S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.date===d&&!t.status&&!t.packed&&!t.toPack).forEach(t=>{t.toPack=true});save();cur.lstage='pack';return render()}
   if(a==='stopsel'){cur.msel=cur.msel||{};cur.msel[v]=!cur.msel[v];return render()}
   if(a==='msclear'){msIds(v).forEach(id=>delete cur.msel[v+'|'+id]);return render()}
   if(a==='msday'){msDay(v);return}
@@ -2164,7 +2166,7 @@ const tcol=t=>(TCOL.find(c=>c[0]===t.color)||[0,0,'#8e99a0'])[2];
 const tourName=t=>{const c=TCOL.find(x=>x[0]===t.color);return (c?'Tour '+c[1]:'Tour')+(t.size?' · '+(t.size==='gross'?'große Bäume':'kleine Bäume'):'')};
 const mTxt=s=>String(s||'').replace(/(\d{2,3})\s*cm/gi,(m,n)=>(n/100).toFixed(2).replace('.',',')+' m');
 const dayVeh=ds=>{const d=S.days.find(x=>x.id===ds);return d&&d.vehicles&&d.vehicles.length?d.vehicles:null};
-const vlist=ds=>{const a=dayVeh(ds);return a||vehiclesList()};
+const vlist=ds=>vehiclesList();
 const LINECATS=['Baum','Deko','Laternenbaum','Grün','Ständer'];
 const mFmt=l=>l?String(Number(l).toFixed(2)).replace('.',',')+' m':'';
 const orderTrees=o=>(o.positions||[]).filter(p=>['Baum','Deko','Laternenbaum'].includes(p.cat));
@@ -2550,7 +2552,7 @@ function applyPlan(idx){
     t.legsSig=tourStops(t).map(s=>s.address||'').join('|');
     S.tours.push(t);pt.applied=true;});
   save();cur.lday=pd.date;cur.lcal=pd.date.slice(0,7);
-  if(pd.res.tours.every(t=>t.applied)){const n=pd.res.tours.length;pd.res=null;pd.sel={};pd.msg='';pd.err='';cur.lkind='lief';cur.lview='tag';cur.lstage='pack';toast(`${n} ${n===1?'Tour':'Touren'} angelegt. Jetzt Fahrer und Fahrzeug zuweisen.`)}else toast('Tour übernommen');
+  if(pd.res.tours.every(t=>t.applied)){const n=pd.res.tours.length;pd.res=null;pd.sel={};pd.msg='';pd.err='';cur.lkind='lief';cur.lview='tag';cur.lstage='plan';toast(`${n} ${n===1?'Tour':'Touren'} angelegt. Jetzt Fahrer und Fahrzeug zuweisen.`)}else toast('Tour übernommen');
   render();
 }
 async function optimizeTour(t){
@@ -2642,9 +2644,9 @@ function planBox(){
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option><option value="max" ${pd.P==='max'?'selected':''}>Fahrer: unbegrenzt (alle Touren gleichzeitig)</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
     ${(()=>{const n=cands.filter(x=>pd.sel[x.o.id]&&!winTimes(x.o.window).length&&/vormittag|nachmittag/i.test(x.o.window||'')).length;return n?`<div class="hint" style="color:var(--orange)">${n} ${n===1?'Auftrag hat':'Aufträge haben'} nur "vormittags" oder "nachmittags" als Zeitfenster. Die Planung nimmt dafür die Zeiten aus den Einstellungen als Pflicht. Bitte beim Kunden klären, was genau gemeint ist.</div>`:''})()}
-    <label class="f">Aufträge für diesen Tag (${nSel} von ${cands.length} gewählt)</label>
-    <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div>
-    <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button><button class="btn sec" data-pl="plrun" style="margin:0" ${pd.busy||!cands.length?'disabled':''}>Nur Vorschlag zeigen</button></div>
+    <details data-det="plcust" ${cur.det.plcust===undefined||cur.det.plcust?'open':''} style="margin-top:8px"><summary style="padding:8px 0"><b>Kunden für diesen Tag</b> (${nSel} von ${cands.length} gewählt)</summary>
+    <div class="card">${cands.map(x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span><button class="rowedit" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Weitere Aktionen" style="margin-left:6px">⋯</button></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div></details>
+    <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button></div>
     <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`${nSel===cands.length?'Alle '+cands.length:nSel} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
     ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
     ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3><div class="hint">Du kannst einzelne Stopps unter "Verschieben nach …" in eine andere Tour legen, Touren fixieren und den Rest neu rechnen lassen.</div><button class="btn sec" data-pl="plrest" style="margin:0 0 8px" ${pd.busy||res.tours.every(t=>t.applied||(pd.locks&&pd.locks[t.bid]))?'disabled':''}>Rest neu berechnen (ohne fixierte Touren)</button>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${fplan(res)}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
@@ -2662,14 +2664,7 @@ function auftraegeBody(day0){
   if(!cur.pd||cur.pd.date<todayStr())initPlan();
   if(day0&&day0<todayStr())return nachBox()+'<div class="hint">Geplant wird nur für heute und spätere Tage. Offenes von früher steht oben unter Nacharbeit.</div>';
   if(day0&&cur.pd.date!==day0){cur.pd.date=day0;cur.pd.sel={};planCandidates(day0).forEach(x=>{cur.pd.sel[x.o.id]=true});cur.pd.res=null}
-  const day=cur.pd.date,all=S.orders.filter(o=>!o.deleted);
-  const inWin=o=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&t>=day};
-  const planned=o=>!orderPickup(o)&&o.status==='geplant'&&(o.plannedFor===day||(!o.plannedFor&&inWin(o))),isOff=o=>!orderPickup(o)&&orderOpen(o)&&inWin(o);
-  const st=['offen','geplant','alle'].includes(cur.ost)?cur.ost:'offen';
-  const nOff=all.filter(isOff).length,nPl=all.filter(planned).length;
-  const list=all.filter(o=>st==='alle'?(isOff(o)||planned(o)||(!orderPickup(o)&&o.status==='erledigt'&&inWin(o))):st==='offen'?isOff(o):planned(o)).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
-  const seg2=`<div class="seg">${[['offen','Offen ('+nOff+')'],['geplant','In Tour ('+nPl+')'],['alle','Alle']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ost" data-v="${k}">${l}</button>`).join('')}</div>`;
-  return `${nachBox()}${planBox()}<h3 style="margin-bottom:2px">Aufträge am ${wdD(day)}</h3>${seg2}${list.map(orderCard).join('')||'<div class="hint">Keine Aufträge für diesen Tag in dieser Ansicht.</div>'}${prepBox()}`;
+  return `${nachBox()}${planBox()}${prepBox()}`;
 }
 /* ---------- Bestellungen (Bestellschein) ---------- */
 const BPOS=5;
@@ -2951,13 +2946,14 @@ function runRow(t,x,i,isNext,act,info){
     ${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}${info}${act}</div>`;
 }
 function stopRow(t,x,i,n,plan){
+  const selMode=plan&&t.type!=='abholung'&&!t.status;
   const pk=t.type==='abholung',run=!pk&&t.status==='gestartet'&&canRun(t),nxt=tourStops(t).find(s=>!s.done),isNext=run&&nxt&&nxt.id===x.id;
   const info=(x.arrivedAt&&plan?`<div class="p">Angekommen um ${hm(x.arrivedAt)}</div>`:'')+(x.drvNote?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.drvNote)}</div>`:'')+(x.done&&(run||plan)&&!pk?`<button class="claim" data-pl="dnedit" data-v="${t.id}|${x.id}" style="margin-top:4px">${x.drvNote?'Notiz ändern':'Notiz hinzufügen'}</button>`:'')+(x.outcome==='nicht'?'<div class="p" style="color:var(--orange)"><b>Nicht angetroffen</b></div>':'');
   const noteBlock=`<div class="card pad formc" style="margin:8px 0 0"><label class="f">Notiz zur Lieferung (optional)</label><div class="chips">${DNCHIPS.map(c=>`<button class="chip" data-pl="dnchip" data-v="${x.id}|${c}">${c}</button>`).join('')}</div><textarea class="t" id="dn-${x.id}" rows="2" placeholder="z. B. nur abgelegt, nicht aufgestellt">${esc(cur.dn[x.id]||'')}</textarea></div>`;
   const act=isNext?`<div class="mini" style="margin-top:8px">${x.address?routeBtns(gmapsUrl(x.address),appleUrl(x.address)):''}${x.phone?`<a class="btn sec" href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}" style="margin:0;text-align:center;text-decoration:none;color:var(--link)">Anrufen</a>`:''}</div>${x.arrivedAt?noteBlock:''}<div class="mini" style="margin-top:8px">${!x.arrivedAt?`<button class="btn" data-pl="sarrive" data-v="${t.id}|${x.id}" style="margin:0">Angekommen</button>`:`<button class="btn green go" data-pl="sdeliv" data-v="${t.id}|${x.id}" style="margin:0">Geliefert</button><button class="btn sec" data-pl="snone" data-v="${t.id}|${x.id}" style="margin:0;color:var(--orange)">Nicht angetroffen</button>`}</div>`:'';
   if(run&&!pk)return runRow(t,x,i,isNext,act,info);
   return `<div class="row ${x.done?'dim':''}" style="align-items:flex-start${isNext?';background:var(--panel);border-radius:10px':''}"><div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0">
-    <button class="chk big ${x.done?'on':''}" ${run&&!pk?'disabled':''} data-pl="${pk?'pickst':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${x.done?'✓':(pk&&x.ready)?'•':''}</button>
+    <button class="chk big ${(selMode?(cur.msel||{})[t.id+'|'+x.id]:x.done)?'on':''}" ${run&&!pk?'disabled':''} data-pl="${pk?'pickst':selMode?'stopsel':'stopdone'}" data-v="${t.id}|${x.id}" ${pk&&x.ready&&!x.done?'style="background:var(--orange);border-color:var(--orange);color:#fff"':''}>${selMode?((cur.msel||{})[t.id+'|'+x.id]?'✓':''):x.done?'✓':(pk&&x.ready)?'•':''}</button>
     <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${pk?(x.time?esc(x.time)+' · ':''):(i+1)+'. '}${esc(x.name)}${!pk&&winTxt(x.win||x.time)?` <span class="p">· ${winTxt(x.win||x.time)}</span>`:''}</div>
     ${pk?`<div class="p"><b style="color:${x.done?'var(--green,#27AE60)':x.ready?'var(--orange)':'var(--mut)'}">${x.done?'Abgeholt':x.ready?'Bereitgestellt':'Noch nicht bereit'}</b></div>`:''}
     ${(!pk&&t.legs&&t.legs.length&&!x.done)?`<div class="p" style="color:var(--link)">Ankunft ca. ${hmMin(up5(planSim(t).eta[x.id]||0))} · Aufenthalt ${svcMin(x,tourCrewN(t))} Min</div>`:''}
@@ -2965,7 +2961,7 @@ function stopRow(t,x,i,n,plan){
     ${x.callBefore?`<div class="p" style="color:var(--orange)"><b>Vorher anrufen (${x.callBefore} Min)</b></div>`:''}${x.items?`<div class="p">${esc(mTxt(x.items))}</div>`:''}${x.note?`<div class="p" style="font-style:italic;background:var(--fill);border-radius:8px;padding:4px 8px">${esc(x.note)}</div>`:''}
     ${x.phone?`<div class="p"><a href="tel:${esc(String(x.phone).replace(/[^+\d]/g,''))}">${esc(x.phone)}</a></div>`:''}
     ${info}${act}
-    ${plan?`<div style="display:flex;gap:8px;margin-top:8px">${(pk||t.status)?'':`<button class="chip ${(cur.msel||{})[t.id+'|'+x.id]?'on':''}" data-pl="stopsel" data-v="${t.id}|${x.id}" style="margin:0">${(cur.msel||{})[t.id+'|'+x.id]?'✓ gewählt':'Wählen'}</button>`}${pk?'':`<button data-pl="stopup" data-v="${t.id}|${x.id}" ${i===0?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▲</button><button data-pl="stopdown" data-v="${t.id}|${x.id}" ${i===n-1?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▼</button>`}<button class="claim" data-pl="stopedit" data-v="${t.id}|${x.id}">Ändern</button></div>`:''}</div></div></div>`;
+    ${plan?`<div style="display:flex;gap:8px;margin-top:8px">${pk?'':`<button data-pl="stopup" data-v="${t.id}|${x.id}" ${i===0?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▲</button><button data-pl="stopdown" data-v="${t.id}|${x.id}" ${i===n-1?'disabled':''} style="width:44px;height:36px;border:0;border-radius:10px;background:var(--fill);color:var(--text)">▼</button>`}<button class="claim" data-pl="stopedit" data-v="${t.id}|${x.id}">Ändern</button></div>`:''}</div></div></div>`;
 }
 function pickCard(t,plan){
   const st=tourStops(t),done=st.filter(x=>x.done).length;
@@ -3012,7 +3008,8 @@ function tourCard(t,plan){
   const assign=plan?`<div class="mini" style="margin-top:8px">${tsel(t,'driver','Fahrer zuweisen',S.people)}${tsel(t,'codriver','Beifahrer zuweisen',S.people)}</div>${(t.crewN>=3||t.codriver2)?`<div class="mini" style="margin-top:8px">${tsel(t,'codriver2','2. Beifahrer zuweisen',S.people)}</div>`:''}<div class="mini" style="margin-top:8px">${tsel(t,'vehicle','Fahrzeug zuweisen',vlist(t.date))}${tsel(t,'trailer','Anhänger zuweisen',trailersList())}</div>`:'';
   const durBtns=plan&&st.length?`<div class="mini" style="margin:8px 0 4px"><button class="btn sec" data-pl="tlegs" data-v="${t.id}" style="margin:0">Fahrzeiten berechnen</button>${!stt&&st.length>1?`<button class="btn sec" data-pl="topt" data-v="${t.id}" style="margin:0">Reihenfolge optimieren</button>`:''}</div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div></div></div></div>`).join('')}</div></details>`:'';
-  const ctrl=run&&!stt&&st.length?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}${st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:(has('lieferplanung')&&!mineRun(t)?`<button class="btn sec" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden (Admin, mit offenen Stopps)</button>`:`<div class="hint">Noch ${st.length-done} Stopps offen. Beenden geht, sobald jeder Stopp auf Geliefert oder Nicht angetroffen steht.</div>`)}`:'');
+  const stgBtn=plan&&!stt&&!t.packed&&st.length?(t.toPack?`<button class="claim" data-pl="tpack" data-v="${t.id}" style="margin-top:8px">Zurück in die Planung</button>`:`<button class="btn sec" data-pl="tpack" data-v="${t.id}" style="margin-top:8px">Fertig geplant, zum Packen</button>`):'';
+  const ctrl=stgBtn+(run&&!stt&&st.length&&(t.toPack||t.packed)?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}${st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:(has('lieferplanung')&&!mineRun(t)?`<button class="btn sec" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden (Admin, mit offenen Stopps)</button>`:`<div class="hint">Noch ${st.length-done} Stopps offen. Beenden geht, sobald jeder Stopp auf Geliefert oder Nicht angetroffen steht.</div>`)}`:''));
   const body=open?`${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}${moreInfo}${assign}${durBtns}${selBar(t)}<div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Stopps.</span></div>'}</div>
     <div class="mini">${routeBtns(url,appleRoute(st))}${plan?`<button class="btn add" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div>${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}" style="margin-top:8px">Tour ändern</button>`:''}`:'';
   return `<div class="tour">${head}${ctrl}${body}</div>`;
@@ -3067,16 +3064,16 @@ function vLieferungen(){
   const empty=kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':kind==='lief'?'Für diesen Tag sind keine Touren geplant.':'Für diesen Tag steht nichts an.';
   const add=plan?((kind!=='abh'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn add" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
   const dayTitle=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>`;
-  const stg=t=>t.status==='beendet'?'done':(t.status==='gestartet'||t.packed)?'run':'pack';
+  const stg=t=>t.status==='beendet'?'done':(t.status==='gestartet'||t.packed)?'run':t.toPack?'pack':'plan';
   const stagesOn=plan&&kind==='lief'&&!fahrer,stage=['plan','pack','run','done'].includes(cur.lstage)?cur.lstage:'plan';
   let dayBlock;
   if(stagesOn){
-    const lt=on(day).filter(t=>!isP(t)),cnt={pack:lt.filter(t=>stg(t)==='pack').length,run:lt.filter(t=>stg(t)==='run').length,done:lt.filter(t=>stg(t)==='done').length},nPlan=day>=td?planCandidates(day).length:0;
-    const sseg=`<div class="seg stg">${[['plan','Planung',nPlan],['pack','Packen',cnt.pack],['run','In Auslieferung',cnt.run],['done','Erledigt',cnt.done]].map(([k,l,n])=>`<button class="${stage===k?'on':''}" data-pl="lstage" data-v="${k}">${l}<span class="sc">${n||'0'}</span></button>`).join('')}</div>`;
+    const lt=on(day).filter(t=>!isP(t)),cnt={plan:lt.filter(t=>stg(t)==='plan').length,pack:lt.filter(t=>stg(t)==='pack').length,run:lt.filter(t=>stg(t)==='run').length,done:lt.filter(t=>stg(t)==='done').length},nPlan=day>=td?planCandidates(day).length:0;
+    const sseg=`<div class="seg stg">${[['plan','Planung',cnt.plan],['pack','Packen',cnt.pack],['run','In Auslieferung',cnt.run],['done','Erledigt',cnt.done]].map(([k,l,n])=>`<button class="${stage===k?'on':''}" data-pl="lstage" data-v="${k}">${l}<span class="sc">${n||'0'}</span></button>`).join('')}</div>`;
     let inner;
-    if(stage==='plan')inner=auftraegeBody(day);
-    else{const list=lt.filter(t=>stg(t)===stage);
-      inner=(stage==='pack'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(list.map(t=>tourCard(t,plan)).join('')||`<div class="hint">${stage==='pack'?'Keine Touren zum Packen.':stage==='run'?'Keine Touren in Auslieferung.':'Noch nichts erledigt.'}</div>`)+(stage==='pack'?packSummary(day)+`<details data-det="vehday"><summary>Fahrzeuge an diesem Tag</summary>${vehBar(day)}</details>`:'')}
+    const list=lt.filter(t=>stg(t)===stage);
+    if(stage==='plan')inner=auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>';
+    else inner=(list.map(t=>tourCard(t,plan)).join('')||`<div class="hint">${stage==='pack'?'Keine Touren zum Packen.':stage==='run'?'Keine Touren in Auslieferung.':'Noch nichts erledigt.'}</div>`)+(stage==='pack'?packSummary(day):'')
     dayBlock=dayTitle+sseg+inner;
   }else dayBlock=dayTitle+(on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`)+(plan&&kind!=='abh'?packSummary(day):'')+add;
   const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate(),rows=Math.ceil((off+dim)/7),first=`${y}-${p2(m)}-01`,start=shiftDate(first,-off);
