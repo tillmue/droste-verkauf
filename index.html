@@ -312,6 +312,14 @@ body.run{padding-top:0}
 .selbar .sh b{font-size:16px}
 .selbar select.t,.selbar input.t{border-radius:14px}
 .selbar .btn{margin:0}
+/* Kopfzeilen-Test (nur Admin, Einstellungen): Varianten gegen die Unschärfe auf iOS */
+body.hv-b header{position:static}body.hv-b{padding-top:0}
+body.hv-c header{position:absolute}
+body.hv-d header{padding-top:calc(env(safe-area-inset-top) + 30px)}
+body.hv-e header{background:transparent;border-bottom-color:transparent}
+body.hv-f header{position:sticky;top:0;transform:none;will-change:auto;isolation:auto}body.hv-f{padding-top:0}
+body.hv-g header{transform:none;will-change:auto;isolation:auto}
+body.hv-h header{background:rgba(44,70,61,.98)}
 </style>
 </head>
 <body>
@@ -328,7 +336,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 H';
+const APP_VERSION='2026-10-23 I';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3333,6 +3341,9 @@ function vDaten(){
   ${freigaben()}
   <h2>Anwesenheit</h2>
   ${anwBlock()}
+  <h2>iOS-Test Kopfzeile</h2>
+  <div class="card pad"><div class="hint">Nur zum Testen: Varianten der Kopfzeile gegen die Unschärfe auf dem iPhone. Variante wählen, App ansehen (Übersicht), mir sagen, welche scharf ist. A ist der Normalfall.</div>
+  <select class="t" id="hv-sel">${[['','A: fest (Normalfall)'],['b','B: nicht fest, scrollt mit'],['c','C: absolut oben'],['d','D: fest, 30 px mehr Abstand oben'],['e','E: fest, durchsichtiger Hintergrund'],['f','F: klebend (alte Version)'],['g','G: fest ohne eigene Ebene'],['h','H: fest, leicht durchsichtig']].map(([k,l])=>`<option value="${k}" ${(localStorage.getItem('droste-hv')||'')===k?'selected':''}>${l}</option>`).join('')}</select></div>
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
@@ -3634,6 +3645,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='fadd'&&t.value){feldChange(curOrt(),t.value,1,'netz');return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-mach'){S.hofInfo={...S.hofInfo,machines:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
+  if(t.id==='hv-sel'){try{localStorage.setItem('droste-hv',t.value)}catch(e){}[...document.body.classList].filter(c=>c.startsWith('hv-')).forEach(c=>document.body.classList.remove(c));if(t.value)document.body.classList.add('hv-'+t.value);const hd=document.querySelector('header');if(hd)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px');toast('Variante '+(t.value||'a').toUpperCase());return}
   if(t.id==='hof-attfrom'){S.hofInfo={...S.hofInfo,attFrom:t.value};save()}
   if(t.id==='hof-attto'){S.hofInfo={...S.hofInfo,attTo:t.value};save()}
   if(t.id==='hof-salesStart'){S.hofInfo={...S.hofInfo,salesStart:t.value};wxData=null;save()}
@@ -3672,6 +3684,7 @@ if(LANG==='ro'){
 render();
 if(LANG==='ro')i18nTree(document.body);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+{try{const v=localStorage.getItem('droste-hv');if(v)document.body.classList.add('hv-'+v)}catch(e){}}
 {const hd=document.querySelector('header'),setHH=()=>{if(hd&&hd.offsetHeight)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px')};setHH();window.addEventListener('resize',setHH);window.addEventListener('orientationchange',()=>setTimeout(setHH,200));if(window.ResizeObserver&&hd)new ResizeObserver(setHH).observe(hd);}
 </script>
 <script type="module" src="cloud.js"></script>
