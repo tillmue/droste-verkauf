@@ -318,7 +318,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 C';
+const APP_VERSION='2026-10-23 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1004,6 +1004,22 @@ function beerBlock(){
     <div class="barw" style="margin:6px 0 8px;position:relative"><i style="width:${p}%"></i><u style="position:absolute;left:80%;top:0;bottom:0;width:2px;background:var(--text);opacity:.45"></u></div>
     ${ok?'<div class="hint" style="margin:0"><b style="color:#7fe0a0">Feierabendbier verdient</b></div>':''}</section>`;
 }
+function abendBlock(){
+  if(new Date().getHours()<17)return '';
+  const td=todayStr(),tm=shiftDate(td,1),me=S.me,lines=[];
+  const mt=S.tasks.filter(t=>!t.deleted&&!t.done&&t.person===me&&t.date===tm);
+  if(mt.length)lines.push(['Aufgaben',mt.slice(0,3).map(t=>esc(t.title)).join(', ')+(mt.length>3?' (+'+(mt.length-3)+')':'')]);
+  const ev=S.events.filter(e=>!e.deleted&&e.cal==='saison'&&e.date<=tm&&tm<=(e.end||e.date)&&(!e.person||e.person===me));
+  if(ev.length)lines.push(['Termine',ev.slice(0,3).map(e=>(e.time?esc(e.time)+' ':'')+esc(e.title)).join(', ')]);
+  const tr=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.date===tm&&isCrew(t,me));
+  if(tr.length)lines.push(['Auslieferung',tr.map(t=>esc(tourName(t))+' ('+tourStops(t).length+' Stopps)').join(', ')]);
+  if(has('kueche')){const m=mealOf(tm),c=attCounts(tm);if(m||c)lines.push(['Essen',(m?esc(m):'noch offen')+(c?' ('+c.fr+' Frühstück, '+c.mi+' Mittag)':'')])}
+  if(has('anwSee')){const who=(S.attendance||[]).filter(a=>['ja','vm','nm'].includes((a.days||{})[tm])).map(a=>a.name),mb=(S.attendance||[]).filter(a=>(a.days||{})[tm]==='viell').length;
+    lines.push(['Morgen da',who.length?who.length+' ('+who.slice(0,12).map(esc).join(', ')+')':'noch niemand eingetragen'+(mb?', vielleicht '+mb:'')])}
+  if(has('zahlen')&&has('anwSee')){const rows=S.stands.map(st=>{const e=S.entries[keyOf(st.id,td)];return e?{n:st.name,q:qtyOf(e),r:revOf(e)}:null}).filter(x=>x&&(x.q||x.r));
+    lines.push(['Verkauf heute',rows.length?rows.map(x=>esc(x.n)+' '+x.q+' Stk. '+eur0(x.r)).join(', ')+'. Gesamt '+rows.reduce((a,x)=>a+x.q,0)+' Stk. '+eur0(rows.reduce((a,x)=>a+x.r,0)):'noch nichts eingetragen'])}
+  if(!lines.length)return '';
+  return blk('Morgen',lines.map(([k,v])=>`<div class="row" style="display:block"><div class="p"><b>${k}</b></div><div class="n" style="font-weight:500;font-size:15px">${v}</div></div>`).join(''),{pill:pill('ab 17 Uhr','g')})}
 function vIch(){
   const td=todayStr(),me=S.me,now=new Date(),nowS=now.toDateString();
   const live=S.tasks.filter(t=>!t.deleted);
@@ -1041,6 +1057,7 @@ function vIch(){
   <div class="mini" style="margin-bottom:14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
+  ${abendBlock()}
   ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(t.title)}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
   ${mealToday?blk('Essen heute',`<div class="p" style="padding:2px 0 10px;font-size:16px;color:var(--text)">${esc(mealToday)}</div>`,{pill:pill('heute','g')}):''}
   ${blk('Meine Aufgaben heute',`${attDue?`<div class="row" data-pl="goatt" style="cursor:pointer"><div style="min-width:0"><div class="n">Anwesenheit ausfüllen</div><div class="p">${attDue} ${attDue===1?'Tag':'Tage'} noch offen, tippen zum Ausfüllen</div></div></div>`:''}${today.map(t=>taskRow(t,true,true)).join('')||(attDue?'':'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>')}

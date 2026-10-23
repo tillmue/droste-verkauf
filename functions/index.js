@@ -445,6 +445,67 @@ exports.attDigest = onSchedule({ schedule: '30 7 * * *', timeZone: TZ }, async (
   });
 });
 
+/* Abendbriefing: 17:00 für jeden (was morgen ansteht), bei Rolf zusätzlich wer morgen da ist und die Verkaufszahlen;
+   19:30 für Rolf die Verkaufszahlen mit allen Ständen */
+const EUR = n => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
+async function salesOf(day) {
+  const [pr, sn, ss] = await Promise.all([db.collection('products').get(), db.collection('stands').get(), db.collection('sales').get()]);
+  const products = pr.docs.map(d => ({ id: d.id, ...d.data() })), stands = {};
+  sn.forEach(d => { stands[d.id] = d.data().name || d.id; });
+  const rows = []; let tq = 0, tr = 0;
+  ss.forEach(d => {
+    if (!d.id.endsWith('|' + day)) return;
+    const sid = d.id.slice(0, d.id.length - day.length - 1);
+    if (sid.startsWith('p:') || !stands[sid]) return;
+    const e = d.data(), counts = e.counts || {}, prices = e.prices || {};
+    let q = 0, r = 0;
+    products.forEach(p => { const c = +counts[p.id] || 0; q += c; r += c * (prices[p.id] != null ? prices[p.id] : (p.price || 0)); });
+    (e.extra || []).forEach(x => { const n = x.qty || 1; q += n; r += (x.price || 0) * n; });
+    if (q || r) { rows.push({ name: stands[sid], q, r }); tq += q; tr += r; }
+  });
+  return { rows, tq, tr };
+}
+function salesText(s, lang) {
+  if (!s.rows.length) return lang === 'ro' ? 'Vânzări azi: încă nimic înregistrat' : 'Verkauf heute: noch nichts eingetragen';
+  return (lang === 'ro' ? 'Vânzări azi: ' : 'Verkauf heute: ') + s.rows.map(x => `${x.name} ${x.q} ${lang === 'ro' ? 'buc.' : 'Stk.'} ${EUR(x.r)}`).join(', ') + (lang === 'ro' ? `. Total ${s.tq} buc. ${EUR(s.tr)}` : `. Gesamt ${s.tq} Stk. ${EUR(s.tr)}`);
+}
+exports.eveningBrief = onSchedule({ schedule: '0 17 * * *', timeZone: TZ }, async () => {
+  const tomorrow = addDays(berlinDate(), 1), today = berlinDate();
+  const users = (await approvedUsers()).filter(u => (u.fcmTokens || []).length);
+  if (!users.length) return;
+  const canKueche = await canDoAll('kueche');
+  const tasks = (await db.collection('tasks').where('done', '==', false).get()).docs.map(d => d.data()).filter(t => !t.deleted && t.date === tomorrow);
+  const events = (await db.collection('events').where('date', '<=', tomorrow).get()).docs.map(d => d.data()).filter(e => !e.deleted && e.cal === 'saison' && tomorrow <= (e.end || e.date));
+  const tours = (await db.collection('tours').where('date', '==', tomorrow).get()).docs.map(d => d.data()).filter(t => !t.deleted && t.type !== 'abholung');
+  const meal = (await db.doc('meals/' + tomorrow).get()).data()?.text || '';
+  const att = (await db.collection('attendance').get()).docs.map(d => d.data());
+  const cnt = (await db.doc('stats/attendance').get()).data()?.days?.[tomorrow] || null;
+  const sales = await salesOf(today);
+  for (const u of users) {
+    const ro = u.lang === 'ro';
+    const parts = [];
+    const myTasks = tasks.filter(t => t.person === u.name);
+    if (myTasks.length) parts.push((ro ? 'Sarcini mâine: ' : 'Aufgaben morgen: ') + myTasks.slice(0, 3).map(t => t.title).join(', ') + (myTasks.length > 3 ? ` (+${myTasks.length - 3})` : ''));
+    const myEv = events.filter(e => !e.person || e.person === u.name);
+    if (myEv.length) parts.push((ro ? 'Termene: ' : 'Termine: ') + myEv.slice(0, 3).map(e => (e.time ? e.time + ' ' : '') + e.title).join(', '));
+    const myTours = tours.filter(t => [t.driver, t.codriver, t.codriver2].includes(u.name));
+    if (myTours.length) parts.push((ro ? 'Tură: ' : 'Tour: ') + myTours.map(t => `${TCOLOR[t.color] || ''} (${Object.values(t.stops || {}).filter(s => !s.deleted).length} ${ro ? 'opriri' : 'Stopps'})`).join(', '));
+    if ((canKueche(u) || u.role === 'kueche') && (meal || cnt)) parts.push((ro ? 'Mâncare mâine: ' : 'Essen morgen: ') + (meal || (ro ? 'noch offen' : 'noch offen')) + (cnt ? ` (${ro ? 'mic dejun' : 'Frühstück'} ${cnt.fr || 0}, ${ro ? 'prânz' : 'Mittag'} ${cnt.mi || 0})` : ''));
+    if (u.role === 'chef') {
+      const who = att.filter(a => ['ja', 'vm', 'nm'].includes((a.days || {})[tomorrow])).map(a => a.name), maybe = att.filter(a => (a.days || {})[tomorrow] === 'viell').length;
+      parts.push((ro ? 'Mâine prezenți: ' : 'Morgen da: ') + (who.length ? `${who.length} (${who.slice(0, 12).join(', ')}${who.length > 12 ? ' …' : ''})` : (ro ? 'nimeni încă' : 'noch niemand eingetragen')) + (maybe ? (ro ? `, poate ${maybe}` : `, vielleicht ${maybe}`) : ''));
+      parts.push(salesText(sales, ro ? 'ro' : 'de'));
+    }
+    if (!parts.length) continue;
+    await pushTo(u, () => (ro ? 'Mâine: ' : 'Morgen: ') + parts.join(' · '));
+  }
+});
+exports.eveningBrief2 = onSchedule({ schedule: '30 19 * * *', timeZone: TZ }, async () => {
+  const sales = await salesOf(berlinDate());
+  const users = (await approvedUsers()).filter(u => u.role === 'chef' && (u.fcmTokens || []).length);
+  for (const u of users) await pushTo(u, lang => salesText(sales, lang));
+});
+
 /* 2. Morgennachricht */
 exports.morning = onSchedule({ schedule: '0 7 * * *', timeZone: TZ }, async () => {
   const today = berlinDate();
