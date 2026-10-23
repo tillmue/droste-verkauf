@@ -127,6 +127,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Baumstandorte (Kunden-Bäume in der Schonung): Admin pflegt, wer das Recht hat liest und markiert als gesägt
+    match /treeSpots/{id} {
+      allow read: if perm('bstand');
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (perm('bstand') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'doneBy', 'doneAt']));
+      allow delete: if false;
+    }
+
     // Essensplan: alle lesen, Küche, Chef und Admin tragen ein
     match /meals/{id} {
       allow read: if isMember();

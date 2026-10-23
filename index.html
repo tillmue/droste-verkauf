@@ -318,7 +318,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 B';
+const APP_VERSION='2026-10-23 C';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -358,7 +358,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.attendance=S.attendance||[];S.meals=S.meals||[];S.attStats=S.attStats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.treeSpots=S.treeSpots||[];S.attendance=S.attendance||[];S.meals=S.meals||[];S.attStats=S.attStats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -799,7 +799,7 @@ const isAdmin=()=>roleOf(S.me)==='admin';
 const RIGHTS=[
   ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Feld','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
   ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
-  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],
+  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],['bstand','Baumstandorte sehen und als gesägt markieren','Reiter und Bereiche'],
   ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],['anwSee','Anwesenheit aller mit Namen sehen','Fremde Daten sehen'],['anwCount','Anwesenheit als Zahlen sehen (Küche)','Fremde Daten sehen'],
   ['calEdit','Saison- und Instagram-Kalender bearbeiten','Bearbeiten'],['lieferplanung','Touren planen','Bearbeiten'],['tasksGive','Aufgaben abgeben und verteilen','Bearbeiten']];
 const PERMS=RIGHTS.map(r=>[r[0],r[1]]);
@@ -1398,7 +1398,7 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);if(cur.sheet==='stopf')cur.stopOpen=false;if(cur.sheet==='tourf')cur.tourOpen=false;closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():'';
+  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
 }
@@ -1831,6 +1831,16 @@ document.addEventListener('click',ev=>{
   if(a==='stopnew'){cur.stop=newStop(v);cur.stopOpen=true;cur.tourOpen=false;return render()}
   if(a==='stopedit'){const [tid,sid]=v.split('|'),t=S.tours.find(x=>x.id===tid),x=t&&t.stops[sid];if(!x)return;
     cur.stop={id:sid,tourId:tid,name:x.name||'',address:x.address||'',time:x.time||'',phone:x.phone||'',items:x.items||'',note:x.note||'',callBefore:x.callBefore||'',standId:x.standId||'',toTour:tid,toDay:t.date};cur.stopOpen=true;cur.tourOpen=false;render();return}
+  if(a==='sps'){cur.sps=v;return render()}
+  if(a==='spnew'){cur.spf=spotNew();cur.sheet='spot';return render()}
+  if(a==='spedit'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;cur.spf={id:x.id,name:x.name||'',link:x.link||'',sorte:x.sorte||'',groesse:x.groesse||'',note:x.note||''};cur.sheet='spot';return render()}
+  if(a==='spcancel'){cur.spf=null;return closeSheet()}
+  if(a==='spsave'){const f=cur.spf;if(!f||!(f.name||'').trim())return alert('Bitte den Kunden eintragen.');
+    const geo=parseGeo(f.link),base={name:f.name.trim(),link:(f.link||'').trim(),sorte:(f.sorte||'').trim(),groesse:(f.groesse||'').trim(),note:(f.note||'').trim(),lat:geo?geo.lat:null,lng:geo?geo.lng:null};
+    if(f.id){const x=S.treeSpots.find(y=>y.id===f.id);if(x)Object.assign(x,base)}else S.treeSpots.push({id:uid(),status:'offen',by:S.me,created:Date.now(),...base});
+    cur.spf=null;save();closeSheet();toast(geo?'Gespeichert, Standort erkannt':'Gespeichert (Standort nur als Link)');return}
+  if(a==='spdel'){const x=S.treeSpots.find(y=>y.id===(cur.spf&&cur.spf.id));if(!x)return;return askConfirm('Standort ins Archiv verschieben?','Ja, löschen',()=>{softDel(x);cur.spf=null;save();closeSheet()})}
+  if(a==='spdone'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;if(x.status==='gesaegt'){x.status='offen';delete x.doneBy;delete x.doneAt}else{x.status='gesaegt';x.doneBy=S.me;x.doneAt=Date.now()}save();return render()}
   if(a==='stopsel'){cur.msel=cur.msel||{};cur.msel[v]=!cur.msel[v];return render()}
   if(a==='msclear'){msIds(v).forEach(id=>delete cur.msel[v+'|'+id]);return render()}
   if(a==='msday'){msDay(v);return}
@@ -3118,11 +3128,42 @@ function feldChange(ort,sid,delta,typ,quiet){
   b.by=S.me;b.at=Date.now();b.typ=typ;
   if(!quiet){save();render()}
 }
+/* ---------- Baumstandorte: Kunden-Bäume in der Schonung (Standort aus WhatsApp) ---------- */
+function parseGeo(t){
+  t=String(t||'');let m;
+  if(m=t.match(/@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/))return {lat:+m[1],lng:+m[2]};
+  if(m=t.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/))return {lat:+m[1],lng:+m[2]};
+  if(m=t.match(/[?&](?:q|ll|query|destination|daddr|sll)=(-?\d{1,3}\.\d+)(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i))return {lat:+m[1],lng:+m[2]};
+  if(m=t.match(/(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})/))return {lat:+m[1],lng:+m[2]};
+  return null}
+const spotUrl=x=>x.lat&&x.lng?`https://www.google.com/maps/search/?api=1&query=${x.lat},${x.lng}`:(/^https?:\/\//i.test(String(x.link||'').trim())?String(x.link).trim().split(/\s+/)[0]:'');
+const spotNew=()=>({id:null,name:'',link:'',sorte:'',groesse:'',note:''});
+function spotsView(){
+  const live=(S.treeSpots||[]).filter(x=>!x.deleted),st=cur.sps==='done'?'done':'offen',q=String(cur.spq||'').toLowerCase().trim();
+  const off=live.filter(x=>x.status!=='gesaegt'),don=live.filter(x=>x.status==='gesaegt'),list=(st==='done'?don:off).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'de'));
+  const row=x=>`<div class="row" data-sn="${esc(String(x.name).toLowerCase())}" style="${q&&!String(x.name).toLowerCase().includes(q)?'display:none;':''}align-items:flex-start"><div style="min-width:0;flex:1"><div class="n">${esc(x.name)}</div><div class="p">${[x.sorte,x.groesse].filter(Boolean).map(esc).join(' · ')||'ohne Angabe'}</div>${x.note?`<div class="p" style="font-style:italic">${esc(x.note)}</div>`:''}
+    ${spotUrl(x)?`<div class="mini" style="margin-top:6px"><a class="btn sec" href="${esc(spotUrl(x))}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none">In Google Maps öffnen</a></div>`:`<div class="p" style="color:var(--orange)">Standort fehlt oder nicht lesbar${x.link?': '+esc(String(x.link).slice(0,60)):''}</div>`}
+    ${x.status==='gesaegt'&&x.doneBy?`<div class="p">Gesägt von ${esc(x.doneBy)}${x.doneAt?' am '+shopTs(x.doneAt):''}</div>`:''}</div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><button class="chk big ${x.status==='gesaegt'?'on':''}" data-pl="spdone" data-v="${x.id}" aria-label="gesägt">${x.status==='gesaegt'?'✓':''}</button>${isAdmin()?`<button class="rowedit" data-pl="spedit" data-v="${x.id}" aria-label="Eintrag bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`:''}</div></div>`;
+  const seg=`<div class="seg">${[['offen','Zu sägen ('+off.length+')'],['done','Gesägt ('+don.length+')']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="sps" data-v="${k}">${l}</button>`).join('')}</div>`;
+  return `${isAdmin()?'<button class="btn add" data-pl="spnew">+ Standort eintragen</button>':''}<input class="t" id="sp-q" placeholder="Kunde suchen" value="${esc(cur.spq||'')}" autocomplete="off" style="margin:4px 0 8px">${seg}
+    ${blk(st==='done'?'Gesägt':'Zu sägen',list.map(row).join('')||'<div class="row"><span class="p">Nichts in dieser Liste.</span></div>',{pill:pill(list.length,st==='done'?'g':'o')})}`}
+function spotForm(){
+  const f=cur.spf||(cur.spf=spotNew());
+  return `<div class="card pad formc"><label class="f">${f.id?'Standort bearbeiten':'Neuer Baumstandort'}</label>
+    <input class="t" id="spf-name" placeholder="Kunde" value="${esc(f.name)}">
+    <textarea class="t" id="spf-link" rows="3" placeholder="Standort aus WhatsApp einfügen (Google-Maps-Link oder Koordinaten)" style="margin-top:8px">${esc(f.link)}</textarea>
+    <div class="mini" style="margin-top:8px"><input class="t" id="spf-sorte" placeholder="Sorte" value="${esc(f.sorte)}" style="min-width:0"><input class="t" id="spf-groesse" placeholder="Größe" value="${esc(f.groesse)}" style="min-width:0"></div>
+    <input class="t" id="spf-note" placeholder="Notiz (optional)" value="${esc(f.note)}" style="margin-top:8px">
+    ${f.id?'<button class="btn red" data-pl="spdel" style="margin-top:10px">Löschen</button>':''}
+    <div class="mini" style="margin-top:10px"><button class="btn sec" data-pl="spcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="spsave" style="margin:0">Speichern</button></div></div>`}
 function vFeld(){
+  if(cur.fmode==='standorte'&&!has('bstand'))cur.fmode='karte';
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]};
   const chips=`<div class="chips">${os.map(x=>`<button class="chip ${x.name===cur.fs?'on':''}" data-pl="fs" data-v="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
 `,gchips=o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'';
-  const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht'],has('bstand')?['standorte','Standorte']:null].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if(mode==='standorte'){$('#app').innerHTML=`${seg}${spotsView()}`;return}
   if(mode==='karte'){
     const sch=schon(cur.fs),url=imgUrl(sch.img);
     $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
@@ -3538,6 +3579,8 @@ document.addEventListener('input',ev=>{
   const t=ev.target;
   if(t.id==='au-mail'&&cur.auth)cur.auth.mail=t.value;
   if(t.id&&t.id.startsWith('shf-')&&cur.shf)cur.shf[t.id.slice(4)]=t.value;
+  if(t.id&&t.id.startsWith('spf-')&&cur.spf)cur.spf[t.id.slice(4)]=t.value;
+  if(t.id==='sp-q'){cur.spq=t.value;const q=t.value.toLowerCase().trim();document.querySelectorAll('[data-sn]').forEach(r=>{r.style.display=(!q||r.dataset.sn.includes(q))?'':'none'})}
   if(t.id&&t.id.startsWith('tr-'))cur.tour[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('sp-'))cur.stop[t.id.slice(3)]=t.value;
   if(t.id&&t.id.startsWith('bf-nr-')&&cur.bf){bfNr(t.id.slice(6),t.value);return}

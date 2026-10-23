@@ -48,6 +48,7 @@ function initCloud(FB) {
     questions:{ get: () => T.S.questions.map(x => [x.id, x]), put: m => { T.S.questions = Object.values(m); }, del: false },
     stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; T.S.attStats = (m.attendance && m.attendance.days) || {}; }, del: false },
     attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days'] },
+    treeSpots: { get: () => (T.S.treeSpots || []).map(x => [x.id, x]), put: m => { T.S.treeSpots = Object.values(m); }, del: false },
     meals:    { get: () => (T.S.meals || []).map(x => [x.id, x]), put: m => { T.S.meals = Object.values(m); }, del: false },
     reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
     orders:   { get: () => T.S.orders.map(x => [x.id, x]), put: m => { T.S.orders = Object.values(m); }, del: true },
@@ -186,7 +187,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.attendance = []; S.meals = []; S.attStats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.attendance = []; S.treeSpots = []; S.meals = []; S.attStats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -200,6 +201,7 @@ function initCloud(FB) {
     if (T.permFor(p, 'lieferplanung')) { listen('orders'); listen('bestellungen'); }
     if (T.permFor(p, 'einkauf') || T.permFor(p, 'kueche')) listen('shopping');
     listen('attendance'); listen('meals');
+    if (T.permFor(p, 'bstand')) listen('treeSpots');
     if (T.permFor(p, 'feld')) listen('feld');
   }
 
