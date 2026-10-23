@@ -302,6 +302,16 @@ nav button.on{background:var(--blue);color:#fff}
 #app[data-tab="einstellungen"] .blk>details[open]>summary{margin-bottom:10px}
 #app[data-tab="einstellungen"] .blk>details>.card.pad{background:none;border:0;padding:0;margin:0 0 6px}
 .seg.stg button{display:flex;flex-direction:column;align-items:center;gap:2px;white-space:normal;line-height:1.1;font-size:12px;padding:7px 2px}.seg.stg .sc{font-size:16px;font-weight:800}
+/* iOS: Kopfzeile fest statt klebend (sonst legt iOS 26 den Unschärfe-Verlauf der Statusleiste über sie), Seite immer mindestens so hoch wie der Bildschirm (sonst rutscht die untere Leiste auf kurzen Seiten hoch) */
+header{position:fixed;top:0;left:0;right:0}
+body{padding-top:var(--hh,72px);min-height:calc(100vh + 1px);min-height:calc(100dvh + 1px)}
+body.run{padding-top:0}
+.chk{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.selbar{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin:10px 0}
+.selbar .sh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.selbar .sh b{font-size:16px}
+.selbar select.t,.selbar input.t{border-radius:14px}
+.selbar .btn{margin:0}
 </style>
 </head>
 <body>
@@ -318,7 +328,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 F';
+const APP_VERSION='2026-10-23 G';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2978,10 +2988,10 @@ function moveStopTo(t,sid,t2){const x0=t.stops&&t.stops[sid];if(!x0||x0.deleted)
 function selBar(t){
   const ids=msIds(t.id);if(!ids.length)return '';
   const others=S.tours.filter(x=>!x.deleted&&x.type!=='abholung'&&x.id!==t.id&&x.date===t.date&&!x.status);
-  return `<div class="card pad formc" style="margin:8px 0"><div class="n">${ids.length} ${ids.length===1?'Stopp':'Stopps'} gewählt</div>
-    <select class="t" data-msto="${t.id}" style="margin-top:6px"><option value="">Verschieben nach …</option>${others.map(x=>`<option value="${x.id}">${esc(tourName(x))}${x.driver?' · '+esc(x.driver):''}</option>`).join('')}<option value="new">Neue Tour</option></select>
-    <div class="mini" style="margin-top:6px"><input class="t" type="date" id="ms-day-${t.id}" value="${t.date}" style="min-width:0"><button class="btn sec" data-pl="msday" data-v="${t.id}" style="margin:0">Tag ändern</button></div>
-    <div class="mini" style="margin-top:6px"><button class="btn green" data-pl="msdone" data-v="${t.id}" style="margin:0">Als geliefert markieren</button><button class="btn sec" data-pl="msclear" data-v="${t.id}" style="margin:0">Auswahl aufheben</button></div></div>`}
+  return `<div class="selbar"><div class="sh"><b>${ids.length} ${ids.length===1?'Stopp':'Stopps'} gewählt</b><button class="claim" data-pl="msclear" data-v="${t.id}">Auswahl aufheben</button></div>
+    <select class="t" data-msto="${t.id}"><option value="">Verschieben nach …</option>${others.map(x=>`<option value="${x.id}">${esc(tourName(x))}${x.driver?' · '+esc(x.driver):''}</option>`).join('')}<option value="new">Neue Tour</option></select>
+    <div class="mini" style="margin-top:8px"><input class="t" type="date" id="ms-day-${t.id}" value="${t.date}" style="min-width:0"><button class="btn sec" data-pl="msday" data-v="${t.id}">Tag ändern</button></div>
+    <button class="btn green go" data-pl="msdone" data-v="${t.id}" style="margin-top:8px">Als geliefert markieren</button></div>`}
 function msMove(tid,target){const t=S.tours.find(x=>x.id===tid);if(!t)return;const ids=msIds(tid);if(!ids.length)return;
   const t2=target==='new'?newTourOn(t.date,t.size):S.tours.find(x=>x.id===target);if(!t2)return;
   ids.forEach(id=>moveStopTo(t,id,t2));ids.forEach(id=>delete cur.msel[tid+'|'+id]);save();toast(ids.length+(ids.length===1?' Stopp':' Stopps')+' verschoben nach '+tourName(t2));render()}
@@ -3662,6 +3672,7 @@ if(LANG==='ro'){
 render();
 if(LANG==='ro')i18nTree(document.body);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+{const hd=document.querySelector('header'),setHH=()=>{if(hd&&hd.offsetHeight)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px')};setHH();window.addEventListener('resize',setHH);window.addEventListener('orientationchange',()=>setTimeout(setHH,200));if(window.ResizeObserver&&hd)new ResizeObserver(setHH).observe(hd);}
 </script>
 <script type="module" src="cloud.js"></script>
 </body>
