@@ -336,7 +336,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-10-23 I';
+const APP_VERSION='2026-11-09 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3684,6 +3684,20 @@ if(LANG==='ro'){
 render();
 if(LANG==='ro')i18nTree(document.body);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* Notbremse: bleibt die App leer oder bei "Lade ..." hängen, erscheint nach 10 Sekunden eine Diagnose mit Neu laden und Zurücksetzen */
+{window.__errs=[];window.addEventListener('error',e=>{window.__errs.push(String(e.message||e)+(e.lineno?' @'+e.lineno:''))});window.addEventListener('unhandledrejection',e=>{window.__errs.push('Zusage: '+String((e.reason&&e.reason.message)||e.reason))});
+  let t0=Date.now();
+  setInterval(()=>{try{const a=document.getElementById('app');if(!a||document.body.classList.contains('run'))return;
+    const txt=(a.innerText||'').trim(),stuck=!txt||/^(Lade …|Daten werden geladen …)$/.test(txt);
+    if(!stuck){t0=Date.now();return}
+    if(Date.now()-t0<10000||a.querySelector('#diag'))return;
+    const c=(typeof cur!=='undefined'&&cur.cloud)||{},er=(window.__errs||[]).slice(-3).map(x=>String(x).replace(/[<>&]/g,' ')).join(' | ');
+    a.innerHTML=`<div id="diag" class="card pad" style="margin:24px 0"><div class="n" style="font-size:18px">Die App lädt nicht richtig</div><div class="p" style="margin:8px 0">Zuerst "Neu laden". Hilft das nicht, "Zurücksetzen" löscht nur den Zwischenspeicher dieses Geräts, deine Daten bleiben in der Cloud.</div>
+      <div class="p" style="word-break:break-word">Version ${APP_VERSION} · Status ${c.status||'?'} · bereit ${window.APP&&APP.ready?'ja':'nein'}${er?' · Fehler: '+er:''}</div>
+      <button class="btn" id="diag-reload" style="margin-top:12px">Neu laden</button><button class="btn sec" id="diag-reset">Zurücksetzen und neu laden</button></div>`;
+    document.getElementById('diag-reload').onclick=()=>location.reload();
+    document.getElementById('diag-reset').onclick=async()=>{try{localStorage.removeItem(KEY)}catch(e){}try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}try{const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()))}catch(e){}location.reload()};
+  }catch(e){}},3000);}
 {try{const v=localStorage.getItem('droste-hv');if(v)document.body.classList.add('hv-'+v)}catch(e){}}
 {const hd=document.querySelector('header'),setHH=()=>{if(hd&&hd.offsetHeight)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px')};setHH();window.addEventListener('resize',setHH);window.addEventListener('orientationchange',()=>setTimeout(setHH,200));if(window.ResizeObserver&&hd)new ResizeObserver(setHH).observe(hd);}
 </script>
