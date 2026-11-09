@@ -328,6 +328,23 @@ body.hv-h header{background:rgba(44,70,61,.98)}
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
 
+<script>
+/* Notbremse ganz früh und ohne Abhängigkeit: fängt Fehler und nicht ladbare Dateien ab und zeigt nach 9 Sekunden eine Diagnose, falls die App leer bleibt */
+window.__errs=[];
+window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName&&(t.tagName==='SCRIPT'||t.tagName==='LINK')){window.__errs.push('Datei nicht ladbar: '+String(t.src||t.href||'').split('/').pop());return}window.__errs.push(String((e&&e.message)||e)+(e&&e.lineno?' @'+e.lineno:''))},true);
+window.addEventListener('unhandledrejection',function(e){window.__errs.push('Zusage: '+String((e.reason&&e.reason.message)||e.reason))});
+setTimeout(function(){try{
+  var a=document.getElementById('app');if(!a||document.getElementById('diag'))return;
+  var txt=(a.innerText||'').replace(/\s+/g,' ').trim();
+  if(txt&&!/^(Lade …|Daten werden geladen …)$/.test(txt))return;
+  var er=(window.__errs||[]).slice(-4).join(' | ').replace(/[<>&]/g,' ');
+  var ui='';try{ui=navigator.userAgent.replace(/[<>&]/g,' ').slice(0,160)}catch(x){}
+  a.innerHTML='<div id="diag" style="margin:24px 0;padding:16px;border:1px solid #3a5a4e;border-radius:16px;background:rgba(0,0,0,.25);color:#f5f7f6;font:16px/1.4 -apple-system,Helvetica,Arial,sans-serif"><div style="font-size:18px;font-weight:700">Die App lädt nicht richtig</div><div style="margin:8px 0;color:#c4cdc9">Zuerst "Neu laden". Hilft das nicht: "Zurücksetzen" löscht nur den Zwischenspeicher dieses Geräts, die Daten bleiben in der Cloud.</div><div style="font-size:13px;color:#9aa7a2;word-break:break-word">'+(typeof APP_VERSION!=='undefined'?'Version '+APP_VERSION+' · ':'Hauptprogramm nicht gestartet · ')+(window.APP?'App ja':'App nein')+(typeof cur!=='undefined'&&cur.cloud?' · Status '+cur.cloud.status:'')+(er?' · Fehler: '+er:'')+'<br>'+ui+'</div><button id="diag-reload" style="display:block;width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:#0071e3;color:#fff;font-size:16px;font-weight:600">Neu laden</button><button id="diag-reset" style="display:block;width:100%;margin-top:8px;padding:14px;border:1px solid #3a5a4e;border-radius:14px;background:none;color:#f5f7f6;font-size:16px;font-weight:600">Zurücksetzen und neu laden</button></div>';
+  document.getElementById('diag-reload').onclick=function(){location.reload()};
+  document.getElementById('diag-reset').onclick=function(){try{localStorage.removeItem('droste-verkauf-v1')}catch(x){}try{caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))})}catch(x){}try{navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}).then(function(){location.reload()},function(){location.reload()})}catch(x){location.reload()}setTimeout(function(){location.reload()},1500)};
+}catch(x){}},9000);
+</script>
+<script nomodule>document.addEventListener('DOMContentLoaded',function(){var a=document.getElementById('app');if(a)a.innerHTML='<div style="margin:24px 0;padding:16px;color:#f5f7f6;font:16px/1.4 sans-serif"><b>Dieser Browser ist zu alt für die App.</b><br>Bitte Chrome oder Safari aktualisieren oder einen anderen Browser öffnen.</div>'});</script>
 <script src="firebase-config.js"></script>
 <script src="i18n-ro.js"></script>
 <script>
@@ -336,7 +353,7 @@ const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'
 const LOC=LANG==='ro'?'ro-RO':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-09 A';
+const APP_VERSION='2026-11-09 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3347,7 +3364,7 @@ function vDaten(){
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Mitarbeiter für die Planung</h2>
@@ -3685,7 +3702,7 @@ render();
 if(LANG==='ro')i18nTree(document.body);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 /* Notbremse: bleibt die App leer oder bei "Lade ..." hängen, erscheint nach 10 Sekunden eine Diagnose mit Neu laden und Zurücksetzen */
-{window.__errs=[];window.addEventListener('error',e=>{window.__errs.push(String(e.message||e)+(e.lineno?' @'+e.lineno:''))});window.addEventListener('unhandledrejection',e=>{window.__errs.push('Zusage: '+String((e.reason&&e.reason.message)||e.reason))});
+{window.__errs=window.__errs||[];
   let t0=Date.now();
   setInterval(()=>{try{const a=document.getElementById('app');if(!a||document.body.classList.contains('run'))return;
     const txt=(a.innerText||'').trim(),stuck=!txt||/^(Lade …|Daten werden geladen …)$/.test(txt);
@@ -3701,6 +3718,6 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch((
 {try{const v=localStorage.getItem('droste-hv');if(v)document.body.classList.add('hv-'+v)}catch(e){}}
 {const hd=document.querySelector('header'),setHH=()=>{if(hd&&hd.offsetHeight)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px')};setHH();window.addEventListener('resize',setHH);window.addEventListener('orientationchange',()=>setTimeout(setHH,200));if(window.ResizeObserver&&hd)new ResizeObserver(setHH).observe(hd);}
 </script>
-<script type="module" src="cloud.js"></script>
+<script type="module" src="cloud.js" onerror="window.__errs.push('cloud.js nicht ladbar')"></script>
 </body>
 </html>
