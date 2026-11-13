@@ -1,6 +1,10 @@
 window.RO_DICT={
 "Standort": "Locație",
 "Baumstandorte": "Locații pomi",
+"Lieferdatum (optional)": "Data livrării (opțional)",
+"Lieferung am": "Livrare pe",
+"Die Karte braucht Internet.": "Harta necesită internet.",
+"Blau: zu sägen, grün: gesägt. Punkt antippen für Details. Namen erscheinen beim Hineinzoomen.": "Albastru: de tăiat, verde: tăiat. Atinge un punct pentru detalii. Numele apar la mărire.",
 "Schonung wählen": "Alege plantația",
 "Versionsverlauf": "Istoric versiuni",
 "In der Planung als Auftrag angelegt.": "Creat ca lucrare în planificare.",

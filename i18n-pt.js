@@ -1,6 +1,10 @@
 window.PT_DICT={
 "Standort": "Localização",
 "Baumstandorte": "Locais das árvores",
+"Lieferdatum (optional)": "Data de entrega (opcional)",
+"Lieferung am": "Entrega em",
+"Die Karte braucht Internet.": "O mapa precisa de internet.",
+"Blau: zu sägen, grün: gesägt. Punkt antippen für Details. Namen erscheinen beim Hineinzoomen.": "Azul: a serrar, verde: serrado. Toque num ponto para detalhes. Os nomes aparecem ao ampliar.",
 "Schonung wählen": "Escolher plantação",
 "Auswertung öffnen": "Abrir análise",
 "Versionsverlauf": "Histórico de versões",
