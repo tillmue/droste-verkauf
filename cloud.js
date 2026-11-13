@@ -25,7 +25,7 @@ function initCloud(FB) {
   const T = window.APP;
   const app = FB.initializeApp(window.FIREBASE_CONFIG);
   const auth = FB.getAuth(app);
-  auth.languageCode = (() => { try { return localStorage.getItem('droste-lang') === 'ro' ? 'ro' : 'de'; } catch (e) { return 'de'; } })();
+  auth.languageCode = (() => { try { return (['ro', 'pt'].includes(localStorage.getItem('droste-lang')) ? localStorage.getItem('droste-lang') : 'de'); } catch (e) { return 'de'; } })();
   let db;
   try {
     db = FB.initializeFirestore(app, { experimentalAutoDetectLongPolling: true, localCache: FB.persistentLocalCache({ tabManager: FB.persistentMultipleTabManager() }) });
@@ -207,7 +207,7 @@ function initCloud(FB) {
 
   /* Push: Token holen und am Profil speichern (iPhone nur, wenn die App auf dem Home-Bildschirm liegt) */
   let pushChecked = false;
-  const curLang = () => { try { return localStorage.getItem('droste-lang') === 'ro' ? 'ro' : 'de'; } catch (e) { return 'de'; } };
+  const curLang = () => { try { return (['ro', 'pt'].includes(localStorage.getItem('droste-lang')) ? localStorage.getItem('droste-lang') : 'de'); } catch (e) { return 'de'; } };
   async function saveToken() {
     if (!(FB.isSupported && FB.getMessaging && await FB.isSupported())) throw new Error('unsupported');
     const reg = await navigator.serviceWorker.ready;

@@ -315,7 +315,7 @@ body.run{padding-top:0}
 </style>
 </head>
 <body>
-<header><img src="logo.svg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button></div><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="guide" aria-label="Anleitung" title="Anleitung"></button><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Einstellungen"><span id="av"></span></button><button id="who" aria-label="Einstellungen"><b id="pname"></b><small id="hstat"></small></button></header>
+<header><img src="logo.svg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button><button data-lang="pt">PT</button></div><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="guide" aria-label="Anleitung" title="Anleitung"></button><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Einstellungen"><span id="av"></span></button><button id="who" aria-label="Einstellungen"><b id="pname"></b><small id="hstat"></small></button></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -339,13 +339,14 @@ setTimeout(function(){try{
 <script nomodule>document.addEventListener('DOMContentLoaded',function(){var a=document.getElementById('app');if(a)a.innerHTML='<div style="margin:24px 0;padding:16px;color:#f5f7f6;font:16px/1.4 sans-serif"><b>Dieser Browser ist zu alt für die App.</b><br>Bitte Chrome oder Safari aktualisieren oder einen anderen Browser öffnen.</div>'});</script>
 <script src="firebase-config.js"></script>
 <script src="i18n-ro.js"></script>
+<script src="i18n-pt.js"></script>
 <script>
 const KEY='droste-verkauf-v1';
-const LANG=(()=>{try{return localStorage.getItem('droste-lang')==='ro'?'ro':'de'}catch(e){return 'de'}})();
-const LOC=LANG==='ro'?'ro-RO':'de-DE';
+const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'||l==='pt'?l:'de'}catch(e){return 'de'}})();
+const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-09 C';
+const APP_VERSION='2026-11-13 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -437,8 +438,8 @@ function prodQty(e,acc){
 const shiftDate=(d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
 const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString(LOC,{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
 const shortD=d=>d.slice(8)+'.'+d.slice(5,7)+'.';
-const WD=LANG==='ro'?['Du','Lu','Ma','Mi','Jo','Vi','Sâ']:['So','Mo','Di','Mi','Do','Fr','Sa'];
-const WDS=LANG==='ro'?['Lu','Ma','Mi','Jo','Vi','Sâ','Du']:['Mo','Di','Mi','Do','Fr','Sa','So'];
+const WD=LANG==='ro'?['Du','Lu','Ma','Mi','Jo','Vi','Sâ']:LANG==='pt'?['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']:['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WDS=LANG==='ro'?['Lu','Ma','Mi','Jo','Vi','Sâ','Du']:LANG==='pt'?['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']:['Mo','Di','Mi','Do','Fr','Sa','So'];
 
 /* ---------- Auswertung ---------- */
 function stats(sids){
@@ -909,7 +910,7 @@ function pushBlock(){
 function accountBlock(){
   const ver=`<div class="hint">App-Version ${APP_VERSION}</div>`;
   const view=`<label class="f">Darstellung</label><div class="seg"><button data-view="bar" class="${homeMode()?'':'on'}">Leiste</button><button data-view="home" class="${homeMode()?'on':''}">Startbildschirm</button></div>`;
-  const lang=`<label class="f">Sprache</label><div class="seg"><button data-lang="de" class="${LANG==='de'?'on':''}">Deutsch</button><button data-lang="ro" class="${LANG==='ro'?'on':''}">Română</button></div>`;
+  const lang=`<label class="f">Sprache</label><div class="seg"><button data-lang="de" class="${LANG==='de'?'on':''}">Deutsch</button><button data-lang="ro" class="${LANG==='ro'?'on':''}">Română</button><button data-lang="pt" class="${LANG==='pt'?'on':''}">Português</button></div>`;
   if(CLOUD){const c=(cur.cloud&&cur.cloud.profile)||{};
     return `<div class="kv"><span>Name</span><span>${esc(S.me)}</span></div><div class="kv"><span>E-Mail</span><span>${esc(c.email||'')}</span></div><div class="kv"><span>Rolle</span><span>${ROLE[roleOf(S.me)]}</span></div>${lang}${view}${pushBlock()}<button class="btn sec" id="signOutBtn">Abmelden</button>${ver}`}
   return `${lang}${view}<label class="f">Angemeldet als (Testversion, später Login)</label>${meSelect()}<div class="hint">Rolle: ${ROLE[roleOf(S.me)]}</div>${ver}`;
@@ -3664,30 +3665,30 @@ document.addEventListener('change',ev=>{
 });
 
 /* ---------- Sprache: Übersetzung der Oberfläche (Deutsch / Rumänisch) ---------- */
-const RO=window.RO_DICT||{},ROP=window.RO_PATTERNS||[];
+const RO=(LANG==='pt'?window.PT_DICT:window.RO_DICT)||{},ROP=(LANG==='pt'?window.PT_PATTERNS:window.RO_PATTERNS)||[];
 function trs(str){
-  if(LANG!=='ro'||!str)return str;
+  if(LANG==='de'||!str)return str;
   const k=str.trim();if(!k)return str;
   let r=RO[k];
   if(r===undefined)for(const [re,fn] of ROP){const m=k.match(re);if(m){r=fn(...m);break}}
   return r===undefined?str:str.replace(k,()=>r);
 }
 function i18nTree(n){
-  if(LANG!=='ro'||!n)return;
+  if(LANG==='de'||!n)return;
   if(n.nodeType===3){const v=trs(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v;return}
   if(n.nodeType!==1)return;
   for(const a of ['placeholder','title','aria-label','alt']){if(n.hasAttribute(a)){const v=trs(n.getAttribute(a));if(v!==n.getAttribute(a))n.setAttribute(a,v)}}
   if(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.tagName))return;
   n.childNodes.forEach(i18nTree);
 }
-if(LANG==='ro'){
+if(LANG!=='de'){
   const _al=window.alert.bind(window),_cf=window.confirm.bind(window);
   window.alert=m=>_al(trs(String(m)));window.confirm=m=>_cf(trs(String(m)));const _pr=window.prompt.bind(window);window.prompt=(m,d)=>_pr(trs(String(m)),d);
   new MutationObserver(ms=>ms.forEach(m=>{m.addedNodes.forEach(i18nTree);if(m.type==='characterData')i18nTree(m.target)})).observe(document.body,{childList:true,subtree:true,characterData:true});
 }
 
 render();
-if(LANG==='ro')i18nTree(document.body);
+if(LANG!=='de')i18nTree(document.body);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 /* Notbremse: bleibt die App leer oder bei "Lade ..." hängen, erscheint nach 10 Sekunden eine Diagnose mit Neu laden und Zurücksetzen */
 {window.__errs=window.__errs||[];
