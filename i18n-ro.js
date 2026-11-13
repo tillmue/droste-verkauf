@@ -1,5 +1,6 @@
 window.RO_DICT={
 "Standort": "Locație",
+"Baumstandorte": "Locații pomi",
 "Schonung wählen": "Alege plantația",
 "Versionsverlauf": "Istoric versiuni",
 "In der Planung als Auftrag angelegt.": "Creat ca lucrare în planificare.",

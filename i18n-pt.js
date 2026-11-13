@@ -1,5 +1,6 @@
 window.PT_DICT={
 "Standort": "Localização",
+"Baumstandorte": "Locais das árvores",
 "Schonung wählen": "Escolher plantação",
 "Auswertung öffnen": "Abrir análise",
 "Versionsverlauf": "Histórico de versões",

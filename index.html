@@ -377,7 +377,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 H';
+const APP_VERSION='2026-11-13 I';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -600,10 +600,10 @@ function render(){
   {const ar=$('#asrole');if(ar){if(realRole(S.me)==='demo'){ar.style.display='';ar.innerHTML=ASROLES.map(r=>`<option value="${r}" ${roleOf(S.me)===r?'selected':''}>${ROLE[r]}</option>`).join('')}else ar.style.display='none'}}
   if(tab==='erfassen'&&!has('verkauf'))tab='staende';
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
-  if(tab==='lieferungen'&&!has('lieferungen'))tab='plan';
+  if(tab==='lieferungen'&&!has('lieferungen')&&!has('bstand'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
   if(tab==='auswertung'&&!isAdmin())tab='einstellungen';
-  const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,has('lieferungen')?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
+  const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,(has('lieferungen')||has('bstand'))?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
   {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise','kueche'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   if(homeMode()){
@@ -2402,7 +2402,7 @@ function vPacken(t){
     ${rows||'<div class="hint">Diese Tour hat noch keine Bäume aus Aufträgen.</div>'}
     ${fin}`;
 }
-function kindSeg(kind,fahrer,plan){return fahrer?'':`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg ptabs">${[['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']].concat(plan?[['best','Bestellung']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
+function kindSeg(kind,fahrer,plan){const sp=has('bstand'),onlySp=sp&&!has('lieferungen');if(fahrer)return !sp?'':`<div class="seg ptabs">${(onlySp?[]:[['lief','Lieferung']]).concat([['spot','Standorte']]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`;return`${isAdmin()?'<div style="text-align:right"><button class="claim" data-pl="resettest">Zurücksetzen (Test)</button></div>':''}<div class="seg ptabs">${[['lief','Lieferung'],['abh','Abholung'],['ges','Gesamt']].concat(plan?[['best','Bestellung']]:[]).concat(sp?[['spot','Standorte']]:[]).map(([k,l])=>`<button class="${kind===k?'on':''}" data-pl="lkind" data-v="${k}">${l}</button>`).join('')}</div>`}
 function orderCard(o){
   const b=orderBohren(o),addr=orderAddr(o),sv=orderService(o),stand=(o.positions||[]).filter(p=>p.cat==='Ständer').map(posLabel).join(', ');
   const when=(o.from?wdD(o.from):'')+(o.to&&o.to!==o.from?' bis '+wdD(o.to):'');
@@ -3181,11 +3181,13 @@ function vLieferungen(){
   const td=todayStr(),plan=has('lieferplanung');
   if(cur.packTour){const pt=S.tours.find(x=>x.id===cur.packTour&&!x.deleted);if(pt&&(plan||canRun(pt))){vPacken(pt);return}cur.packTour=''}
   const fahrer=!has('toursAll')&&!has('lieferplanung');
-  const kinds=['lief','abh','ges'].concat(plan?['best']:[]);
-  const kind=fahrer?'lief':kinds.includes(cur.lkind)?cur.lkind:'lief';
+  const spOk=has('bstand'),onlySp=spOk&&!has('lieferungen');
+  const kinds=['lief','abh','ges'].concat(plan?['best']:[]).concat(spOk?['spot']:[]);
+  const kind=onlySp?'spot':fahrer?(cur.lkind==='spot'&&spOk?'spot':'lief'):kinds.includes(cur.lkind)?cur.lkind:'lief';
   if(!cur.lday)cur.lday=td;if(!cur.lcal)cur.lcal=cur.lday.slice(0,7);
   syncPickups();
   if(kind==='best'){vBestellungen(kind,fahrer,plan);return}
+  if(kind==='spot'){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${spotsView()}`;return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||isCrew(t,S.me)));
   const nOf=t=>isP(t)?tourStops(t).length:Math.max(tourStops(t).length,1);
@@ -3305,7 +3307,7 @@ function spotForm(){
     ${f.id?'<button class="btn red" data-pl="spdel" style="margin-top:10px">Löschen</button>':''}
     <div class="mini" style="margin-top:10px"><button class="btn sec" data-pl="spcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="spsave" style="margin:0">Speichern</button></div></div>`}
 function vFeld(){
-  if(cur.fmode==='standorte'&&!has('bstand'))cur.fmode='netz';
+  if(cur.fmode==='standorte')cur.fmode='netz';
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]},schAddr=schon(cur.fs).address||'';
   const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div>${schAddr?`<div style="display:flex;gap:8px;margin-top:10px"><a class="claim" href="${gmapsUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a><a class="claim" href="${appleUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Karten</a></div>`:''}</section>
 `,sch=schon(cur.fs),murl=imgUrl(sch.img),pins=sch.pins||{},hasMap=!!(murl&&o.gaenge.some(g=>pins[g])),
@@ -3313,8 +3315,7 @@ function vFeld(){
     vor=o.gaenge.filter(g=>/^Vorgew/i.test(g)&&!(hasMap&&pins[g])),gnr=o.gaenge.filter(g=>/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),gsonst=o.gaenge.filter(g=>!/^Vorgew/i.test(g)&&!/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),
     gt=(g,lab)=>`<button class="gtile ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(lab)}</button>`,
     gchips=o.gaenge.length?`<div class="card pad gsel">${gnr.length?`<label class="f" style="margin-top:0">Gänge</label><div class="gnum">${gnr.map(g=>gt(g,g.replace(/^Gang\s*/i,''))).join('')}</div>`:''}${vor.length+gsonst.length?`<label class="f" ${gnr.length?'':'style="margin-top:0"'}>Vorgewände</label><div class="gwide">${[...vor,...gsonst].map(g=>gt(g,g)).join('')}</div>`:''}</div>`:'';
-  const seg=`<div class="seg">${[['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht'],has('bstand')?['standorte','Standorte']:null].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
-  if(mode==='standorte'){$('#app').innerHTML=`${seg}${spotsView()}`;return}
+  const seg=`<div class="seg">${[['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht']].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
   if(mode==='uebersicht'){
     const bySch={},perSort={};let tot=0;
     S.feld.forEach(d=>{const bal=Object.entries(d.bal||{}).filter(([,b])=>b.q>0);if(!bal.length)return;
