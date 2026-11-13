@@ -279,6 +279,10 @@ nav button.on{background:var(--blue);color:#fff}
 .seg.ptabs button{font-size:13px;padding:9px 1px}
 .standpick{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin:4px 0 14px;color:var(--text);font:inherit}
 .standpick small{display:block;color:var(--mut);font-size:13px;font-weight:600}.standpick b{display:block;font-size:21px;letter-spacing:-.01em}.standpick i{font-style:normal;color:var(--link);font-weight:700;font-size:15px;white-space:nowrap}
+.gsel{margin:0 0 12px}.gsel .f{display:block;margin:12px 0 6px}
+.gnum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.gwide{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gtile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:14px;min-height:54px;font:inherit;font-size:21px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:6px 8px;text-align:center;line-height:1.2}
+.gwide .gtile{font-size:16px}.gtile.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 6px}
 .stile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:16px;padding:16px 10px;font:inherit;text-align:center;min-height:68px;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .stile b{font-size:17px;font-weight:700}.stile small{color:var(--mut);font-size:12px}
@@ -346,7 +350,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 C';
+const APP_VERSION='2026-11-13 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -536,6 +540,13 @@ function standSel(){
   return `<div class="n" style="font-size:21px;margin:0 0 12px">Stand wählen</div>${k==='z'?`<button class="btn sec" data-pl="sselpick" data-v="@all" style="margin:0 0 12px">Alle Stände (Gesamt)</button>`:''}
     <div class="sgrid">${S.stands.map(x=>tile(x.id,x.name,x.address?esc(String(x.address).split(',')[0]):'')).join('')}</div>
     ${k==='v'&&pn.length?`<h3>Partnerstände</h3><div class="sgrid">${pn.map(x=>tile('p:'+x.n,x.n,'')).join('')}</div>`:''}
+    <button class="btn sec" data-pl="sselclose" style="margin:14px 0 0">Schließen</button>`;
+}
+function fKarte(){
+  const sch=schon(cur.fs),url=imgUrl(sch.img);
+  return `<div class="n" style="font-size:21px;margin:0 0 12px">${esc(cur.fs)}</div>
+    ${sch.address?`${isLL(sch.address)?'':`<div class="n" style="margin:0 0 8px">${esc(sch.address)}</div>`}<div class="mini" style="margin:0 0 12px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
+    ${url?`<div class="fmap" data-pl="fzoom" data-v="${esc(url)}" style="cursor:zoom-in"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf die Karte zum Vergrößern. Dann mit zwei Fingern zoomen.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}
     <button class="btn sec" data-pl="sselclose" style="margin:14px 0 0">Schließen</button>`;
 }
 function schonSel(){
@@ -1447,7 +1458,7 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);if(cur.sheet==='stopf')cur.stopOpen=false;if(cur.sheet==='tourf')cur.tourOpen=false;closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='schsel'?schonSel():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():'';
+  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='schsel'?schonSel():cur.sheet==='fkarte'?fKarte():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
 }
@@ -1928,6 +1939,7 @@ document.addEventListener('click',ev=>{
   if(a==='besopen'){cur.sheet='bes';return render()}
   if(a==='sselopen'){cur.ssk=v;cur.sheet='standsel';return render()}
   if(a==='schselopen'){cur.sheet='schsel';return render()}
+  if(a==='fkarte'){cur.sheet='fkarte';return render()}
   if(a==='schpick'){cur.fs=v;cur.fg='';cur.frest=false;return closeSheet()}
   if(a==='sselclose')return closeSheet();
   if(a==='sselpick'){const k=cur.ssk;if(k==='p')cur.pstand=v;else if(k==='z'){if(v==='@all')cur.zst=false;else{cur.stand=v;cur.zst=true}}else cur.stand=v;
@@ -3159,7 +3171,7 @@ function shrinkImage(file,maxW){
 const parseOrte=t=>t.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf(':');return i<0?{name:l,gaenge:[]}:{name:l.slice(0,i).trim(),gaenge:l.slice(i+1).split(',').map(x=>x.trim()).filter(Boolean)}});
 const orteText=()=>(S.hofInfo&&S.hofInfo.orte)||DEF_ORTE;
 const orteList=()=>parseOrte(orteText());
-cur.fmode='karte';cur.fs='';cur.fg='';cur.frest=false;cur.fextra=[];
+cur.fmode='netz';cur.fs='';cur.fg='';cur.frest=false;cur.fextra=[];
 function curOrt(){
   const os=orteList();let s=(cur.fs&&os.some(x=>x.name===cur.fs))?cur.fs:(os[0]||{name:'Vorgewände'}).name;cur.fs=s;
   const o=os.find(x=>x.name===s)||{gaenge:[]};
@@ -3207,19 +3219,14 @@ function spotForm(){
     ${f.id?'<button class="btn red" data-pl="spdel" style="margin-top:10px">Löschen</button>':''}
     <div class="mini" style="margin-top:10px"><button class="btn sec" data-pl="spcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="spsave" style="margin:0">Speichern</button></div></div>`}
 function vFeld(){
-  if(cur.fmode==='standorte'&&!has('bstand'))cur.fmode='karte';
+  if(cur.fmode==='standorte'&&!has('bstand'))cur.fmode='netz';
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]};
-  const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div></section>
-`,gchips=o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'';
-  const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht'],has('bstand')?['standorte','Standorte']:null].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div><div style="display:flex;gap:8px;flex:none"><button class="claim" data-pl="fkarte">Karte</button>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div></div></section>
+`,vor=o.gaenge.filter(g=>/^Vorgew/i.test(g)),gnr=o.gaenge.filter(g=>/^Gang\s*\d+$/i.test(g)),gsonst=o.gaenge.filter(g=>!vor.includes(g)&&!gnr.includes(g)),
+    gt=(g,lab)=>`<button class="gtile ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(lab)}</button>`,
+    gchips=o.gaenge.length?`<div class="card pad gsel">${gnr.length?`<label class="f" style="margin-top:0">Gänge</label><div class="gnum">${gnr.map(g=>gt(g,g.replace(/^Gang\s*/i,''))).join('')}</div>`:''}${vor.length+gsonst.length?`<label class="f" ${gnr.length?'':'style="margin-top:0"'}>Vorgewände</label><div class="gwide">${[...vor,...gsonst].map(g=>gt(g,g)).join('')}</div>`:''}</div>`:'';
+  const seg=`<div class="seg">${[['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht'],has('bstand')?['standorte','Standorte']:null].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
   if(mode==='standorte'){$('#app').innerHTML=`${seg}${spotsView()}`;return}
-  if(mode==='karte'){
-    const sch=schon(cur.fs),url=imgUrl(sch.img);
-    $('#app').innerHTML=`${chips}${seg}
-      ${sch.address?`<div class="card pad"><label class="f">${isLL(sch.address)?'Standort':'Adresse'}</label>${isLL(sch.address)?'':`<div class="n">${esc(sch.address)}</div>`}<div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
-      ${url?`<div class="fmap" data-pl="fzoom" data-v="${esc(url)}" style="cursor:zoom-in"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf die Karte zum Vergrößern. Dann mit zwei Fingern zoomen.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}`;
-    return;
-  }
   if(mode==='uebersicht'){
     const bySch={},perSort={};let tot=0;
     S.feld.forEach(d=>{const bal=Object.entries(d.bal||{}).filter(([,b])=>b.q>0);if(!bal.length)return;
