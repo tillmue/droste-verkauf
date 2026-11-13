@@ -7,23 +7,23 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Droste">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#2c463d">
+<meta name="theme-color" content="#0e1813">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Droste Verkauf</title>
 <style>
 :root{
   color-scheme:dark;
-  --bg:#2c463d; --fill:rgba(0,0,0,.26); --card:#22372f; --text:#f5f7f6; --mut:#b4c8c3; --line:rgba(255,255,255,.18);
+  --bg:#365443; --page:#111d17; --fill:rgba(0,0,0,.32); --card:#2b4338; --card2:#365443; --text:#f5f7f6; --mut:#b9ccc7; --line:rgba(255,255,255,.17);
   --green:#2e9e4f; --red:#f0503c; --blue:#0071e3; --link:#7cc0ff; --panel:rgba(124,192,255,.16); --orange:#ffae42;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%)}
-html{min-height:100%;background-color:#0f1b16;background-image:linear-gradient(180deg,#2c463d 0%,#223a32 40%,#162620 75%,#0f1b16 100%);background-repeat:no-repeat;background-size:100% 100vh}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,#1a2b23 0%,#14221b 45%,#0f1a15 100%)}
+html{min-height:100%;background-color:#0f1a15;background-image:linear-gradient(180deg,#1a2b23 0%,#14221b 45%,#0f1a15 100%);background-repeat:no-repeat;background-size:100% 100vh}
 body{background:transparent;color:var(--text);font:16px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
   padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-header{flex-wrap:wrap;background:#2c463d;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
+header{flex-wrap:wrap;background:#0e1813;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
 header img{height:38px;display:block;border-radius:4px;background:#fff}
 #hofbar{order:3;flex-basis:100%;margin-top:6px;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.25);color:var(--text);text-decoration:none;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -184,7 +184,7 @@ tr.tot td{font-weight:700;border-top:2px solid var(--text)}
 h2{font-size:20px;margin:18px 0 8px;letter-spacing:-.01em}
 h3{font-size:15px;margin:14px 0 4px;color:var(--mut);font-weight:600}
 .mini{display:flex;gap:8px}.mini>*{flex:1}
-nav{position:fixed;bottom:0;left:0;right:0;background:#101d18;border-top:1px solid var(--line);display:flex;
+nav{position:fixed;bottom:0;left:0;right:0;background:#0e1813;border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom);z-index:6}
 nav button{flex:1;border:0;background:none;padding:10px 2px 8px;font-size:11px;color:var(--mut)}
 nav button b{display:block;font-size:20px;font-weight:400}
@@ -326,6 +326,23 @@ body.run{padding-top:0}
 .selbar .sh b{font-size:16px}
 .selbar select.t,.selbar input.t{border-radius:14px}
 .selbar .btn{margin:0}
+
+/* Ebenen: Seite dunkel, Karten heller mit Rand und Schatten, Einsaetze in Karten wieder dunkel, Pop-ups am hellsten */
+.blk,.tile,.qtile,.tour,.seg,.rtile{background:var(--card);border:1px solid rgba(255,255,255,.15);box-shadow:0 3px 12px rgba(0,0,0,.35)}
+.seg{padding:4px;border-radius:14px}
+.blk{border-radius:20px}
+.blk .tile,.blk .qtile,.blk .seg,.blk .rtile,.blk .tour,.sheetbox .tile,.sheetbox .qtile,.sheetbox .seg,.sheetbox .rtile{background:var(--fill);box-shadow:none;border-color:rgba(255,255,255,.12)}
+.qtile.g{border-color:rgba(46,158,79,.85)}.qtile.o{border-color:rgba(255,174,66,.9)}
+.sheetbox{background:var(--card2);border-color:rgba(255,255,255,.22)}
+.sheetbox .blk{background:var(--fill);box-shadow:none}
+.wxd,.mcal,.infobox,.formc{background:var(--card)!important;border:1px solid rgba(255,255,255,.15)!important;box-shadow:0 3px 12px rgba(0,0,0,.35)}
+.blk .wxd,.blk .mcal,.blk .infobox,.blk .formc,.sheetbox .wxd,.sheetbox .mcal,.sheetbox .infobox,.sheetbox .formc{background:var(--fill)!important;box-shadow:none;border-color:rgba(255,255,255,.12)!important}
+.stile,.gtile,.chip{border-color:rgba(255,255,255,.2)}
+.stile:not(.on){background:var(--fill)}
+input.t,textarea.t,select.t{background:rgba(0,0,0,.36);border-color:rgba(255,255,255,.22)}
+.blk-h h3,.blk>details>summary{font-size:18px}
+h2{font-size:22px;margin:22px 0 10px}
+.row{border-bottom-color:rgba(255,255,255,.12)}
 </style>
 </head>
 <body>
@@ -360,7 +377,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 G';
+const APP_VERSION='2026-11-13 H';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
