@@ -321,3 +321,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - 13.11.2026: **Schonung "Meyer Ossenbrock"** angelegt (Gang 1 bis 4, keine Vorgewände-Schilder, Tor; Bild `schonungen/meyer-ossenbrock.jpg`; Standort `52.294088612637964,8.196592731193261`). Zahlen auf am Original gemessene Wege gesetzt. Dateien `Feld_Meyer_Ossenbrock*` in `[4]Stände/[6]Schonungen/`. 10 Schonungen.
 
 - 13.11.2026: **Schonung "Dreyer Berg"** angelegt (Gang 1 bis 3, Tor; Bild `schonungen/dreyer-berg.jpg`; Standort `52.29939984620297,8.184839576584245`). Zahlen auf am Original gemessene Wege gesetzt. Dateien `Feld_Dreyer_Berg*` in `[4]Stände/[6]Schonungen/`. 11 Schonungen.
+
+- 13.11.2026: **Schonung "Dreyer L"** angelegt (Gang 1 bis 7, Tor; Bild `schonungen/dreyer-l.jpg`; Standort `52.30002242819949,8.186809924657078`). Zahlen auf per Texturmessung gefundene Wegstreifen gesetzt (senkrechte Linie). Dateien `Feld_Dreyer_L*` in `[4]Stände/[6]Schonungen/`. 12 Schonungen.
