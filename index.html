@@ -346,7 +346,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 A';
+const APP_VERSION='2026-11-13 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -537,6 +537,10 @@ function standSel(){
     <div class="sgrid">${S.stands.map(x=>tile(x.id,x.name,x.address?esc(String(x.address).split(',')[0]):'')).join('')}</div>
     ${k==='v'&&pn.length?`<h3>Partnerstände</h3><div class="sgrid">${pn.map(x=>tile('p:'+x.n,x.n,'')).join('')}</div>`:''}
     <button class="btn sec" data-pl="sselclose" style="margin:14px 0 0">Schließen</button>`;
+}
+function schonSel(){
+  const os=orteList(),tile=o=>`<button class="stile ${o.name===cur.fs?'on':''}" data-pl="schpick" data-v="${esc(o.name)}"><b>${esc(o.name)}</b></button>`;
+  return `<div class="n" style="font-size:21px;margin:0 0 12px">Schonung wählen</div><div class="sgrid">${os.map(tile).join('')}</div><button class="btn sec" data-pl="sselclose" style="margin:14px 0 0">Schließen</button>`;
 }
 const standChips=()=>standPick('v');
 function render(){
@@ -1443,7 +1447,7 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet';el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);if(cur.sheet==='stopf')cur.stopOpen=false;if(cur.sheet==='tourf')cur.tourOpen=false;closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():'';
+  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='schsel'?schonSel():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
 }
@@ -1923,6 +1927,8 @@ document.addEventListener('click',ev=>{
   if(a==='ps'){cur.pstand=v;return render()}
   if(a==='besopen'){cur.sheet='bes';return render()}
   if(a==='sselopen'){cur.ssk=v;cur.sheet='standsel';return render()}
+  if(a==='schselopen'){cur.sheet='schsel';return render()}
+  if(a==='schpick'){cur.fs=v;cur.fg='';cur.frest=false;return closeSheet()}
   if(a==='sselclose')return closeSheet();
   if(a==='sselpick'){const k=cur.ssk;if(k==='p')cur.pstand=v;else if(k==='z'){if(v==='@all')cur.zst=false;else{cur.stand=v;cur.zst=true}}else cur.stand=v;
     if(k!=='p'&&v!=='@all'){try{localStorage.setItem(KEY+'-ui',JSON.stringify({stand:cur.stand}))}catch(e){}}
@@ -3202,13 +3208,13 @@ function spotForm(){
 function vFeld(){
   if(cur.fmode==='standorte'&&!has('bstand'))cur.fmode='karte';
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]};
-  const chips=`<div class="chips">${os.map(x=>`<button class="chip ${x.name===cur.fs?'on':''}" data-pl="fs" data-v="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
+  const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div></section>
 `,gchips=o.gaenge.length?`<div class="chips">${o.gaenge.map(g=>`<button class="chip ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'';
   const seg=`<div class="seg">${[['karte','Karte'],['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht'],has('bstand')?['standorte','Standorte']:null].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
   if(mode==='standorte'){$('#app').innerHTML=`${seg}${spotsView()}`;return}
   if(mode==='karte'){
     const sch=schon(cur.fs),url=imgUrl(sch.img);
-    $('#app').innerHTML=`${chips}${seg}<h2 style="margin-top:4px">${esc(cur.fs)}</h2>
+    $('#app').innerHTML=`${chips}${seg}
       ${sch.address?`<div class="card pad"><label class="f">Adresse</label><div class="n">${esc(sch.address)}</div><div class="mini" style="margin-top:8px">${routeBtns(gmapsUrl(sch.address),appleUrl(sch.address))}</div></div>`:'<div class="hint">Noch keine Adresse hinterlegt (Daten, Schonungen).</div>'}
       ${url?`<div class="fmap" data-pl="fzoom" data-v="${esc(url)}" style="cursor:zoom-in"><img src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}"></div><div class="hint">Tippe auf die Karte zum Vergrößern. Dann mit zwei Fingern zoomen.</div>`:`<div class="hint">${sch.img?(IMGERR[sch.img]?'Das Bild konnte nicht geladen werden (Fehler: '+esc(IMGERR[sch.img])+').':'Bild wird geladen …'):'Noch kein Bild für diese Schonung hinterlegt.'}</div>`}`;
     return;

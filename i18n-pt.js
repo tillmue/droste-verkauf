@@ -1,4 +1,5 @@
 window.PT_DICT={
+"Schonung wählen": "Escolher plantação",
 "Auswertung öffnen": "Abrir análise",
 "Versionsverlauf": "Histórico de versões",
 "In der Planung als Auftrag angelegt.": "Criado como ordem no planejamento.",

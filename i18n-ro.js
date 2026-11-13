@@ -1,4 +1,5 @@
 window.RO_DICT={
+"Schonung wählen": "Alege plantația",
 "Versionsverlauf": "Istoric versiuni",
 "In der Planung als Auftrag angelegt.": "Creat ca lucrare în planificare.",
 "Abgesendet": "Trimis",
