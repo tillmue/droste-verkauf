@@ -1,4 +1,5 @@
 window.PT_DICT={
+"Standort": "Localização",
 "Schonung wählen": "Escolher plantação",
 "Auswertung öffnen": "Abrir análise",
 "Versionsverlauf": "Histórico de versões",
