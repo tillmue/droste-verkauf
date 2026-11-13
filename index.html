@@ -281,13 +281,11 @@ nav button.on{background:var(--blue);color:#fff}
 .standpick small{display:block;color:var(--mut);font-size:13px;font-weight:600}.standpick b{display:block;font-size:21px;letter-spacing:-.01em}.standpick i{font-style:normal;color:var(--link);font-weight:700;font-size:15px;white-space:nowrap}
 .fmapw{text-align:center;margin:0 0 10px}.fmapi{position:relative;display:inline-block;max-width:100%;border-radius:14px;overflow:hidden;vertical-align:top}
 .fmapi img{display:block;max-width:100%;max-height:48vh;width:auto;height:auto;cursor:zoom-in}
-.gpin{position:absolute;transform:translate(-50%,-50%);width:27px;height:27px;border-radius:50%;background:#1D1D1F;color:#fff;border:2px solid #fff;font:inherit;font-size:14px;font-weight:700;padding:0;display:flex;align-items:center;justify-content:center;z-index:1;box-shadow:0 1px 4px rgba(0,0,0,.5)}
-.gpill{position:absolute;transform:translate(-50%,-50%);background:#0071E3;color:#fff;border:2px solid #fff;border-radius:12px;font:inherit;font-size:11px;font-weight:700;padding:3px 8px;white-space:nowrap;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.5)}
-.gpill::after{content:'';position:absolute;inset:-8px;border-radius:16px}
+.gpin{position:absolute;transform:translate(-50%,-50%);width:var(--pd,27px);height:var(--pd,27px);border-radius:50%;background:#1D1D1F;color:#fff;border:2px solid #fff;font:inherit;font-size:calc(var(--pd,27px)*.5);font-weight:700;padding:0;display:flex;align-items:center;justify-content:center;z-index:1;box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none;box-sizing:border-box;line-height:1}
+.gpin.on{background:var(--blue);width:calc(var(--pd,27px) + 12px);height:calc(var(--pd,27px) + 12px);font-size:calc(var(--pd,27px)*.5 + 4px);z-index:3;box-shadow:0 0 0 4px rgba(0,113,227,.4)}
+.gpill{position:absolute;transform:translate(-50%,-50%);background:#0071E3;color:#fff;border:2px solid #fff;border-radius:12px;font:inherit;font-size:11px;font-weight:700;padding:3px 8px;white-space:nowrap;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none;line-height:1.2}
 .gpill.on{background:#fff;color:#0071E3;border-color:#0071E3;font-size:13px;z-index:3;box-shadow:0 0 0 4px rgba(0,113,227,.4)}
 .pvm{position:absolute;inset:0}.pvm .gpin,.pvm .gpill{transform:translate(-50%,-50%) scale(var(--inv,1))}
-.gpin::after{content:'';position:absolute;inset:-7px;border-radius:50%}
-.gpin.on{background:var(--blue);width:40px;height:40px;font-size:19px;z-index:3;box-shadow:0 0 0 4px rgba(0,113,227,.4)}
 .fzoomb{position:absolute;right:8px;bottom:8px;z-index:4;width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.7);background:rgba(0,0,0,.55);color:#fff;font-size:20px;padding:0}
 .gstep{display:flex;align-items:center;gap:10px;margin:4px 0 8px}.gstep h2{flex:1;margin:0;text-align:center}
 .gstep button{flex:none;width:54px;height:46px;border-radius:14px;border:1px solid var(--line);background:var(--fill);color:var(--text);font-size:28px;line-height:1;padding:0}
@@ -362,7 +360,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 F';
+const APP_VERSION='2026-11-13 G';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -612,7 +610,49 @@ function mapPins(){
   o.gaenge.forEach(g=>{const isV=/^Vorgew/i.test(g);pinPairs(pins[g]).forEach(([x,y])=>out.push({g,x,y,v:isV,label:isV?g:g.replace(/^Gang\s*/i,'')}))});
   return out;
 }
-const pinBtn=(p,act,x,y)=>`<button class="${p.v?'gpill':'gpin'} ${act==='fg'&&p.g===cur.fg?'on':''}" style="left:${x}%;top:${y}%" data-pl="${act}" data-v="${esc(p.g)}">${esc(p.label)}</button>`;
+const pinBtn=(p,act,x,y)=>`<button class="${p.v?'gpill':'gpin'} ${act==='fg'&&p.g===cur.fg?'on':''}" style="left:${x}%;top:${y}%" data-x="${x}" data-y="${y}" data-pl="${act}" data-v="${esc(p.g)}">${esc(p.label)}</button>`;
+function layoutPins(box,W,H,sc){
+  const img=box.querySelector('img');if(!img)return;
+  W=W||img.clientWidth;H=H||img.clientHeight;sc=sc||1;if(!W||!H)return;
+  const Ws=W*sc,Hs=H*sc,els=[...box.querySelectorAll('.gpin,.gpill')];if(!els.length)return;
+  const circ=els.filter(e=>e.classList.contains('gpin')),pil=els.filter(e=>e.classList.contains('gpill'));
+  const P=e=>[+e.dataset.x*Ws/100,+e.dataset.y*Hs/100];
+  let md=1e9;for(let i=0;i<circ.length;i++)for(let j=i+1;j<circ.length;j++){const a=P(circ[i]),b=P(circ[j]);md=Math.min(md,Math.hypot(a[0]-b[0],a[1]-b[1]))}
+  const pd=circ.length>1?Math.max(14,Math.min(28,md*.95)):28;
+  box.style.setProperty('--pd',pd.toFixed(1)+'px');box.dataset.md=md<1e8?md.toFixed(1):'999';box.dataset.ws=Ws.toFixed(0);
+  const it=els.map(e=>{const [x,y]=P(e),c=e.classList.contains('gpin'),w=c?(e.classList.contains('on')?pd+12:pd):(e.offsetWidth||90),h=c?w:(e.offsetHeight||22);return {e,x,y,ox:x,oy:y,w,h,pill:!c}});
+  const pl=it.filter(a=>a.pill);
+  for(let k=0;k<80;k++){let moved=false;
+    for(const a of pl){
+      for(const b of it){if(a===b)continue;
+        if(Math.abs(a.x-b.x)>=(a.w+b.w)/2+4||Math.abs(a.y-b.y)>=(a.h+b.h)/2+4)continue;
+        const c=[[(b.x+b.w/2+4+a.w/2)-a.x,0],[(b.x-b.w/2-4-a.w/2)-a.x,0],[0,(b.y+b.h/2+4+a.h/2)-a.y],[0,(b.y-b.h/2-4-a.h/2)-a.y]]
+          .filter(([dx,dy])=>{const nx=a.x+dx,ny=a.y+dy;return nx>=a.w/2&&nx<=Ws-a.w/2&&ny>=a.h/2&&ny<=Hs-a.h/2&&Math.abs(nx-a.ox)<=260&&Math.abs(ny-a.oy)<=260})
+          .sort((p,q)=>Math.abs(p[0])+Math.abs(p[1])-Math.abs(q[0])-Math.abs(q[1]));
+        if(c.length){a.x+=c[0][0];a.y+=c[0][1];moved=true}}
+    }
+    if(!moved)break;
+  }
+  pl.forEach(a=>{a.e.style.left=(a.x/Ws*100)+'%';a.e.style.top=(a.y/Hs*100)+'%'});
+}
+function pinHit(box,cx,cy,maxd){
+  let best=null;
+  box.querySelectorAll('.gpin,.gpill').forEach(e=>{
+    const r=e.getBoundingClientRect(),mx=r.left+r.width/2,my=r.top+r.height/2;
+    let d,c=e.classList.contains('gpin');
+    if(c)d=Math.max(0,Math.hypot(cx-mx,cy-my)-r.width/2);
+    else d=Math.hypot(Math.max(r.left-cx,0,cx-r.right),Math.max(r.top-cy,0,cy-r.bottom));
+    const dc=Math.hypot(cx-mx,cy-my);
+    if(!best||d<best.d-.01||(Math.abs(d-best.d)<=.01&&dc<best.dc))best={e,d,dc};
+  });
+  return best&&best.d<=(maxd||40)?best.e:null;
+}
+const fitAllPins=()=>document.querySelectorAll('.fmapi').forEach(b=>layoutPins(b));
+window.addEventListener('resize',fitAllPins);
+function openMapViewer(act,focus){
+  const sc2=schon(cur.fs),u2=imgUrl(sc2.img);
+  if(u2)planViewer(()=>Promise.resolve(u2),{pins:mapPins(),act,focus});
+}
 function planViewer(getUrl,opts){
   const d=document.createElement('div');d.className='planview';let rot=false,sc=1,tx=0,ty=0;
     d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""><div class="pvm"></div></div></div><div class="pvh">Mit zwei Fingern zoomen</div>';
@@ -620,13 +660,15 @@ function planViewer(getUrl,opts){
     const drawPins=()=>{mk.innerHTML=(opts&&opts.pins)?opts.pins.map(p=>pinBtn(p,opts.act,rot?100-p.y:p.x,rot?p.x:p.y)).join(''):''};
     let W=0,H=0;
     const clamp=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,w=W*sc,h=H*sc;tx=w<=cw?(cw-w)/2:Math.min(0,Math.max(cw-w,tx));ty=h<=ch?(ch-h)/2:Math.min(0,Math.max(ch-h,ty))};
-    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')';wr.style.setProperty('--inv',(1/sc).toFixed(4))};
+    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')';wr.style.setProperty('--inv',(1/sc).toFixed(4));layoutPins(wr,W,H,sc)};
     const lay=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,r=(im.naturalWidth&&im.naturalHeight)?im.naturalWidth/im.naturalHeight:1.414;
       const iw=rot?1/r:r;let w0=cw,h0=cw/iw;if(h0>ch){h0=ch;w0=ch*iw}
       W=w0;H=h0;wr.style.cssText='position:absolute;left:0;top:0;transform-origin:0 0;width:'+W+'px;height:'+H+'px';
       if(!rot)im.style.cssText='position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;max-width:none';
       else im.style.cssText='position:absolute;left:0;top:0;width:'+H+'px;height:'+W+'px;max-width:none;transform-origin:0 0;transform:translateX('+W+'px) rotate(90deg)';
-      drawPins();apply()};
+      drawPins();
+      if(opts&&opts.focus&&!opts.fdone&&im.naturalWidth){opts.fdone=true;sc=opts.focus.sc;const cw=pvs.clientWidth,ch=pvs.clientHeight;tx=cw/2-opts.focus.x/100*W*sc;ty=ch/2-opts.focus.y/100*H*sc}
+      apply()};
     im.onload=lay;lay();window.addEventListener('resize',lay);new MutationObserver(()=>{if(!d.isConnected)window.removeEventListener('resize',lay)}).observe(document.body,{childList:true});
     Promise.resolve().then(getUrl).then(u=>{im.src=u}).catch(()=>{pvs.innerHTML='<div style="color:#fff;padding:24px">Der Plan konnte nicht geladen werden.</div>'});
     const pt=t=>[t.clientX,t.clientY],mid=ts=>[(ts[0].clientX+ts[1].clientX)/2,(ts[0].clientY+ts[1].clientY)/2],dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
@@ -640,7 +682,8 @@ function planViewer(getUrl,opts){
     pvs.addEventListener('touchend',e=>{if(e.touches.length===0)g=null;else if(e.touches.length===1)g={k:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,tx,ty}},{passive:true});
     pvs.addEventListener('wheel',e=>{e.preventDefault();const r=pvs.getBoundingClientRect(),px=(e.clientX-r.left-tx)/sc,py=(e.clientY-r.top-ty)/sc;sc=Math.min(8,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15)));tx=e.clientX-r.left-px*sc;ty=e.clientY-r.top-py*sc;apply()},{passive:false});
     d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;sc=1;tx=ty=0;lay()}
-      else if(e.target.closest('.pvm [data-pl]')){const act=e.target.closest('.pvm [data-pl]').dataset.pl;if(act==='fpin')d.remove();else setTimeout(drawPins,0)}});
+      else if(e.target.closest('.pvm [data-pl]')){const act=e.target.closest('.pvm [data-pl]').dataset.pl;if(act==='fpin')d.remove();else setTimeout(()=>{drawPins();apply()},0)}
+      else if(e.target.closest('.pvs')){const hit=pinHit(wr,e.clientX,e.clientY);if(hit)hit.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
     document.body.appendChild(d);
 }
 
@@ -1720,6 +1763,9 @@ document.addEventListener('click',ev=>{
     return;
   }
   if(ev.target.closest('.cheers'))return;
+  {const mb=ev.target.closest('.fmapi');if(mb&&!ev.target.closest('.fzoomb,.gpin,.gpill')){const hit=pinHit(mb,ev.clientX,ev.clientY);if(hit){const md=+mb.dataset.md||999;
+      if(md<30){const r=mb.getBoundingClientRect(),w=r.width||1,h=r.height||1;openMapViewer(hit.dataset.pl,{x:Math.max(0,Math.min(100,(ev.clientX-r.left)/w*100)),y:Math.max(0,Math.min(100,(ev.clientY-r.top)/h*100)),sc:Math.max(1.5,Math.min(8,48/(md*innerWidth/(+mb.dataset.ws||w))))});return}
+      hit.dispatchEvent(new MouseEvent('click',{bubbles:true}));return}}}
   const t=ev.target.closest('[data-pl]');if(!t)return;
   const a=t.dataset.pl,v=t.dataset.v,td=todayStr(),reset=()=>{cur.tf=newTf(cur.cday);cur.tfOpen=false;cur.tfile=null};
   if(a==='thand'){handOver(v);return}
@@ -1829,7 +1875,7 @@ document.addEventListener('click',ev=>{
   if(a==='fstep'){const gs=(orteList().find(x=>x.name===cur.fs)||{gaenge:[]}).gaenge;if(gs.length){const i=gs.indexOf(cur.fg);cur.fg=gs[(i+(+v)+gs.length)%gs.length];cur.frest=false}return render()}
   if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
   if(a==='fzoom'){planViewer(()=>Promise.resolve(v));return}
-  if(a==='fmapzoom'){const sc2=schon(cur.fs),u2=imgUrl(sc2.img);if(u2)planViewer(()=>Promise.resolve(u2),{pins:mapPins(),act:v});return}
+  if(a==='fmapzoom'){openMapViewer(v);return}
   if(a==='ftoggle'){const o=curOrt(),q0=feldQ(o,v);feldChange(o,v,q0>0?-q0:1,'netz');return}
   if(a==='fest'){const [sid,n]=v.split('|'),o=curOrt(),q0=feldQ(o,sid),nn=+n;feldChange(o,sid,(nn===0?0:nn)-q0,'rest');return}
   if(a==='fch'){const [sid,dl]=v.split('|');feldChange(curOrt(),sid,+dl,cur.fmode==='abfahrt'?'abfahrt':'netz');return}
@@ -3246,7 +3292,7 @@ function vFeld(){
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]},schAddr=schon(cur.fs).address||'';
   const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div>${schAddr?`<div style="display:flex;gap:8px;margin-top:10px"><a class="claim" href="${gmapsUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a><a class="claim" href="${appleUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Karten</a></div>`:''}</section>
 `,sch=schon(cur.fs),murl=imgUrl(sch.img),pins=sch.pins||{},hasMap=!!(murl&&o.gaenge.some(g=>pins[g])),
-    mapHtml=(act)=>`<div class="fmapw"><div class="fmapi"><img src="${murl}" alt="" data-pl="fmapzoom" data-v="${act}">${mapPins().map(p=>pinBtn(p,act,p.x,p.y)).join('')}<button class="fzoomb" data-pl="fmapzoom" data-v="${act}" aria-label="Vergrößern">⤢</button></div></div>`,
+    mapHtml=(act)=>`<div class="fmapw"><div class="fmapi"><img src="${murl}" alt="" data-pl="fmapzoom" data-v="${act}" onload="fitAllPins()">${mapPins().map(p=>pinBtn(p,act,p.x,p.y)).join('')}<button class="fzoomb" data-pl="fmapzoom" data-v="${act}" aria-label="Vergrößern">⤢</button></div></div>`,
     vor=o.gaenge.filter(g=>/^Vorgew/i.test(g)&&!(hasMap&&pins[g])),gnr=o.gaenge.filter(g=>/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),gsonst=o.gaenge.filter(g=>!/^Vorgew/i.test(g)&&!/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),
     gt=(g,lab)=>`<button class="gtile ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(lab)}</button>`,
     gchips=o.gaenge.length?`<div class="card pad gsel">${gnr.length?`<label class="f" style="margin-top:0">Gänge</label><div class="gnum">${gnr.map(g=>gt(g,g.replace(/^Gang\s*/i,''))).join('')}</div>`:''}${vor.length+gsonst.length?`<label class="f" ${gnr.length?'':'style="margin-top:0"'}>Vorgewände</label><div class="gwide">${[...vor,...gsonst].map(g=>gt(g,g)).join('')}</div>`:''}</div>`:'';
@@ -3266,6 +3312,7 @@ function vFeld(){
     $('#app').innerHTML=`${chips}${seg}${hasMap?mapHtml('fpin'):''}<div class="tiles"><div class="tile b"><small>Orte mit Bäumen</small><b>${num(tot)}</b></div></div>
       ${blocks||'<div class="hint">Noch nichts eingetragen.</div>'}
       ${rows.length?`<h3>Gesamt nach Sorte</h3><div class="card">${rows.map(x=>`<div class="row"><span class="sw" style="background:${swatchCss(x.k.f)}"></span><div class="n" style="flex:1">${esc(sorteLabel(x.k))}</div><b>${x.q>1?'ca. '+num(x.q):'liegt'}</b></div>`).join('')}</div>`:''}`;
+    setTimeout(fitAllPins,0);
     return;
   }
   const qOf=k=>feldQ(ort,k.id);
@@ -3288,6 +3335,7 @@ function vFeld(){
   }
   $('#app').innerHTML=`${chips}${seg}${hasMap?mapHtml('fg'):''}${gchips}<div class="gstep"><button data-pl="fstep" data-v="-1" aria-label="Zurück">‹</button><h2>${esc(ort)}</h2><button data-pl="fstep" data-v="1" aria-label="Weiter">›</button></div>${body}
     <div class="card pad formc" style="margin-top:14px"><label class="f">Notiz für Chef und Admin (z. B. Gang blockiert, Sorte fehlt)</label><textarea class="t" id="fn-note" rows="2" placeholder="Notiz zu ${esc(ort)}">${esc(cur.fnote||'')}</textarea><button class="btn" data-pl="fnote" style="margin-bottom:0">Notiz senden</button></div>`;
+  setTimeout(fitAllPins,0);
 }
 /* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
 const DEMO_TASKS=['Zaun am Verkaufsstand prüfen','Lichterkette kontrollieren','Kasse und Wechselgeld zählen','Bäume nachsortieren','Netzmaschine reinigen','Plane am Stand festzurren',
