@@ -282,6 +282,10 @@ nav button.on{background:var(--blue);color:#fff}
 .fmapw{text-align:center;margin:0 0 10px}.fmapi{position:relative;display:inline-block;max-width:100%;border-radius:14px;overflow:hidden;vertical-align:top}
 .fmapi img{display:block;max-width:100%;max-height:48vh;width:auto;height:auto;cursor:zoom-in}
 .gpin{position:absolute;transform:translate(-50%,-50%);width:27px;height:27px;border-radius:50%;background:#1D1D1F;color:#fff;border:2px solid #fff;font:inherit;font-size:14px;font-weight:700;padding:0;display:flex;align-items:center;justify-content:center;z-index:1;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.gpill{position:absolute;transform:translate(-50%,-50%);background:#0071E3;color:#fff;border:2px solid #fff;border-radius:12px;font:inherit;font-size:11px;font-weight:700;padding:3px 8px;white-space:nowrap;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.gpill::after{content:'';position:absolute;inset:-8px;border-radius:16px}
+.gpill.on{background:#fff;color:#0071E3;border-color:#0071E3;font-size:13px;z-index:3;box-shadow:0 0 0 4px rgba(0,113,227,.4)}
+.pvm{position:absolute;inset:0}.pvm .gpin,.pvm .gpill{transform:translate(-50%,-50%) scale(var(--inv,1))}
 .gpin::after{content:'';position:absolute;inset:-7px;border-radius:50%}
 .gpin.on{background:var(--blue);width:40px;height:40px;font-size:19px;z-index:3;box-shadow:0 0 0 4px rgba(0,113,227,.4)}
 .fzoomb{position:absolute;right:8px;bottom:8px;z-index:4;width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.7);background:rgba(0,0,0,.55);color:#fff;font-size:20px;padding:0}
@@ -358,7 +362,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 E';
+const APP_VERSION='2026-11-13 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -602,19 +606,27 @@ function render(){
 }
 
 /* Logistik, Feld und Preise bekommen die Blockoptik: Überschrift plus Liste werden zu einem Block, Formulare und Details ebenso */
-function planViewer(getUrl){
+const pinPairs=a=>{const r=[];for(let i=0;i+1<(a||[]).length;i+=2)r.push([+a[i],+a[i+1]]);return r};
+function mapPins(){
+  const o=orteList().find(x=>x.name===cur.fs)||{gaenge:[]},pins=(schon(cur.fs).pins)||{},out=[];
+  o.gaenge.forEach(g=>{const isV=/^Vorgew/i.test(g);pinPairs(pins[g]).forEach(([x,y])=>out.push({g,x,y,v:isV,label:isV?g:g.replace(/^Gang\s*/i,'')}))});
+  return out;
+}
+const pinBtn=(p,act,x,y)=>`<button class="${p.v?'gpill':'gpin'} ${act==='fg'&&p.g===cur.fg?'on':''}" style="left:${x}%;top:${y}%" data-pl="${act}" data-v="${esc(p.g)}">${esc(p.label)}</button>`;
+function planViewer(getUrl,opts){
   const d=document.createElement('div');d.className='planview';let rot=false,sc=1,tx=0,ty=0;
-    d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""></div></div><div class="pvh">Mit zwei Fingern zoomen</div>';
-    const im=d.querySelector('img'),pvs=d.querySelector('.pvs'),wr=d.querySelector('.pvw');
+    d.innerHTML='<div class="bar"><button data-x="r">Drehen</button><button data-x="c">Schließen</button></div><div class="pvs"><div class="pvw"><img alt=""><div class="pvm"></div></div></div><div class="pvh">Mit zwei Fingern zoomen</div>';
+    const im=d.querySelector('img'),pvs=d.querySelector('.pvs'),wr=d.querySelector('.pvw'),mk=d.querySelector('.pvm');
+    const drawPins=()=>{mk.innerHTML=(opts&&opts.pins)?opts.pins.map(p=>pinBtn(p,opts.act,rot?100-p.y:p.x,rot?p.x:p.y)).join(''):''};
     let W=0,H=0;
     const clamp=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,w=W*sc,h=H*sc;tx=w<=cw?(cw-w)/2:Math.min(0,Math.max(cw-w,tx));ty=h<=ch?(ch-h)/2:Math.min(0,Math.max(ch-h,ty))};
-    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')'};
+    const apply=()=>{clamp();wr.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')';wr.style.setProperty('--inv',(1/sc).toFixed(4))};
     const lay=()=>{const cw=pvs.clientWidth,ch=pvs.clientHeight,r=(im.naturalWidth&&im.naturalHeight)?im.naturalWidth/im.naturalHeight:1.414;
       const iw=rot?1/r:r;let w0=cw,h0=cw/iw;if(h0>ch){h0=ch;w0=ch*iw}
       W=w0;H=h0;wr.style.cssText='position:absolute;left:0;top:0;transform-origin:0 0;width:'+W+'px;height:'+H+'px';
       if(!rot)im.style.cssText='position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;max-width:none';
       else im.style.cssText='position:absolute;left:0;top:0;width:'+H+'px;height:'+W+'px;max-width:none;transform-origin:0 0;transform:translateX('+W+'px) rotate(90deg)';
-      apply()};
+      drawPins();apply()};
     im.onload=lay;lay();window.addEventListener('resize',lay);new MutationObserver(()=>{if(!d.isConnected)window.removeEventListener('resize',lay)}).observe(document.body,{childList:true});
     Promise.resolve().then(getUrl).then(u=>{im.src=u}).catch(()=>{pvs.innerHTML='<div style="color:#fff;padding:24px">Der Plan konnte nicht geladen werden.</div>'});
     const pt=t=>[t.clientX,t.clientY],mid=ts=>[(ts[0].clientX+ts[1].clientX)/2,(ts[0].clientY+ts[1].clientY)/2],dist=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
@@ -627,7 +639,8 @@ function planViewer(getUrl){
       else if(g.k==='pan'&&ts.length===1){tx=g.tx+ts[0].clientX-g.x;ty=g.ty+ts[0].clientY-g.y;apply()}},{passive:false});
     pvs.addEventListener('touchend',e=>{if(e.touches.length===0)g=null;else if(e.touches.length===1)g={k:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,tx,ty}},{passive:true});
     pvs.addEventListener('wheel',e=>{e.preventDefault();const r=pvs.getBoundingClientRect(),px=(e.clientX-r.left-tx)/sc,py=(e.clientY-r.top-ty)/sc;sc=Math.min(8,Math.max(1,sc*(e.deltaY<0?1.15:1/1.15)));tx=e.clientX-r.left-px*sc;ty=e.clientY-r.top-py*sc;apply()},{passive:false});
-    d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;sc=1;tx=ty=0;lay()}});
+    d.addEventListener('click',e=>{const x=e.target.dataset&&e.target.dataset.x;if(x==='c')d.remove();else if(x==='r'){rot=!rot;sc=1;tx=ty=0;lay()}
+      else if(e.target.closest('.pvm [data-pl]')){const act=e.target.closest('.pvm [data-pl]').dataset.pl;if(act==='fpin')d.remove();else setTimeout(drawPins,0)}});
     document.body.appendChild(d);
 }
 
@@ -1816,6 +1829,7 @@ document.addEventListener('click',ev=>{
   if(a==='fstep'){const gs=(orteList().find(x=>x.name===cur.fs)||{gaenge:[]}).gaenge;if(gs.length){const i=gs.indexOf(cur.fg);cur.fg=gs[(i+(+v)+gs.length)%gs.length];cur.frest=false}return render()}
   if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
   if(a==='fzoom'){planViewer(()=>Promise.resolve(v));return}
+  if(a==='fmapzoom'){const sc2=schon(cur.fs),u2=imgUrl(sc2.img);if(u2)planViewer(()=>Promise.resolve(u2),{pins:mapPins(),act:v});return}
   if(a==='ftoggle'){const o=curOrt(),q0=feldQ(o,v);feldChange(o,v,q0>0?-q0:1,'netz');return}
   if(a==='fest'){const [sid,n]=v.split('|'),o=curOrt(),q0=feldQ(o,sid),nn=+n;feldChange(o,sid,(nn===0?0:nn)-q0,'rest');return}
   if(a==='fch'){const [sid,dl]=v.split('|');feldChange(curOrt(),sid,+dl,cur.fmode==='abfahrt'?'abfahrt':'netz');return}
@@ -3232,8 +3246,8 @@ function vFeld(){
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]},schAddr=schon(cur.fs).address||'';
   const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div>${schAddr?`<div style="display:flex;gap:8px;margin-top:10px"><a class="claim" href="${gmapsUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a><a class="claim" href="${appleUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Karten</a></div>`:''}</section>
 `,sch=schon(cur.fs),murl=imgUrl(sch.img),pins=sch.pins||{},hasMap=!!(murl&&o.gaenge.some(g=>pins[g])),
-    mapHtml=(act)=>`<div class="fmapw"><div class="fmapi"><img src="${murl}" alt="" data-pl="fzoom" data-v="${esc(murl)}">${o.gaenge.filter(g=>pins[g]).map(g=>`<button class="gpin ${act==='fg'&&g===cur.fg?'on':''}" style="left:${pins[g][0]}%;top:${pins[g][1]}%" data-pl="${act}" data-v="${esc(g)}">${esc(g.replace(/^Gang\s*/i,''))}</button>`).join('')}<button class="fzoomb" data-pl="fzoom" data-v="${esc(murl)}" aria-label="Vergrößern">⤢</button></div></div>`,
-    vor=o.gaenge.filter(g=>/^Vorgew/i.test(g)),gnr=o.gaenge.filter(g=>/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),gsonst=o.gaenge.filter(g=>!vor.includes(g)&&!/^Gang\s*\d+$/i.test(g)),
+    mapHtml=(act)=>`<div class="fmapw"><div class="fmapi"><img src="${murl}" alt="" data-pl="fmapzoom" data-v="${act}">${mapPins().map(p=>pinBtn(p,act,p.x,p.y)).join('')}<button class="fzoomb" data-pl="fmapzoom" data-v="${act}" aria-label="Vergrößern">⤢</button></div></div>`,
+    vor=o.gaenge.filter(g=>/^Vorgew/i.test(g)&&!(hasMap&&pins[g])),gnr=o.gaenge.filter(g=>/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),gsonst=o.gaenge.filter(g=>!/^Vorgew/i.test(g)&&!/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),
     gt=(g,lab)=>`<button class="gtile ${g===cur.fg?'on':''}" data-pl="fg" data-v="${esc(g)}">${esc(lab)}</button>`,
     gchips=o.gaenge.length?`<div class="card pad gsel">${gnr.length?`<label class="f" style="margin-top:0">Gänge</label><div class="gnum">${gnr.map(g=>gt(g,g.replace(/^Gang\s*/i,''))).join('')}</div>`:''}${vor.length+gsonst.length?`<label class="f" ${gnr.length?'':'style="margin-top:0"'}>Vorgewände</label><div class="gwide">${[...vor,...gsonst].map(g=>gt(g,g)).join('')}</div>`:''}</div>`:'';
   const seg=`<div class="seg">${[['netz','Netzen'],['abfahrt','Abfahren'],['uebersicht','Übersicht'],has('bstand')?['standorte','Standorte']:null].filter(Boolean).map(([k,l])=>`<button class="${mode===k?'on':''}" data-pl="fmode" data-v="${k}">${l}</button>`).join('')}</div>`;
