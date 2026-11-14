@@ -360,3 +360,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 ### 14.11.2026 E: Im Bearbeitungsmodus (Feld) verschwindet die untere Reiterleiste, stattdessen fester Knopf Speichern (`.fsave`, `body.fedit`), Version D. Gespeichert wird weiterhin sofort bei jeder Eingabe, Speichern beendet den Modus und zeigt Gespeichert.
 
 ### 14.11.2026 F: Einstellungen (Admin): Abschnitt Profil ist nicht mehr einklappbar, immer offen (settingsGroup, Version E).
+
+### 14.11.2026 G: Einstellungen (Admin): Reihenfolge Profil, Team, dann der Rest. Fragen zur App und Anwesenheit starten eingeklappt, nur Freigaben bleiben offen (Version F).

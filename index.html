@@ -392,7 +392,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 E';
+const APP_VERSION='2026-11-14 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -730,12 +730,14 @@ function settingsGroup(app){
       const sec=document.createElement('section');sec.className='blk';
       if(base==='Profil'){const hd=document.createElement('div');hd.className='blk-h';const h3=document.createElement('h3');h3.textContent=base;hd.appendChild(h3);sec.appendChild(hd);app.insertBefore(sec,el);el.remove();cd=sec;return}
       const d=document.createElement('details');d.dataset.det=key;
-      if(cur.det[key]!==undefined?cur.det[key]:(/Freigabe|Fragen/.test(base)||(base==='Anwesenheit'&&attOpen(S.me).length>0)))d.open=true;
+      if(cur.det[key]!==undefined?cur.det[key]:/Freigabe/.test(base))d.open=true;
       const sm=document.createElement('summary'),sp=document.createElement('span');sp.textContent=base;sm.appendChild(sp);
       if(m){const p=document.createElement('span');p.className='pill o';p.style.marginLeft='auto';p.style.marginRight='10px';p.textContent=m[2];sm.appendChild(p)}
       d.appendChild(sm);sec.appendChild(d);app.insertBefore(sec,el);el.remove();cd=d;
     }else if(cd)cd.appendChild(el);
   });
+  {const prof=[...app.querySelectorAll(':scope>section.blk')].find(x=>!x.querySelector(':scope>details')),team=app.querySelector('details[data-det="set-team"]');
+   if(prof&&team&&team.parentElement!==prof.nextElementSibling)prof.after(team.parentElement)}
 }
 function blockify(){
   const app=$('#app');if(!app)return;app.dataset.tab=tab;
