@@ -386,7 +386,7 @@ exports.addrSuggest = onCall(async req => {
 exports.userRegistered = onDocumentCreated('users/{uid}', async event => {
   const d = event.data.data();
   if (!d || d.approved !== false) return;
-  const admins = (await approvedUsers()).filter(u => u.role === 'admin' && u.id !== event.params.uid);
+  const admins = (await approvedUsers()).filter(u => (u.role === 'admin' || u.role === 'chef') && u.id !== event.params.uid);
   for (const u of admins) await pushTo(u, lang => T.newUser[lang](d.name || d.email || '?'));
 });
 exports.questionCreated = onDocumentCreated('questions/{id}', async event => {

@@ -401,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 L';
+const APP_VERSION='2026-11-14 M';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -956,6 +956,7 @@ const realRole=n=>(S.roles&&S.roles[n])||'team';
 let asRole='admin';try{asRole=localStorage.getItem('droste-asrole')||'admin'}catch(e){}
 const roleOf=n=>{const r=realRole(n);return(r==='demo'&&n===S.me)?(ASROLES.includes(asRole)?asRole:'admin'):r};
 const isAdmin=()=>roleOf(S.me)==='admin';
+const canApprove=()=>isAdmin()||roleOf(S.me)==='chef';
 const RIGHTS=[
   ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Feld','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
   ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
@@ -1059,7 +1060,7 @@ function freigaben(){
     <div class="mini" style="margin-top:12px"><button class="btn green" data-appr="${esc(n)}" style="margin:0">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;color:var(--red)">Ablehnen</button></div></div>`).join('')}`;
 }
 function vProfil(){
-  $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>${anwBlock()}`;
+  $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>${canApprove()?freigaben():''}${anwBlock()}`;
 }
 /* ---------- Wetter (Bright Sky, Daten des Deutschen Wetterdienstes) ---------- */
 const WX={lat:52.3125,lon:8.1475,ort:'Hof Droste, Belm'};
@@ -1768,7 +1769,7 @@ function vPlan(){
   const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'],has('einkauf')?['einkauf','Einkauf']:null,['arch','Archiv']].filter(Boolean);
   if(!ptabs.some(x=>x[0]===cur.ptab))cur.ptab='aufg';
   const seg=`<div class="seg ptabs">${ptabs.map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
-  const np=isAdmin()?pendingNames().length:0;
+  const np=canApprove()?pendingNames().length:0;
   const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
   $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
 }

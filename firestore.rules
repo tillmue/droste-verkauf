@@ -35,12 +35,16 @@ service cloud.firestore {
               && request.resource.data.approved == true)
         );
       allow update: if isAdmin()
+        || (isMember() && role() == 'chef'
+            && resource.data.approved == false
+            && request.resource.data.approved == true
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approved']))
         || (request.auth.uid == uid
             && request.resource.data.role == resource.data.role
             && request.resource.data.approved == resource.data.approved
             && request.resource.data.email == resource.data.email
             && request.resource.data.get('perms', null) == resource.data.get('perms', null));
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (isMember() && role() == 'chef' && resource.data.approved == false);
     }
 
     // Einladungen (nur fuer den ersten Admin): nur Admin verwaltet, jeder liest nur die eigene
