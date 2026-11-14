@@ -307,6 +307,12 @@ body.kb nav,body.kb .fsave{display:none!important}
 body.fedit nav{display:none}body.fedit main{padding-bottom:110px}
 body.gate nav{display:none}.gyn{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gyn .gtile{font-size:19px}.gmeal{margin:0 0 18px}
 .btn[disabled]{opacity:.4;pointer-events:none}
+.kvs{margin:0 0 12px;padding:12px 14px;border-radius:18px;background:var(--card);border:1px solid rgba(255,255,255,.15);box-shadow:0 3px 12px rgba(0,0,0,.35)}
+.kvh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:17px}
+.kv{display:flex;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.1);font-size:16px;line-height:1.35}
+.kv:first-of-type{border-top:0}.kvl{flex:none;width:108px;color:var(--mut);font-size:14px;padding-top:2px}
+.kn{display:block;font-style:normal;font-size:11px;font-weight:700;color:var(--mut);margin-top:2px}.dchip.on .kn{color:rgba(255,255,255,.9)}
+.dchip{width:62px}
 .gsel{margin:0 0 12px}.gsel .f{display:block;margin:12px 0 6px}
 .gnum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.gwide{display:flex;flex-wrap:wrap;gap:8px}.gwide .gtile{flex:1 1 calc(50% - 8px);min-height:42px;padding:6px 10px}
 .gtile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:14px;min-height:54px;font:inherit;font-size:21px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:6px 8px;text-align:center;line-height:1.2}
@@ -395,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 K';
+const APP_VERSION='2026-11-14 L';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1712,10 +1718,27 @@ function anwBlock(){
     ${past.length?`<details data-det="attpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(open?open+' offen':'komplett',open?'o':'g')})}`}
 const mealOf=ds=>((S.meals||[]).find(x=>x.id===ds)||{}).text||'';
 function mealSet(ds,txt){let m=(S.meals||[]).find(x=>x.id===ds);if(!m){m={id:ds,date:ds};S.meals.push(m)}m.text=txt.trim();m.by=S.me;m.updated=Date.now();save()}
+function kVotes(d){
+  const rows=(S.attendance||[]).filter(x=>roleOf(x.name)!=='demo').map(x=>({n:x.name,v:(x.days||{})[d]||'',lf:(x.locf||{})[d]||'',lm:(x.locm||{})[d]||'',ok:!!(x.chk||{})[d]}));
+  const by=(arr,lk,l)=>{const g={hof:[],schonung:[],unklar:[],'':[]};arr.forEach(r=>(g[r[lk]]||g['']).push(r.n));
+    const lab={hof:'Am Hof',schonung:'In der Schonung',unklar:'Weiß noch nicht','':'Ohne Ortsangabe'};
+    return Object.keys(g).filter(k=>g[k].length).map(k=>`<div class="kv"><span class="kvl">${lab[k]}</span><span>${g[k].sort((a,b)=>a.localeCompare(b,'de')).map(esc).join(', ')}</span></div>`).join('')};
+  const fr=rows.filter(r=>r.lf||(!r.ok&&(r.v==='ja'||r.v==='vm'))),mi=rows.filter(r=>r.lm||(!r.ok&&(r.v==='ja'||r.v==='vm'||r.v==='nm')));
+  const frN=fr.filter(r=>r.lf!=='schonung').length,miN=mi.filter(r=>r.lm!=='schonung').length;
+  const nein=rows.filter(r=>r.v==='nein').map(r=>r.n),da=rows.filter(r=>r.v==='da').map(r=>r.n),vl=rows.filter(r=>r.v==='viell').map(r=>r.n);
+  const no=S.people.filter(n=>roleOf(n)!=='demo'&&!rows.some(r=>r.n===n&&r.v)).sort((a,b)=>a.localeCompare(b,'de'));
+  const sec=(t,n,body,cls)=>body?`<div class="kvs ${cls||''}"><div class="kvh"><b>${t}</b><span class="pill ${cls==='no'?'o':'g'}">${n}</span></div>${body}</div>`:'';
+  const list=a=>a.sort((x,y)=>x.localeCompare(y,'de')).map(esc).join(', ');
+  return `${sec('Frühstück',fr.length,by(fr,'lf'))}${sec('Mittagessen',mi.length,by(mi,'lm'))}
+    ${nein.length?sec('Nicht da',nein.length,`<div class="kv"><span>${list(nein)}</span></div>`):''}
+    ${da.length?sec('Da, isst nicht am Hof',da.length,`<div class="kv"><span>${list(da)}</span></div>`):''}
+    ${vl.length?sec('Vielleicht',vl.length,`<div class="kv"><span>${list(vl)}</span></div>`):''}
+    ${no.length?sec('Noch keine Antwort',no.length,`<div class="kv"><span>${no.map(esc).join(', ')}</span></div>`,'no'):''}`;
+}
 function kDayStrip(days){
-  const td=todayStr();
+  const td=todayStr(),kc=d=>{const c=attCounts(d);return c&&(c.fr||c.mi)?`<em class="kn">${c.fr}·${c.mi}</em>`:''};
   return `<div class="dstrip">${days.map(d=>{const dt=new Date(d+'T12:00:00'),has2=!!mealOf(d);
-    return `<button class="dchip ${d===cur.kday?'on':''} ${d===td?'today':''}" data-pl="kday" data-v="${d}"><small>${WD[dt.getDay()]}</small><b>${+d.slice(8)}</b><small>${p2(dt.getMonth()+1)}.</small>${has2?'<i class="dd"></i>':''}</button>`}).join('')}</div>`;
+    return `<button class="dchip ${d===cur.kday?'on':''} ${d===td?'today':''}" data-pl="kday" data-v="${d}"><small>${WD[dt.getDay()]}</small><b>${+d.slice(8)}</b><small>${p2(dt.getMonth()+1)}.</small>${kc(d)}${has2?'<i class="dd"></i>':''}</button>`}).join('')}</div>`;
 }
 function kDayHead(d){
   const c=attCounts(d),td=todayStr();
@@ -1735,9 +1758,7 @@ function vKueche(){
       body=`${kDayStrip(fut)}<section class="blk">${kDayHead(d)}<label class="f" style="margin-top:14px">Was gibt es?</label><textarea class="t" rows="3" data-meal="${d}" placeholder="Was gibt es?">${esc(mealOf(d))}</textarea></section>`;
     }else{
       const d=cur.kday,names=has('anwSee');
-      const who=names?ATT.map(([k,l])=>{const n=(S.attendance||[]).filter(x=>(x.days||{})[d]===k).map(x=>x.name);return n.length?`<div class="row" style="display:block"><div class="p"><b>${l}</b> (${n.length})</div><div style="font-size:16px">${n.map(esc).join(', ')}</div></div>`:''}).join(''):'';
-      const no=names?S.people.filter(n=>roleOf(n)!=='demo'&&!Object.values((attDoc(n)||{}).days||{}).some(Boolean)):[];
-      body=`${kDayStrip(fut)}<section class="blk">${kDayHead(d)}${names?`<div style="margin-top:10px">${who||'<div class="hint">Keine Angaben für diesen Tag.</div>'}</div>`:''}${no.length?`<div class="hint" style="margin-top:8px">Noch keine Angaben von: ${no.map(esc).join(', ')}</div>`:''}</section>`;
+      body=`${kDayStrip(fut)}<div class="hint" style="margin:-6px 0 10px">Zahl im Tag: Frühstück · Mittag</div><section class="blk">${kDayHead(d)}</section>${names?kVotes(d):'<div class="hint">Die Namen sehen nur Chef und Admin.</div>'}`;
     }
   }else body=planEinkauf('kueche');
   $('#app').innerHTML=`${backupWarn()}${seg}${body}`;
