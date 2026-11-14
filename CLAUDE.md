@@ -352,3 +352,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 ### 14.11.2026 B: Schonung "Feld Links vorne / Neubau"
 - 15. Schonung. Koordinaten 52.32359464836566, 8.138259886296595, 9 Gänge plus Vorgewände (Pill an der Straße oben rechts), Gang 10 auf Tills Wunsch entfernt, Pins in `settings/hof.schonungen`, Bild `schonungen/feld-links-vorne-neubau.jpg`, Zeile in `settings/hof.orte`. Kein Tor markiert.
 - Archiv `[4]Stände/[6]Schonungen/` (Feld_Links_vorne_Neubau.png, Original und Entwurf in `[1]Original/`), Druck-PDFs neu (11 Quer, 4 Hoch).
+
+### 14.11.2026 C: Knopf Wechseln im Feld größer (Version B, Klasse schbtn).

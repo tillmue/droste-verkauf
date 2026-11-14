@@ -300,6 +300,7 @@ nav button.on{background:var(--blue);color:#fff}
 .fedbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid rgba(255,255,255,.18)}
 .fedbar b{display:block;font-size:16px}.fedbar small{display:block;color:var(--mut);font-size:13px}.fedbar.on{background:#1f5a38;border-color:#2e9e4f}.fedbar.on small{color:#cfe9d8}
 .fro button,.fro select,.fro textarea,.fro input{pointer-events:none}.fro .est button.on,.fro .stile.on{opacity:1}
+.schbtn{margin:0;width:auto;min-height:52px;padding:0 22px;font-size:18px;font-weight:700;border-radius:26px;flex:none}
 .gsel{margin:0 0 12px}.gsel .f{display:block;margin:12px 0 6px}
 .gnum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.gwide{display:flex;flex-wrap:wrap;gap:8px}.gwide .gtile{flex:1 1 calc(50% - 8px);min-height:42px;padding:6px 10px}
 .gtile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:14px;min-height:54px;font:inherit;font-size:21px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:6px 8px;text-align:center;line-height:1.2}
@@ -388,7 +389,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 A';
+const APP_VERSION='2026-11-14 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3382,7 +3383,7 @@ const feldCanEdit=()=>has('feldEdit')&&!!cur.fedit;
 function vFeld(){
   if(cur.fmode==='standorte')cur.fmode='netz';
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]},schAddr=schon(cur.fs).address||'';
-  const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="claim" data-pl="schselopen">Wechseln ›</button>`:''}</div>${schAddr?`<div style="display:flex;gap:8px;margin-top:10px"><a class="claim" href="${gmapsUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a><a class="claim" href="${appleUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Karten</a></div>`:''}</section>
+  const chips=`<section class="blk"><div class="blk-h"><div><small class="p" style="display:block">Schonung</small><h3 style="font-size:22px">${esc(cur.fs)}</h3></div>${os.length>1?`<button class="btn schbtn" data-pl="schselopen">Wechseln ›</button>`:''}</div>${schAddr?`<div style="display:flex;gap:8px;margin-top:10px"><a class="claim" href="${gmapsUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a><a class="claim" href="${appleUrl(schAddr)}" target="_blank" rel="noopener" style="text-decoration:none">Karten</a></div>`:''}</section>
 `,sch=schon(cur.fs),murl=imgUrl(sch.img),pins=sch.pins||{},hasMap=!!(murl&&o.gaenge.some(g=>pins[g])),
     mapHtml=(act)=>`<div class="fmapw"><div class="fmapi"><img src="${murl}" alt="" data-pl="fmapzoom" data-v="${act}" onload="fitAllPins()">${mapPins().map(p=>pinBtn(p,act,p.x,p.y)).join('')}<button class="fzoomb" data-pl="fmapzoom" data-v="${act}" aria-label="Vergrößern">⤢</button></div></div>`,
     vor=o.gaenge.filter(g=>/^Vorgew/i.test(g)&&!(hasMap&&pins[g])),gnr=o.gaenge.filter(g=>/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),gsonst=o.gaenge.filter(g=>!/^Vorgew/i.test(g)&&!/^Gang\s*\d+$/i.test(g)&&!(hasMap&&pins[g])),
