@@ -304,7 +304,7 @@ nav button.on{background:var(--blue);color:#fff}
 .fsave{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#0e1813;border-top:1px solid var(--line)}
 .fsave .btn{max-width:568px;margin:0 auto;min-height:54px;font-size:19px;font-weight:700;background:var(--blue)}
 body.fedit nav{display:none}body.fedit main{padding-bottom:110px}
-body.gate nav{display:none}.gyn{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gyn .gtile{font-size:19px}
+body.gate nav{display:none}.gyn{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gyn .gtile{font-size:19px}.gmeal{margin:0 0 18px}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .gsel{margin:0 0 12px}.gsel .f{display:block;margin:12px 0 6px}
 .gnum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.gwide{display:flex;flex-wrap:wrap;gap:8px}.gwide .gtile{flex:1 1 calc(50% - 8px);min-height:42px;padding:6px 10px}
@@ -394,7 +394,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 G';
+const APP_VERSION='2026-11-14 H';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1628,26 +1628,30 @@ const attDoc=n=>(S.attendance||[]).find(x=>x.name===n);
 const gateDay=()=>{const d=new Date();d.setHours(d.getHours()-7);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
 const gateNeed=()=>{if(!S.me)return false;if(cur.gateOpen)return true;const g=gateDay();if(g<attFrom()||g>attTo())return false;return !((attDoc(S.me)||{}).chk||{})[g]};
 function gateSave(g,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}
-  d.days=d.days||{};d.loc=d.loc||{};d.chk=d.chk||{};
-  d.days[g]=v.da===false?'nein':(v.fr&&v.mi?'ja':v.fr?'vm':v.mi?'nm':'da');
-  if(v.da===false)delete d.loc[g];else d.loc[g]=v.loc||'unklar';
+  d.days=d.days||{};d.locf=d.locf||{};d.locm=d.locm||{};d.chk=d.chk||{};
+  if(v.da===false){d.days[g]='nein';delete d.locf[g];delete d.locm[g]}
+  else{const fh=v.fr&&v.locf!=='schonung',mh=v.mi&&v.locm!=='schonung';
+    d.days[g]=fh&&mh?'ja':fh?'vm':mh?'nm':'da';
+    if(v.fr)d.locf[g]=v.locf;else delete d.locf[g];
+    if(v.mi)d.locm[g]=v.locm;else delete d.locm[g]}
   d.chk[g]=Date.now();d.updated=Date.now();save()}
 const LOCS=[['hof','Am Hof'],['schonung','In der Schonung'],['unklar','Weiß ich noch nicht']];
 function vGate(){
-  const g=gateDay(),me=S.me,old=attDoc(me)||{},o=cur.gate=cur.gate||{fr:null,mi:null,loc:'',da:true};
-  const yn=(k,l)=>`<label class="f">${l}</label><div class="gyn">${[[true,'Ja'],[false,'Nein']].map(([b,t])=>`<button class="gtile ${o[k]===b?'on':''}" data-pl="gset" data-v="${k}|${b}">${t}</button>`).join('')}</div>`;
-  const ok=o.fr!==null&&o.mi!==null&&o.loc;
+  const g=gateDay(),me=S.me,o=cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};
+  const meal=(k,lk,l)=>`<div class="gmeal"><label class="f" style="margin-top:0">${l}</label><div class="gyn">${[[true,'Ja'],[false,'Nein']].map(([b,t])=>`<button class="gtile ${o[k]===b?'on':''}" data-pl="gset" data-v="${k}|${b}">${t}</button>`).join('')}</div>
+    ${o[k]===true?`<div class="gwide" style="margin-top:8px">${LOCS.map(([x,t])=>`<button class="gtile ${o[lk]===x?'on':''}" data-pl="gset" data-v="${lk}|${x}">${t}</button>`).join('')}</div>`:''}</div>`;
+  const ok=o.fr!==null&&o.mi!==null&&(o.fr===false||o.locf)&&(o.mi===false||o.locm);
   document.body.classList.add('gate');
   $('#app').innerHTML=`<h2 style="margin-top:4px">Guten Morgen, ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${fmtD(g)}</div>
     <section class="blk"><div class="blk-h"><h3>Bist du heute da?</h3></div>
-      ${yn('fr','Frühstück am Hof?')}${yn('mi','Mittagessen am Hof?')}
-      <label class="f">Wo bist du heute?</label><div class="gwide">${LOCS.map(([k,l])=>`<button class="gtile ${o.loc===k?'on':''}" data-pl="gset" data-v="loc|${k}">${l}</button>`).join('')}</div>
+      ${meal('fr','locf','Frühstück')}${meal('mi','locm','Mittagessen')}
       <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button></section>
     <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Morgen um 7 Uhr neu abgefragt.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
 }
 function gateStatus(){const g=gateDay(),d=attDoc(S.me)||{};if(g<attFrom()||g>attTo()||!(d.chk||{})[g])return '';
-  const v=(d.days||{})[g],l=v==='nein'?'Heute nicht da':v==='da'?'Da, isst nicht am Hof':(ATT.find(a=>a[0]===v)||[0,''])[1],loc=(LOCS.find(x=>x[0]===(d.loc||{})[g])||[0,''])[1];
-  return `<section class="blk"><div class="blk-h"><h3>Heute</h3><button class="claim" data-pl="gchg">Ändern</button></div><div class="p">${esc(l)}${loc?' · '+esc(loc):''}</div></section>`}
+  const lab=x=>(LOCS.find(y=>y[0]===x)||[0,''])[1],lf=(d.locf||{})[g],lm=(d.locm||{})[g];
+  const txt=(d.days||{})[g]==='nein'?'Heute nicht da':`Frühstück: ${lf?esc(lab(lf)):'Nein'} · Mittag: ${lm?esc(lab(lm)):'Nein'}`;
+  return `<section class="blk"><div class="blk-h"><h3>Heute</h3><button class="claim" data-pl="gchg">Ändern</button></div><div class="p">${txt}</div></section>`}
 const attOf=(n,ds)=>((attDoc(n)||{}).days||{})[ds]||'';
 function attSet(ds,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}d.days[ds]=v;d.updated=Date.now();save()}
 const attOpen=n=>{const td=todayStr();return attDays().filter(d=>d>=td&&!attOf(n,d))};
@@ -1958,10 +1962,10 @@ document.addEventListener('click',ev=>{
   if(a==='fnote'){const txt=(cur.fnote||'').trim();if(!txt)return alert('Bitte eine Notiz eintragen.');
     S.reports.push({id:uid(),cat:'feld',obj:curOrt(),text:txt,urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});cur.fnote='';save();toast('Notiz gesendet');return render()}
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
-  if(a==='gset'){const [k,b]=v.split('|');cur.gate=cur.gate||{fr:null,mi:null,loc:'',da:true};cur.gate[k]=k==='loc'?b:b==='true';return render()}
-  if(a==='gsave'){const o=cur.gate||{};if(o.fr===null||o.mi===null||!o.loc)return;gateSave(gateDay(),{da:true,fr:o.fr,mi:o.mi,loc:o.loc});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
+  if(a==='gset'){const [k,b]=v.split('|');cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};cur.gate[k]=(k==='fr'||k==='mi')?b==='true':b;return render()}
+  if(a==='gsave'){const o=cur.gate||{};if(o.fr===null||o.mi===null||(o.fr&&!o.locf)||(o.mi&&!o.locm))return;gateSave(gateDay(),{da:true,fr:o.fr,mi:o.mi,locf:o.locf,locm:o.locm});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
   if(a==='gno'){gateSave(gateDay(),{da:false});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
-  if(a==='gchg'){const g=gateDay(),d=attDoc(S.me)||{},v=(d.days||{})[g];cur.gate={fr:v==='ja'||v==='vm',mi:v==='ja'||v==='nm',loc:(d.loc||{})[g]||'',da:true};if(v==='nein'||!v)cur.gate={fr:null,mi:null,loc:'',da:true};cur.gateOpen=true;return render()}
+  if(a==='gchg'){const g=gateDay(),d=attDoc(S.me)||{},v=(d.days||{})[g],lf=(d.locf||{})[g],lm=(d.locm||{})[g];cur.gate=(v&&v!=='nein')?{fr:!!lf,mi:!!lm,locf:lf||'',locm:lm||''}:{fr:null,mi:null,locf:'',locm:''};cur.gateOpen=true;return render()}
   if(a==='gcancel'){cur.gateOpen=false;cur.gate=null;return render()}
   if(a==='fedit'){const was=cur.fedit;cur.fedit=!cur.fedit;if(was)toast('Gespeichert');window.scrollTo(0,0);return render()}
   if(a==='fstep'){const gs=(orteList().find(x=>x.name===cur.fs)||{gaenge:[]}).gaenge;if(gs.length){const i=gs.indexOf(cur.fg);cur.fg=gs[(i+(+v)+gs.length)%gs.length];cur.frest=false}return render()}

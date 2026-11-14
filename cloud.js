@@ -47,7 +47,7 @@ function initCloud(FB) {
     tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops', 'loaded', 'pack'] },
     questions:{ get: () => T.S.questions.map(x => [x.id, x]), put: m => { T.S.questions = Object.values(m); }, del: false },
     stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; T.S.attStats = (m.attendance && m.attendance.days) || {}; }, del: false },
-    attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days', 'loc', 'chk'] },
+    attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days', 'locf', 'locm', 'chk'] },
     treeSpots: { get: () => (T.S.treeSpots || []).map(x => [x.id, x]), put: m => { T.S.treeSpots = Object.values(m); }, del: false },
     meals:    { get: () => (T.S.meals || []).map(x => [x.id, x]), put: m => { T.S.meals = Object.values(m); }, del: false },
     reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
