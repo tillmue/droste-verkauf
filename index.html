@@ -297,6 +297,9 @@ nav button.on{background:var(--blue);color:#fff}
 .dchip small{display:block;color:var(--mut);font-size:12px;font-weight:600}.dchip b{display:block;font-size:22px;font-weight:800;margin:1px 0}
 .dchip.today{border-color:var(--link)}.dchip.on{background:var(--blue);border-color:var(--blue);color:#fff}.dchip.on small{color:rgba(255,255,255,.85)}
 .dchip .dd{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--green)}.dchip.on .dd{background:#fff}
+.fedbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid rgba(255,255,255,.18)}
+.fedbar b{display:block;font-size:16px}.fedbar small{display:block;color:var(--mut);font-size:13px}.fedbar.on{background:#1f5a38;border-color:#2e9e4f}.fedbar.on small{color:#cfe9d8}
+.fro button,.fro select,.fro textarea,.fro input{pointer-events:none}.fro .est button.on,.fro .stile.on{opacity:1}
 .gsel{margin:0 0 12px}.gsel .f{display:block;margin:12px 0 6px}
 .gnum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.gwide{display:flex;flex-wrap:wrap;gap:8px}.gwide .gtile{flex:1 1 calc(50% - 8px);min-height:42px;padding:6px 10px}
 .gtile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:14px;min-height:54px;font:inherit;font-size:21px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:6px 8px;text-align:center;line-height:1.2}
@@ -385,7 +388,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-13 K';
+const APP_VERSION='2026-11-14 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -610,6 +613,7 @@ function render(){
   if(tab==='zahlen'&&!has('zahlen'))tab='staende';
   if(tab==='lieferungen'&&!has('lieferungen')&&!has('bstand'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
+  if(tab!=='feld')cur.fedit=false;
   if(tab==='auswertung'&&!isAdmin())tab='einstellungen';
   const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,(has('lieferungen')||has('bstand'))?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
   {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise','kueche'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
@@ -933,11 +937,11 @@ const RIGHTS=[
   ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
   ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],['bstand','Baumstandorte sehen und als gesägt markieren','Reiter und Bereiche'],
   ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],['anwSee','Anwesenheit aller mit Namen sehen','Fremde Daten sehen'],['anwCount','Anwesenheit als Zahlen sehen (Küche)','Fremde Daten sehen'],
-  ['calEdit','Saison- und Instagram-Kalender bearbeiten','Bearbeiten'],['lieferplanung','Touren planen','Bearbeiten'],['tasksGive','Aufgaben abgeben und verteilen','Bearbeiten']];
+  ['calEdit','Saison- und Instagram-Kalender bearbeiten','Bearbeiten'],['feldEdit','Im Feld Bäume eintragen (Bearbeitungsmodus)','Bearbeiten'],['lieferplanung','Touren planen','Bearbeiten'],['tasksGive','Aufgaben abgeben und verteilen','Bearbeiten']];
 const PERMS=RIGHTS.map(r=>[r[0],r[1]]);
 const ROLECOLS=[['chef','Ch'],['verkauf','Ve'],['team','Te'],['allrounder','Al'],['schonung','Sc'],['fahrer','Fa'],['kueche','Kü']];
 const DEF_ROLECFG=(()=>{const all={};RIGHTS.forEach(r=>all[r[0]]=true);const pick=l=>{const o={};RIGHTS.forEach(r=>o[r[0]]=l.includes(r[0]));return o};
-  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),allrounder:pick(['instagram','staende','preise','kalender','tasksGive']),schonung:pick(['feld']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender']),kueche:pick(['kueche','anwCount','preise'])}})();
+  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),allrounder:pick(['instagram','staende','preise','kalender','tasksGive']),schonung:pick(['feld','feldEdit']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender']),kueche:pick(['kueche','anwCount','preise'])}})();
 function presetFor(role){
   const o={};if(role==='admin'||role==='demo'){RIGHTS.forEach(r=>o[r[0]]=true);return o}
   const rc={...(DEF_ROLECFG[role]||{}),...(((S&&S.rolesCfg)||{})[role]||{})};RIGHTS.forEach(r=>o[r[0]]=!!rc[r[0]]);return o}
@@ -1917,10 +1921,12 @@ document.addEventListener('click',ev=>{
   if(a==='fnote'){const txt=(cur.fnote||'').trim();if(!txt)return alert('Bitte eine Notiz eintragen.');
     S.reports.push({id:uid(),cat:'feld',obj:curOrt(),text:txt,urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});cur.fnote='';save();toast('Notiz gesendet');return render()}
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
+  if(a==='fedit'){cur.fedit=!cur.fedit;return render()}
   if(a==='fstep'){const gs=(orteList().find(x=>x.name===cur.fs)||{gaenge:[]}).gaenge;if(gs.length){const i=gs.indexOf(cur.fg);cur.fg=gs[(i+(+v)+gs.length)%gs.length];cur.frest=false}return render()}
   if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
   if(a==='fzoom'){planViewer(()=>Promise.resolve(v));return}
   if(a==='fmapzoom'){openMapViewer(v);return}
+  if(['ftoggle','fest','fch','fall','fset','frest','fnote'].includes(a)&&!feldCanEdit())return;
   if(a==='ftoggle'){const o=curOrt(),q0=feldQ(o,v);feldChange(o,v,q0>0?-q0:1,'netz');return}
   if(a==='fest'){const [sid,n]=v.split('|'),o=curOrt(),q0=feldQ(o,sid),nn=+n;feldChange(o,sid,(nn===0?0:nn)-q0,'rest');return}
   if(a==='fch'){const [sid,dl]=v.split('|');feldChange(curOrt(),sid,+dl,cur.fmode==='abfahrt'?'abfahrt':'netz');return}
@@ -3372,6 +3378,7 @@ function spotForm(){
     <input class="t" id="spf-note" placeholder="Notiz (optional)" value="${esc(f.note)}" style="margin-top:8px">
     ${f.id?'<button class="btn red" data-pl="spdel" style="margin-top:10px">Löschen</button>':''}
     <div class="mini" style="margin-top:10px"><button class="btn sec" data-pl="spcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="spsave" style="margin:0">Speichern</button></div></div>`}
+const feldCanEdit=()=>has('feldEdit')&&!!cur.fedit;
 function vFeld(){
   if(cur.fmode==='standorte')cur.fmode='netz';
   const os=orteList(),ort=curOrt(),mode=cur.fmode,o=os.find(x=>x.name===cur.fs)||{gaenge:[]},schAddr=schon(cur.fs).address||'';
@@ -3399,6 +3406,8 @@ function vFeld(){
     setTimeout(fitAllPins,0);
     return;
   }
+  const canE=has('feldEdit'),ed=feldCanEdit();
+  const edBar=canE?`<div class="fedbar ${ed?'on':''}"><div><b>${ed?'Bearbeitung ist an':'Nur ansehen'}</b><small>${ed?'Du kannst jetzt Bäume eintragen.':'Zum Ändern Bearbeiten antippen.'}</small></div><button class="${ed?'claim':'btn'}" data-pl="fedit" style="margin:0">${ed?'Fertig':'Bearbeiten'}</button></div>`:`<div class="hint">Nur ansehen.</div>`;
   const qOf=k=>feldQ(ort,k.id);
   const present=SORT.filter(k=>qOf(k)>0);
   const estTxt=q=>q>1?'ca. '+num(q):'liegt hier';
@@ -3417,8 +3426,8 @@ function vFeld(){
     body=`<div class="hint">Palette voll? Sag, wie viele Bäume hier noch liegen. Eine ungefähre Zahl reicht.</div>${groups.map(g=>blk(esc(SGN[g.g]),g.its.map(rowA).join(''))).join('')||'<div class="hint">Hier ist nichts eingetragen. Unter Netzen angeben, was hier liegt, oder unten eine Sorte hinzufügen.</div>'}
       <select class="t" id="fadd" style="margin:0 0 14px"><option value="">Sorte hinzufügen, die hier noch liegt …</option>${add.map(k=>`<option value="${k.id}">${esc(sorteLabel(k))}</option>`).join('')}</select>`;
   }
-  $('#app').innerHTML=`${chips}${seg}${hasMap?mapHtml('fg'):''}${gchips}<div class="gstep"><button data-pl="fstep" data-v="-1" aria-label="Zurück">‹</button><h2>${esc(ort)}</h2><button data-pl="fstep" data-v="1" aria-label="Weiter">›</button></div>${body}
-    <div class="card pad formc" style="margin-top:14px"><label class="f">Notiz für Chef und Admin (z. B. Gang blockiert, Sorte fehlt)</label><textarea class="t" id="fn-note" rows="2" placeholder="Notiz zu ${esc(ort)}">${esc(cur.fnote||'')}</textarea><button class="btn" data-pl="fnote" style="margin-bottom:0">Notiz senden</button></div>`;
+  $('#app').innerHTML=`${chips}${seg}${edBar}${hasMap?mapHtml('fg'):''}${gchips}<div class="gstep"><button data-pl="fstep" data-v="-1" aria-label="Zurück">‹</button><h2>${esc(ort)}</h2><button data-pl="fstep" data-v="1" aria-label="Weiter">›</button></div><div class="${ed?'':'fro'}">${body}</div>
+    ${ed?`<div class="card pad formc" style="margin-top:14px"><label class="f">Notiz für Chef und Admin (z. B. Gang blockiert, Sorte fehlt)</label><textarea class="t" id="fn-note" rows="2" placeholder="Notiz zu ${esc(ort)}">${esc(cur.fnote||'')}</textarea><button class="btn" data-pl="fnote" style="margin-bottom:0">Notiz senden</button></div>`:''}`;
   setTimeout(fitAllPins,0);
 }
 /* ---------- Beispieldaten (zum Ausprobieren, jederzeit entfernbar) ---------- */
@@ -3820,7 +3829,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='hof-vat'){S.hofInfo={...S.hofInfo,vat:t.value.trim()};save()}
   if(t.id==='hof-paypal'){S.hofInfo={...S.hofInfo,paypal:t.value.trim()};save()}
   if(t.id==='frest-add'&&t.value){cur.fextra.push(t.value);render();return}
-  if(t.id==='fadd'&&t.value){feldChange(curOrt(),t.value,1,'netz');return}
+  if(t.id==='fadd'&&t.value&&feldCanEdit()){feldChange(curOrt(),t.value,1,'netz');return}
   if(t.id==='hof-orte'){S.hofInfo={...S.hofInfo,orte:t.value.trim()};save();return}
   if(t.id==='hof-mach'){S.hofInfo={...S.hofInfo,machines:t.value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')};save()}
   if(t.id==='hof-attfrom'){S.hofInfo={...S.hofInfo,attFrom:t.value};save()}
