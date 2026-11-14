@@ -301,6 +301,9 @@ nav button.on{background:var(--blue);color:#fff}
 .fedbar b{display:block;font-size:16px}.fedbar small{display:block;color:var(--mut);font-size:13px}.fedbar.on{background:#1f5a38;border-color:#2e9e4f}.fedbar.on small{color:#cfe9d8}
 .fro button,.fro select,.fro textarea,.fro input{pointer-events:none}.fro .est button.on,.fro .stile.on{opacity:1}
 .schbtn{margin:0;width:auto;min-height:52px;padding:0 22px;font-size:18px;font-weight:700;border-radius:26px;flex:none}
+.fsave{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#0e1813;border-top:1px solid var(--line)}
+.fsave .btn{max-width:568px;margin:0 auto;min-height:54px;font-size:19px;font-weight:700;background:var(--blue)}
+body.fedit nav{display:none}body.fedit main{padding-bottom:110px}
 .gsel{margin:0 0 12px}.gsel .f{display:block;margin:12px 0 6px}
 .gnum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.gwide{display:flex;flex-wrap:wrap;gap:8px}.gwide .gtile{flex:1 1 calc(50% - 8px);min-height:42px;padding:6px 10px}
 .gtile{border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:14px;min-height:54px;font:inherit;font-size:21px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:6px 8px;text-align:center;line-height:1.2}
@@ -389,7 +392,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 C';
+const APP_VERSION='2026-11-14 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -615,6 +618,7 @@ function render(){
   if(tab==='lieferungen'&&!has('lieferungen')&&!has('bstand'))tab='plan';
   if(tab==='feld'&&!has('feld'))tab='plan';
   if(tab!=='feld')cur.fedit=false;
+  if(!cur.fedit||tab!=='feld')document.body.classList.remove('fedit');
   if(tab==='auswertung'&&!isAdmin())tab='einstellungen';
   const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,(has('lieferungen')||has('bstand'))?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
   {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise','kueche'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
@@ -1922,7 +1926,7 @@ document.addEventListener('click',ev=>{
   if(a==='fnote'){const txt=(cur.fnote||'').trim();if(!txt)return alert('Bitte eine Notiz eintragen.');
     S.reports.push({id:uid(),cat:'feld',obj:curOrt(),text:txt,urgent:false,photo:'',status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});cur.fnote='';save();toast('Notiz gesendet');return render()}
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
-  if(a==='fedit'){cur.fedit=!cur.fedit;return render()}
+  if(a==='fedit'){const was=cur.fedit;cur.fedit=!cur.fedit;if(was)toast('Gespeichert');window.scrollTo(0,0);return render()}
   if(a==='fstep'){const gs=(orteList().find(x=>x.name===cur.fs)||{gaenge:[]}).gaenge;if(gs.length){const i=gs.indexOf(cur.fg);cur.fg=gs[(i+(+v)+gs.length)%gs.length];cur.frest=false}return render()}
   if(a==='fpin'){cur.fg=v;cur.fmode='netz';cur.frest=false;window.scrollTo(0,0);return render()}
   if(a==='fzoom'){planViewer(()=>Promise.resolve(v));return}
@@ -3409,7 +3413,8 @@ function vFeld(){
     return;
   }
   const canE=has('feldEdit'),ed=feldCanEdit();
-  const edBar=canE?`<div class="fedbar ${ed?'on':''}"><div><b>${ed?'Bearbeitung ist an':'Nur ansehen'}</b><small>${ed?'Du kannst jetzt Bäume eintragen.':'Zum Ändern Bearbeiten antippen.'}</small></div><button class="${ed?'claim':'btn'}" data-pl="fedit" style="margin:0">${ed?'Fertig':'Bearbeiten'}</button></div>`:`<div class="hint">Nur ansehen.</div>`;
+  const edBar=canE?`<div class="fedbar ${ed?'on':''}"><div><b>${ed?'Bearbeitung ist an':'Nur ansehen'}</b><small>${ed?'Du kannst jetzt Bäume eintragen.':'Zum Ändern Bearbeiten antippen.'}</small></div>${ed?'':`<button class="btn" data-pl="fedit" style="margin:0">Bearbeiten</button>`}</div>`:`<div class="hint">Nur ansehen.</div>`;
+  document.body.classList.toggle('fedit',ed);
   const qOf=k=>feldQ(ort,k.id);
   const present=SORT.filter(k=>qOf(k)>0);
   const estTxt=q=>q>1?'ca. '+num(q):'liegt hier';
@@ -3428,7 +3433,7 @@ function vFeld(){
     body=`<div class="hint">Palette voll? Sag, wie viele Bäume hier noch liegen. Eine ungefähre Zahl reicht.</div>${groups.map(g=>blk(esc(SGN[g.g]),g.its.map(rowA).join(''))).join('')||'<div class="hint">Hier ist nichts eingetragen. Unter Netzen angeben, was hier liegt, oder unten eine Sorte hinzufügen.</div>'}
       <select class="t" id="fadd" style="margin:0 0 14px"><option value="">Sorte hinzufügen, die hier noch liegt …</option>${add.map(k=>`<option value="${k.id}">${esc(sorteLabel(k))}</option>`).join('')}</select>`;
   }
-  $('#app').innerHTML=`${chips}${seg}${edBar}${hasMap?mapHtml('fg'):''}${gchips}<div class="gstep"><button data-pl="fstep" data-v="-1" aria-label="Zurück">‹</button><h2>${esc(ort)}</h2><button data-pl="fstep" data-v="1" aria-label="Weiter">›</button></div><div class="${ed?'':'fro'}">${body}</div>
+  $('#app').innerHTML=`${chips}${seg}${edBar}${hasMap?mapHtml('fg'):''}${gchips}<div class="gstep"><button data-pl="fstep" data-v="-1" aria-label="Zurück">‹</button><h2>${esc(ort)}</h2><button data-pl="fstep" data-v="1" aria-label="Weiter">›</button></div><div class="${ed?'':'fro'}">${body}</div>${ed?'<div class="fsave"><button class="btn" data-pl="fedit">Speichern</button></div>':''}
     ${ed?`<div class="card pad formc" style="margin-top:14px"><label class="f">Notiz für Chef und Admin (z. B. Gang blockiert, Sorte fehlt)</label><textarea class="t" id="fn-note" rows="2" placeholder="Notiz zu ${esc(ort)}">${esc(cur.fnote||'')}</textarea><button class="btn" data-pl="fnote" style="margin-bottom:0">Notiz senden</button></div>`:''}`;
   setTimeout(fitAllPins,0);
 }

@@ -356,3 +356,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 ### 14.11.2026 C: Knopf Wechseln im Feld größer (Version B, Klasse schbtn).
 
 ### 14.11.2026 D: Feld zeigt, wer eingetragen hat (Version C): "liegt hier · Name" bei Netzen, Abfahren und Übersicht (`feldBy`, `bal.by`). Testeinträge im Feld gelöscht (Sicherung `~/Droste-Backups/feld-testeintraege-geloescht-2026-11-14.json`), nur Dieter Vorgewände, Rot bleibt (Till 08:52).
+
+### 14.11.2026 E: Im Bearbeitungsmodus (Feld) verschwindet die untere Reiterleiste, stattdessen fester Knopf Speichern (`.fsave`, `body.fedit`), Version D. Gespeichert wird weiterhin sofort bei jeder Eingabe, Speichern beendet den Modus und zeigt Gespeichert.
