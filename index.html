@@ -389,7 +389,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 B';
+const APP_VERSION='2026-11-14 C';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3304,6 +3304,7 @@ function curOrt(){
 }
 const feldSlug=x=>x.toLowerCase().replace(/[^a-z0-9äöüß]+/g,'-').replace(/^-+|-+$/g,'')||'ort';
 const feldDoc=(ort,create)=>{let d=S.feld.find(x=>x.ort===ort);if(!d&&create){d={id:feldSlug(ort),ort,bal:{}};S.feld.push(d)}return d};
+const feldBy=(ort,sid)=>{const d=feldDoc(ort),b=d&&d.bal[sid];return b&&b.q>0&&b.by?String(b.by):''};
 const feldQ=(ort,sid)=>{const d=feldDoc(ort),b=d&&d.bal[sid];return b?b.q:0};
 function feldChange(ort,sid,delta,typ,quiet){
   const d=feldDoc(ort,true),b=d.bal[sid]||(d.bal[sid]={q:0,in:0,out:0});
@@ -3397,7 +3398,7 @@ function vFeld(){
       (bySch[s]=bySch[s]||[]).push({g,bal,q});bal.forEach(([sid,b])=>{perSort[sid]=(perSort[sid]||0)+(b.q>1?b.q:1)})});
     const order=[...os.map(x=>x.name),...Object.keys(bySch).filter(n=>!os.some(x=>x.name===n))].filter(n=>bySch[n]);
     const gIdx=(s,g)=>{const o2=os.find(x=>x.name===s);const i=o2?o2.gaenge.indexOf(g):-1;return i<0?99:i};
-    const sortLine=([sid,b])=>{const k=sortById(sid);return k?`<div class="p" style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${swatchCss(k.f)};width:12px;height:12px"></span><span>${esc(sorteLabel(k))}</span><b style="margin-left:auto">${b.q>1?'ca. '+num(b.q):'liegt'}</b></div>`:''};
+    const sortLine=([sid,b])=>{const k=sortById(sid);return k?`<div class="p" style="display:flex;gap:8px;align-items:center"><span class="sw" style="background:${swatchCss(k.f)};width:12px;height:12px"></span><span>${esc(sorteLabel(k))}</span><b style="margin-left:auto">${b.q>1?'ca. '+num(b.q):'liegt'}${b.by?' · '+esc(b.by):''}</b></div>`:''};
     const blocks=order.map(s=>{const gs=bySch[s].sort((a,b)=>gIdx(s,a.g)-gIdx(s,b.g)),sum=gs.reduce((a,x)=>a+x.q,0);
       return `<h3>${esc(s)}${sum?' ('+num(sum)+')':''}</h3><div class="card">${gs.map(x=>`<div class="row" style="display:block"><div style="display:flex;justify-content:space-between"><div class="n">${esc(x.g||s)}</div><b>${x.q?'ca. '+num(x.q):''}</b></div>${x.bal.sort((a,b)=>b[1].q-a[1].q).map(sortLine).join('')}</div>`).join('')}</div>`}).join('');
     const rows=Object.entries(perSort).map(([sid,q])=>({k:sortById(sid),q})).filter(x=>x.k).sort((a,b)=>b.q-a.q);
@@ -3413,9 +3414,9 @@ function vFeld(){
   const present=SORT.filter(k=>qOf(k)>0);
   const estTxt=q=>q>1?'ca. '+num(q):'liegt hier';
   const EST=[[0,'Leer'],[10,'10'],[20,'20'],[50,'50'],[100,'100']];
-  const tileN=k=>{const on=qOf(k)>0;return `<button class="stile sortile ${on?'on':''}" data-pl="ftoggle" data-v="${k.id}"><span class="sw" style="background:${swatchCss(k.f)}"></span><b>${esc(sorteLabel(k))}</b>${on?'<small>liegt hier</small>':''}</button>`};
+  const tileN=k=>{const on=qOf(k)>0;return `<button class="stile sortile ${on?'on':''}" data-pl="ftoggle" data-v="${k.id}"><span class="sw" style="background:${swatchCss(k.f)}"></span><b>${esc(sorteLabel(k))}</b>${on?`<small>liegt hier${feldBy(ort,k.id)?' · '+esc(feldBy(ort,k.id)):''}</small>`:''}</button>`};
   const rowA=k=>{const q=qOf(k);
-    return `<div class="row" style="display:block;padding:10px 0"><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0">${esc(sorteLabel(k))}</div><span class="p">${q>1?'ca. '+num(q)+' liegen noch':'Menge offen'}</span></div>
+    return `<div class="row" style="display:block;padding:10px 0"><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="sw" style="background:${swatchCss(k.f)}"></span><div class="n" style="flex:1;min-width:0">${esc(sorteLabel(k))}</div><span class="p">${q>1?'ca. '+num(q)+' liegen noch':'Menge offen'}${feldBy(ort,k.id)?' · '+esc(feldBy(ort,k.id)):''}</span></div>
       <div class="est">${EST.map(([n,l])=>`<button class="${(n===0?q===0:(q===n))?'on':''}" data-pl="fest" data-v="${k.id}|${n}">${l}</button>`).join('')}</div></div>`};
   let body;
   if(mode==='netz'){

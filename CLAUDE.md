@@ -354,3 +354,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - Archiv `[4]Stände/[6]Schonungen/` (Feld_Links_vorne_Neubau.png, Original und Entwurf in `[1]Original/`), Druck-PDFs neu (11 Quer, 4 Hoch).
 
 ### 14.11.2026 C: Knopf Wechseln im Feld größer (Version B, Klasse schbtn).
+
+### 14.11.2026 D: Feld zeigt, wer eingetragen hat (Version C): "liegt hier · Name" bei Netzen, Abfahren und Übersicht (`feldBy`, `bal.by`). Testeinträge im Feld gelöscht (Sicherung `~/Droste-Backups/feld-testeintraege-geloescht-2026-11-14.json`), nur Dieter Vorgewände, Rot bleibt (Till 08:52).
