@@ -350,6 +350,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - Nur clientseitig, `firestore.rules` unverändert. RO und PT ergänzt.
 
 ### 14.11.2026 B: Schonung "Feld Links vorne / Neubau"
-- 15. Schonung. Koordinaten 52.32359464836566, 8.138259886296595, 10 Gänge plus Vorgewände (Pill an der Straße oben rechts), Pins in `settings/hof.schonungen`, Bild `schonungen/feld-links-vorne-neubau.jpg`, Zeile in `settings/hof.orte`. Kein Tor markiert.
-- Gang 10 liegt oben links bei den Schuppen (Tills Pin lag am oberen Bildrand), Gänge 1 bis 4 links im dichten Bestand nach Tills Pins gesetzt (Pin-Mittelpunkt = Spitze plus 36 px rechts), 5 bis 9 an den sichtbaren Wegen.
+- 15. Schonung. Koordinaten 52.32359464836566, 8.138259886296595, 9 Gänge plus Vorgewände (Pill an der Straße oben rechts), Gang 10 auf Tills Wunsch entfernt, Pins in `settings/hof.schonungen`, Bild `schonungen/feld-links-vorne-neubau.jpg`, Zeile in `settings/hof.orte`. Kein Tor markiert.
 - Archiv `[4]Stände/[6]Schonungen/` (Feld_Links_vorne_Neubau.png, Original und Entwurf in `[1]Original/`), Druck-PDFs neu (11 Quer, 4 Hoch).
