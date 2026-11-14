@@ -401,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 M';
+const APP_VERSION='2026-11-14 N';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -956,11 +956,11 @@ const realRole=n=>(S.roles&&S.roles[n])||'team';
 let asRole='admin';try{asRole=localStorage.getItem('droste-asrole')||'admin'}catch(e){}
 const roleOf=n=>{const r=realRole(n);return(r==='demo'&&n===S.me)?(ASROLES.includes(asRole)?asRole:'admin'):r};
 const isAdmin=()=>roleOf(S.me)==='admin';
-const canApprove=()=>isAdmin()||roleOf(S.me)==='chef';
+const canApprove=()=>isAdmin()||has('approve');
 const RIGHTS=[
   ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Feld','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
   ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
-  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],['bstand','Baumstandorte sehen und als gesägt markieren','Reiter und Bereiche'],
+  ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],['bstand','Baumstandorte sehen und als gesägt markieren','Reiter und Bereiche'],['approve','Neue Nutzer freigeben oder ablehnen','Bearbeiten'],
   ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],['anwSee','Anwesenheit aller mit Namen sehen','Fremde Daten sehen'],['anwCount','Anwesenheit als Zahlen sehen (Küche)','Fremde Daten sehen'],
   ['calEdit','Saison- und Instagram-Kalender bearbeiten','Bearbeiten'],['feldEdit','Im Feld Bäume eintragen (Bearbeitungsmodus)','Bearbeiten'],['lieferplanung','Touren planen','Bearbeiten'],['tasksGive','Aufgaben abgeben und verteilen','Bearbeiten']];
 const PERMS=RIGHTS.map(r=>[r[0],r[1]]);

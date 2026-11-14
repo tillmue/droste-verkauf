@@ -432,6 +432,7 @@ window.RO_DICT={
 "Standort aus WhatsApp einfügen (Google-Maps-Link oder Koordinaten)": "Lipește locația din WhatsApp (link Google Maps sau coordonate)",
 "Bitte den Kunden eintragen.": "Te rog introdu clientul.",
 "Standort ins Archiv verschieben?": "Muți locația în arhivă?",
+"Neue Nutzer freigeben oder ablehnen": "Aprobă sau respinge utilizatori noi",
 "Baumstandorte sehen und als gesägt markieren": "Vezi locațiile brazilor și marchează ca tăiat",
 "Auslieferung": "Livrare",
 "Morgen da": "Mâine prezenți",

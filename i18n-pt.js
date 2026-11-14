@@ -433,6 +433,7 @@ window.PT_DICT={
 "Standort aus WhatsApp einfügen (Google-Maps-Link oder Koordinaten)": "Colar local do WhatsApp (link do Google Maps ou coordenadas)",
 "Bitte den Kunden eintragen.": "Informe o cliente.",
 "Standort ins Archiv verschieben?": "Mover local para o arquivo?",
+"Neue Nutzer freigeben oder ablehnen": "Liberar ou recusar novos usuários",
 "Baumstandorte sehen und als gesägt markieren": "Ver locais das árvores e marcar como serradas",
 "Auslieferung": "Entrega",
 "Morgen da": "Presentes amanhã",
