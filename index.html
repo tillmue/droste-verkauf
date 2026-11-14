@@ -395,7 +395,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 J';
+const APP_VERSION='2026-11-14 K';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1425,6 +1425,22 @@ function rollTasks(){
   if(n){save();if(window.APP&&window.APP.softRender)softRender()}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'))){rollTasks()}});
+/* Automatisch auf die neueste Version wechseln: beim Zurückkehren in die App und alle 5 Minuten die Versionsnummer beim Server prüfen, bei neuer Version einmal neu laden, sobald gerade nichts getippt oder bearbeitet wird. */
+{let busyMsg=0;
+ const idle=()=>{const a=document.activeElement,typing=a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+   return !typing&&!cur.fedit&&!cur.sheet&&!cur.gateOpen&&!(cur.gate&&(cur.gate.fr!==null||cur.gate.mi!==null))&&!document.body.classList.contains('run')&&!document.querySelector('.pvm')};
+ async function checkUpdate(){
+   try{if(document.visibilityState!=='visible'||typeof S==='undefined'||!S||!S.me)return;
+     const last=+(sessionStorage.getItem('droste-upd')||0);if(Date.now()-last<120000)return;
+     const r=await fetch('index.html?_='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+     const t=await r.text(),m=t.match(/APP_VERSION='([^']+)'/);if(!m||m[1]===APP_VERSION)return;
+     if(!idle()){setTimeout(checkUpdate,30000);return}
+     sessionStorage.setItem('droste-upd',String(Date.now()));
+     if(window.cloud&&window.cloud.resume){try{await Promise.race([window.cloud.resume(),new Promise(x=>setTimeout(x,1500))])}catch(e){}}
+     location.reload();
+   }catch(e){}}
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(checkUpdate,1500)});
+ setInterval(checkUpdate,300000);setTimeout(checkUpdate,8000)}
 function openCount(){const t=todayStr();return S.tasks.filter(x=>!x.deleted&&!x.done&&x.person===S.me&&x.date&&x.date<=t).length}
 function salesByDate(){const o={};Object.keys(S.entries).forEach(k=>{const [sid,d]=k.split('|');if(String(sid).startsWith('p:'))return;const e=entry(sid,d),q=qtyOf(e);if(q>0){const x=o[d]||(o[d]={q:0,r:0});x.q+=q;x.r+=revOf(e)}});return o}
 function askConfirm(msg,ok,cb,no){
