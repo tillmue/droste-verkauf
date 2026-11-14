@@ -394,7 +394,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 H';
+const APP_VERSION='2026-11-14 I';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1635,6 +1635,13 @@ function gateSave(g,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,d
     if(v.fr)d.locf[g]=v.locf;else delete d.locf[g];
     if(v.mi)d.locm[g]=v.locm;else delete d.locm[g]}
   d.chk[g]=Date.now();d.updated=Date.now();save()}
+const GATE_END='09:00';
+setInterval(()=>{if(typeof S==='undefined'||!S||!S.me)return;const cds=document.querySelectorAll('[data-cd]');if(cur.gateOpen&&gateLocked()){cur.gateOpen=false;cur.gate=null;render();return}
+  if(!cds.length)return;if(gateLocked()){if(!document.body.classList.contains('gate'))render();return}cds.forEach(e=>e.textContent=gateMins())},20000);
+const gateLockMs=()=>new Date(gateDay()+'T'+GATE_END+':00').getTime();
+const gateLocked=()=>Date.now()>=gateLockMs();
+const gateMins=()=>Math.max(0,Math.ceil((gateLockMs()-Date.now())/60000));
+const gateCd=()=>gateLocked()?'':`Noch <b data-cd>${gateMins()}</b> Min. änderbar (bis 9:00 Uhr)`;
 const LOCS=[['hof','Am Hof'],['schonung','In der Schonung'],['unklar','Weiß ich noch nicht']];
 function vGate(){
   const g=gateDay(),me=S.me,o=cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};
@@ -1644,6 +1651,7 @@ function vGate(){
   document.body.classList.add('gate');
   $('#app').innerHTML=`<h2 style="margin-top:4px">Guten Morgen, ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${fmtD(g)}</div>
     <section class="blk"><div class="blk-h"><h3>Bist du heute da?</h3></div>
+      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'Es ist nach 9:00 Uhr. Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
       ${meal('fr','locf','Frühstück')}${meal('mi','locm','Mittagessen')}
       <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button></section>
     <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Morgen um 7 Uhr neu abgefragt.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
@@ -1651,9 +1659,10 @@ function vGate(){
 function gateStatus(){const g=gateDay(),d=attDoc(S.me)||{};if(g<attFrom()||g>attTo()||!(d.chk||{})[g])return '';
   const lab=x=>(LOCS.find(y=>y[0]===x)||[0,''])[1],lf=(d.locf||{})[g],lm=(d.locm||{})[g];
   const txt=(d.days||{})[g]==='nein'?'Heute nicht da':`Frühstück: ${lf?esc(lab(lf)):'Nein'} · Mittag: ${lm?esc(lab(lm)):'Nein'}`;
-  return `<section class="blk"><div class="blk-h"><h3>Heute</h3><button class="claim" data-pl="gchg">Ändern</button></div><div class="p">${txt}</div></section>`}
+  const lk=gateLocked();
+  return `<section class="blk"><div class="blk-h"><h3>Heute</h3>${lk?'':'<button class="claim" data-pl="gchg">Ändern</button>'}</div><div class="p">${txt}</div><div class="hint gcd" style="margin-top:6px">${lk?'Nicht mehr änderbar (nach 9:00 Uhr).':gateCd()}</div></section>`}
 const attOf=(n,ds)=>((attDoc(n)||{}).days||{})[ds]||'';
-function attSet(ds,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}d.days[ds]=v;d.updated=Date.now();save()}
+function attSet(ds,v){if(ds===gateDay()&&gateLocked()&&((attDoc(S.me)||{}).chk||{})[ds]&&!isAdmin()){toast('Heute nicht mehr änderbar');return render()}let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}d.days[ds]=v;d.updated=Date.now();save()}
 const attOpen=n=>{const td=todayStr();return attDays().filter(d=>d>=td&&!attOf(n,d))};
 const attTxt=c=>`Frühstück ${c.fr} · Mittag ${c.mi}${c.viell?' · vielleicht '+c.viell:''}`;
 function attCalc(rows){
@@ -1675,7 +1684,7 @@ function attOverview(){
 function anwBlock(){
   const me=S.me,days=attDays(),td=todayStr(),future=days.filter(d=>d>=td),past=days.filter(d=>d<td),open=attOpen(me).length;
   const opts=sel=>`<option value="">offen</option>`+ATT.map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${l}</option>`).join('');
-  const row=d=>`<div class="row"><div class="n" style="min-width:92px">${wdD(d)}</div><select class="t" data-att="${d}" style="max-width:190px">${opts(attOf(me,d))}</select></div>`;
+  const row=d=>`<div class="row"><div class="n" style="min-width:92px">${wdD(d)}</div><select class="t" data-att="${d}" style="max-width:190px" ${d===gateDay()&&gateLocked()&&attOf(me,d)&&!isAdmin()?'disabled':''}>${opts(attOf(me,d))}</select></div>`;
   return `${blk('Meine Anwesenheit',`<div class="hint" style="margin:0 0 8px">Ab ${fmtDe(attFrom())} bis ${fmtDe(attTo())}. Du kannst alles jederzeit ändern. Rolf bekommt morgens eine Zusammenfassung der Änderungen.</div>
     <div class="mini" style="margin-bottom:8px"><select class="t" id="att-bulk" style="min-width:0"><option value="">Alle offenen Tage setzen auf …</option>${ATT.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select><button class="btn sec" data-pl="attbulk" style="margin:0">Anwenden</button></div>
     ${future.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}
@@ -1965,6 +1974,7 @@ document.addEventListener('click',ev=>{
   if(a==='gset'){const [k,b]=v.split('|');cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};cur.gate[k]=(k==='fr'||k==='mi')?b==='true':b;return render()}
   if(a==='gsave'){const o=cur.gate||{};if(o.fr===null||o.mi===null||(o.fr&&!o.locf)||(o.mi&&!o.locm))return;gateSave(gateDay(),{da:true,fr:o.fr,mi:o.mi,locf:o.locf,locm:o.locm});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
   if(a==='gno'){gateSave(gateDay(),{da:false});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
+  if(a==='gchg'&&gateLocked()){toast('Heute nicht mehr änderbar');return render()}
   if(a==='gchg'){const g=gateDay(),d=attDoc(S.me)||{},v=(d.days||{})[g],lf=(d.locf||{})[g],lm=(d.locm||{})[g];cur.gate=(v&&v!=='nein')?{fr:!!lf,mi:!!lm,locf:lf||'',locm:lm||''}:{fr:null,mi:null,locf:'',locm:''};cur.gateOpen=true;return render()}
   if(a==='gcancel'){cur.gateOpen=false;cur.gate=null;return render()}
   if(a==='fedit'){const was=cur.fedit;cur.fedit=!cur.fedit;if(was)toast('Gespeichert');window.scrollTo(0,0);return render()}
