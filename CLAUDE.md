@@ -362,3 +362,9 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 ### 14.11.2026 F: Einstellungen (Admin): Abschnitt Profil ist nicht mehr einklappbar, immer offen (settingsGroup, Version E).
 
 ### 14.11.2026 G: Einstellungen (Admin): Reihenfolge Profil, Team, dann der Rest. Fragen zur App und Anwesenheit starten eingeklappt, nur Freigaben bleiben offen (Version F).
+
+### 14.11.2026 H: Tagesabfrage Anwesenheit (Version G)
+- Jeden Morgen (Tageswechsel um 7 Uhr, `gateDay()`) muss jede Person im Zeitraum `attFrom..attTo` einmal antworten, bevor sie die App nutzt (`gateNeed()`, Vollbild `vGate()` ohne Reiter): Frühstück am Hof (Ja/Nein), Mittagessen am Hof (Ja/Nein), Wo bin ich (`loc`: hof, schonung, unklar). Alternative "Ich bin heute nicht da" (App danach normal nutzbar, nur ansehen).
+- Speicherung in `attendance/{name}`: `days[Datum]` abgeleitet (beide = ja, nur Frühstück = vm, nur Mittag = nm, keins = neuer Wert `da` ("Da, isst nicht am Hof", Küche zählt ihn nicht), nicht da = nein), `loc[Datum]`, `chk[Datum]` = Zeitstempel der Antwort (Abfrage gilt als beantwortet, wenn `chk` für `gateDay()` existiert). `cloud.js` attendance maps jetzt `days, loc, chk`. Kein Regel- oder Function-Deploy nötig (Functions überspringen unbekannte Werte).
+- Übersicht: Karte "Heute" mit Antwort und Knopf Ändern (`gchg`, öffnet die Abfrage erneut mit Abbrechen). Achtung bei neuen Aktionsnamen: `gopen` ist schon vergeben (offene Aufgaben).
+- Bekannt: Frühstück ohne Mittag wird als vm gezählt (Mittag zählt mit); genau wäre ein neuer Wert plus Anpassung `attCalc` und `recomputeAtt` (Deploy). RO und PT ergänzt.
