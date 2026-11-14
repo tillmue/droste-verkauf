@@ -303,6 +303,7 @@ nav button.on{background:var(--blue);color:#fff}
 .schbtn{margin:0;width:auto;min-height:52px;padding:0 22px;font-size:18px;font-weight:700;border-radius:26px;flex:none}
 .fsave{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#0e1813;border-top:1px solid var(--line)}
 .fsave .btn{max-width:568px;margin:0 auto;min-height:54px;font-size:19px;font-weight:700;background:var(--blue)}
+body.kb nav,body.kb .fsave{display:none!important}
 body.fedit nav{display:none}body.fedit main{padding-bottom:110px}
 body.gate nav{display:none}.gyn{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gyn .gtile{font-size:19px}.gmeal{margin:0 0 18px}
 .btn[disabled]{opacity:.4;pointer-events:none}
@@ -394,7 +395,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 I';
+const APP_VERSION='2026-11-14 J';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -687,6 +688,10 @@ function pinHit(box,cx,cy,maxd){
 }
 const fitAllPins=()=>document.querySelectorAll('.fmapi').forEach(b=>layoutPins(b));
 window.addEventListener('resize',fitAllPins);
+/* iPhone: feste Leisten (Reiter, Speichern) rutschen mit der Tastatur nach oben und bleiben dort. Solange ein Eingabefeld aktiv ist, ausblenden; danach Ansicht neu ausrichten. */
+{const FLD='input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]):not([type=file]),textarea,select';
+ document.addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches(FLD))document.body.classList.add('kb')});
+ document.addEventListener('focusout',()=>setTimeout(()=>{const a=document.activeElement;if(a&&a.matches&&a.matches(FLD))return;document.body.classList.remove('kb');window.scrollTo(window.scrollX,window.scrollY)},250))}
 function openMapViewer(act,focus){
   const sc2=schon(cur.fs),u2=imgUrl(sc2.img);
   if(u2)planViewer(()=>Promise.resolve(u2),{pins:mapPins(),act,focus});

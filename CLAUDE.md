@@ -370,3 +370,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - Bekannt: Frühstück ohne Mittag wird als vm gezählt (Mittag zählt mit); genau wäre ein neuer Wert plus Anpassung `attCalc` und `recomputeAtt` (Deploy). RO und PT ergänzt.
 
 ### 14.11.2026 I: Änderungsfenster Tagesabfrage bis 9:00 Uhr (Version I): `gateLocked()`, `gateCd()` mit Countdown in Minuten (Karte Heute und Abfrage, Ticker alle 20 s). Danach kein Ändern mehr (Knopf weg, attSet und Profil-Auswahl für heute gesperrt, Admin ausgenommen). Wer vor 9:00 noch nicht geantwortet hat, muss weiter antworten, danach gesperrt.
+
+### 14.11.2026 J: iPhone: feste Leisten (Reiter, Speichern) rutschten mit der Tastatur nach oben und blieben dort. Fix (Version J): `body.kb` blendet nav und .fsave aus, solange ein Eingabefeld aktiv ist (focusin/focusout, ohne Checkbox/Radio/Button), danach Scroll neu ausrichten. Nur auf Mac simuliert, echter Test auf dem iPhone steht aus.
