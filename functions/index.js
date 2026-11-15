@@ -521,6 +521,21 @@ exports.morning = onSchedule({ schedule: '0 7 * * *', timeZone: TZ }, async () =
   }
 });
 
+/* Anwesenheit: um 7:15 an alle, die heute noch nichts eingetragen haben */
+T.attRemind = {
+  de: () => 'Guten Morgen! Bitte trag jetzt ein, ob du heute da bist und isst (bis 9:00 Uhr änderbar).',
+  ro: () => 'Bună dimineața! Te rugăm să treci acum dacă ești prezent azi și dacă mănânci (modificabil până la 9:00).'
+};
+exports.attRemind = onSchedule({ schedule: '15 7 * * *', timeZone: TZ }, async () => {
+  const today = berlinDate();
+  const hof = (await db.doc('settings/hof').get()).data() || {};
+  if (today < (hof.attFrom || '2026-11-15') || today > (hof.attTo || '2026-12-24')) return;
+  const done = new Set();
+  (await db.collection('attendance').get()).forEach(x => { const d = x.data(); if ((d.chk || {})[today]) done.add(d.name); });
+  const users = (await approvedUsers()).filter(u => u.role !== 'demo' && (u.fcmTokens || []).length && !done.has(u.name));
+  for (const u of users) await pushTo(u, lang => T.attRemind[lang]());
+});
+
 /* 3. Erinnerungen vor Terminen */
 exports.reminders = onSchedule({ schedule: 'every 10 minutes', timeZone: TZ }, async () => {
   const now = new Date(), today = berlinDate(now), tomorrow = addDays(today, 1);
