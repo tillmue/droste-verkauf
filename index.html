@@ -401,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-15 C';
+const APP_VERSION='2026-11-15 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2554,7 +2554,7 @@ function orderCard(o){
 }
 const toRad=d=>d*Math.PI/180;
 const havKm=(a,b)=>{const R=6371,dl=toRad(b.lat-a.lat),dg=toRad(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
-const orderPickup=o=>!o.pickupSkip&&(/abgeholt|abholung|selbst\s*abhol/i.test([...(o.hints||[]),o.window||''].join(' '))||(/Abholung/i.test(orderService(o))&&!/Lieferung|Aufstellen/i.test(orderService(o))));
+const orderPickup=o=>{if(o.pickupSkip)return false;const tx=[...(o.hints||[]),o.window||''].join(' '),sv=orderService(o);if(/selbst\s*abhol/i.test(tx))return true;if(/Lieferung|Aufstellen/i.test(sv))return false;return /abgeholt|abholung/i.test(tx)||/Abholung/i.test(sv)};
 const inWindow=(o,day)=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&t>=day};
 function planPickups(day,list){
   const L=list||S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,day));
