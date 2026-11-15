@@ -401,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-15 B';
+const APP_VERSION='2026-11-15 C';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2559,11 +2559,14 @@ const inWindow=(o,day)=>{const f=o.from||day,t=o.to||o.from||day;return f<=day&&
 function planPickups(day,list){
   const L=list||S.orders.filter(o=>orderOpen(o)&&orderPickup(o)&&inWindow(o,day));
   if(!L.length)return 0;
+  const has1=o=>S.tours.some(t=>!t.deleted&&t.type==='abholung'&&Object.values(t.stops||{}).some(x=>x.orderId===o.id&&!x.deleted));
+  let ch=false;const Lx=L.filter(o=>{if(has1(o)){if(o.status!=='geplant'){o.status='geplant';ch=true}return false}return true});
+  if(!Lx.length){if(ch)save();return 0}
   let p=S.tours.find(x=>!x.deleted&&x.type==='abholung'&&x.date===day);
-  if(!p){p={id:uid(),type:'abholung',date:day,driver:'',vehicle:'',note:'',stops:{},createdBy:S.me,created:Date.now()};S.tours.push(p)}
+  if(!p){p={id:'pk'+day,type:'abholung',date:day,driver:'',vehicle:'',note:'',stops:{},createdBy:S.me,created:Date.now()};S.tours.push(p)}
   p.stops=p.stops||{};
-  L.forEach(o=>{const mx=Object.values(p.stops).reduce((m,s)=>Math.max(m,s.order||0),0),stop=orderToStop(o,mx+1);stop.address='';stop.pickup=true;p.stops[stop.id]=stop;o.status='geplant';o.tourId=p.id;o.stopId=stop.id;o.plannedFor=day});
-  save();return L.length;
+  Lx.forEach(o=>{const mx=Object.values(p.stops).reduce((m,s)=>Math.max(m,s.order||0),0),stop=orderToStop(o,mx+1);stop.id='pk-'+o.id;stop.address='';stop.pickup=true;p.stops[stop.id]=stop;o.status='geplant';o.tourId=p.id;o.stopId=stop.id;o.plannedFor=day});
+  save();return Lx.length;
 }
 function syncPickups(){
   if(!has('lieferplanung')||cur.pkSync)return;
