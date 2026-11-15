@@ -401,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-15 D';
+const APP_VERSION='2026-11-15 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -3333,8 +3333,9 @@ function vLieferungen(){
   const cidx=t=>{const i=TCOL.findIndex(c=>c[0]===t.color);return i<0?99:i};
   const on=ds=>live.filter(t=>t.date===ds).sort((a,b)=>(isP(a)-isP(b))||(cidx(a)-cidx(b))||((a.created||0)-(b.created||0)));
   const nL=ds=>on(ds).filter(t=>!isP(t)).reduce((s,t)=>s+nOf(t),0),nA=ds=>on(ds).filter(isP).reduce((s,t)=>s+nOf(t),0);
-  const badge=ds=>{const l=nL(ds),a=nA(ds);return (l&&kind!=='abh'?`<i class="c-t" style="text-align:center;font-size:13px;font-weight:700">${l}</i>`:'')+(a&&kind!=='lief'?`<i class="c-o" style="text-align:center;font-size:13px;font-weight:700">${a}</i>`:'')};
-  const hint=kind==='abh'?'Zahl = Abholungen pro Tag':kind==='lief'?'Zahl = Stopps pro Tag':'Stopps und Abholungen pro Tag';
+  const oOpen={};if(plan&&kind!=='abh')S.orders.filter(o=>orderOpen(o)&&!orderPickup(o)).forEach(o=>{const d=o.from||o.to;if(d)oOpen[d]=(oOpen[d]||0)+1});
+  const badge=ds=>{const l=nL(ds),a=nA(ds),w=oOpen[ds]||0;return (w?`<i class="c-x" style="text-align:center;font-size:13px;font-weight:700">${w}</i>`:'')+(l&&kind!=='abh'?`<i class="c-t" style="text-align:center;font-size:13px;font-weight:700">${l}</i>`:'')+(a&&kind!=='lief'?`<i class="c-o" style="text-align:center;font-size:13px;font-weight:700">${a}</i>`:'')};
+  const hint=kind==='abh'?'Zahl = Abholungen pro Tag':kind==='lief'?'Zahl = Stopps pro Tag'+(plan?', grau = offene Aufträge':''):'Stopps und Abholungen pro Tag';
   const empty=kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':kind==='lief'?'Für diesen Tag sind keine Touren geplant.':'Für diesen Tag steht nichts an.';
   const add=plan?((kind!=='abh'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn add" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
   const dayTitle=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>`;

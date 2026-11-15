@@ -766,6 +766,7 @@ window.RO_DICT={
 "Keine Touren geplant.": "Nu sunt ture planificate.",
 "Keine Abholungen geplant.": "Nu sunt ridicări planificate.",
 "Für diesen Tag sind keine Abholungen eingetragen.": "Pentru această zi nu sunt ridicări înregistrate.",
+"Zahl = Stopps pro Tag, grau = offene Aufträge": "Număr = opriri pe zi, gri = comenzi deschise",
 "Zahl = Stopps pro Tag": "Număr = opriri pe zi",
 "Zahl = Abholungen pro Tag": "Număr = ridicări pe zi",
 "Gesamt": "Total",

@@ -767,6 +767,7 @@ window.PT_DICT={
 "Keine Touren geplant.": "Nenhuma rota planejada.",
 "Keine Abholungen geplant.": "Nenhuma retirada planejada.",
 "Für diesen Tag sind keine Abholungen eingetragen.": "Não há retiradas registradas para este dia.",
+"Zahl = Stopps pro Tag, grau = offene Aufträge": "Número = paradas por dia, cinza = pedidos abertos",
 "Zahl = Stopps pro Tag": "Número = paradas por dia",
 "Zahl = Abholungen pro Tag": "Número = retiradas por dia",
 "Gesamt": "Total",
