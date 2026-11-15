@@ -401,7 +401,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-14 N';
+const APP_VERSION='2026-11-15 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1921,10 +1921,11 @@ document.addEventListener('click',ev=>{
     if(f.cat==='nachschub'){const q=parseInt(f.qty)||0;if(!f.obj)return alert('Bitte den Stand wählen.');if(q<NACH_MIN)return alert('Nachschub bitte erst ab '+NACH_MIN+' Bäumen anfragen.');f.text=`${q} Bäume${f.text.trim()?': '+f.text.trim():''}`}
     if(f.cat==='strich'){if(!f.obj)return alert('Bitte den Stand wählen.');if(!cur.rfile&&!f.text.trim())return alert('Bitte ein Foto der Strichliste anhängen.');if(!f.text.trim())f.text='Strichliste vom '+new Date().toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}
     if(!f.text.trim())return alert('Bitte kurz beschreiben, was los ist.');
-    (async()=>{const id=uid();let photo='';
+    if(cur.rBusy)return;cur.rBusy=true;{const b=ev.target.closest('button');if(b){b.disabled=true;b.textContent='Wird gesendet …'}}
+    (async()=>{try{const id=uid();let photo='';
       if(cur.rfile&&window.cloud&&window.cloud.uploadImage){try{toast('Foto wird hochgeladen …');photo=await window.cloud.uploadImage('meldungen/'+id+'.jpg',await shrinkImage(cur.rfile,1600))}catch(e){alert('Das Foto konnte nicht hochgeladen werden. Die Meldung wird ohne Foto gesendet.')}}
       S.reports.push({id,cat:f.cat,obj:f.obj||'',text:f.text.trim(),urgent:!!f.urgent,photo,status:'neu',by:S.me,byUid:S.myUid||'',created:Date.now()});
-      cur.rOpen=false;cur.rf=newRf();cur.rfile=null;if(cur.sheet==='rep')cur.sheet='';save();toast('Meldung gesendet');render()})();return}
+      cur.rOpen=false;cur.rf=newRf();cur.rfile=null;if(cur.sheet==='rep')cur.sheet='';save();toast('Meldung gesendet');render()}finally{cur.rBusy=false}})();return}
   if(a==='rwork'){const r=S.reports.find(x=>x.id===v);if(r){r.status='arbeit';save();render()}return}
   if(a==='rdone'){const r=S.reports.find(x=>x.id===v);if(!r)return;return askConfirm('Meldung als erledigt markieren?','Ja, erledigt',()=>{r.status='erledigt';r.doneAt=Date.now();r.doneBy=S.me;save();render()})}
   if(a==='rassign'){const r=S.reports.find(x=>x.id===v);if(!r)return;

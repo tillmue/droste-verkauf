@@ -37,6 +37,7 @@ window.PT_DICT={
 "Noch keine Antwort": "Ainda sem resposta",
 "Die Namen sehen nur Chef und Admin.": "Só o chefe e o admin veem os nomes.",
 "Zahl im Tag: Frühstück · Mittag": "Número por dia: café da manhã · almoço",
+"Wird gesendet …": "Enviando …",
 "Schonung wählen": "Escolher plantação",
 "Auswertung öffnen": "Abrir análise",
 "Versionsverlauf": "Histórico de versões",

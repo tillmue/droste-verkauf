@@ -37,6 +37,7 @@ window.RO_DICT={
 "Noch keine Antwort": "Încă fără răspuns",
 "Die Namen sehen nur Chef und Admin.": "Numele le văd doar șeful și adminul.",
 "Zahl im Tag: Frühstück · Mittag": "Număr pe zi: mic dejun · prânz",
+"Wird gesendet …": "Se trimite …",
 "Schonung wählen": "Alege plantația",
 "Versionsverlauf": "Istoric versiuni",
 "In der Planung als Auftrag angelegt.": "Creat ca lucrare în planificare.",
