@@ -1368,7 +1368,23 @@ window.PT_DICT={
 "+ Person": "+ Pessoa",
 "netto": "líquido",
 "bis 10 km": "até 10 km",
-"pro Meter": "por metro"
+"pro Meter": "por metro",
+"Reiter Schonung": "Aba Plantação",
+"Nach dem Speichern kannst du es heute nicht mehr ändern.": "Depois de salvar, você não pode mais alterar hoje.",
+"Es ist nach 9:00 Uhr. Eintragen nach 9:00 Uhr kostet 6 Bier (¼ Kiste).": "Já passou das 9:00. Registrar depois das 9:00 custa 6 cervejas (¼ de caixa).",
+"Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)": "min. para alterar (até 9:00, depois custa 6 cervejas)",
+"Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.": "Então você ainda pode ver o app. Isso é perguntado de novo todo dia a partir da meia-noite, o registro vale até as 9:00.",
+"Eingetragen heute": "Registrados hoje",
+"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "A partir das 9:00: quem não se registrou paga 6 cervejas (¼ de caixa). Quem tomou café da manhã sem registro é marcado aqui. A lista para pendurar está como PDF no OneDrive, pasta Hof-Droste_Büro.",
+"Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.": "Até as 9:00 ainda dá para se registrar. Depois, a lista com os complementos aparece aqui.",
+"Alle eingetragen.": "Todos registrados.",
+"Noch niemand.": "Ainda ninguém.",
+"nicht da": "não está",
+"nach 9:00": "depois das 9:00",
+"hat gefrühstückt": "tomou café da manhã",
+"Hat gefrühstückt": "Tomou café da manhã",
+"Zurücknehmen": "Desfazer",
+"Wartet auf Freigabe": "Aguardando aprovação"
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[
@@ -1637,5 +1653,11 @@ window.PT_PATTERNS=[
  [/^Umbenennen fehlgeschlagen: (.*)$/,(m,x)=>`Falha ao renomear: ${x}`],
  [/^Benachrichtigungen konnten nicht eingeschaltet werden\.\n\nFehler: (.*)$/,(m,x)=>`Não foi possível ativar as notificações.\n\nErro: ${x}`],
  [/^noch offen \((\d+) Frühstück, (\d+) Mittag\)$/,(m,a,b)=>`ainda em aberto (${a} café da manhã, ${b} almoço)`],
- [/^Rolle: (.+)$/,(m,x)=>`Função: ${trs(x)}`]
+ [/^Rolle: (.+)$/,(m,x)=>`Função: ${trs(x)}`],
+ [/^Nicht eingetragen \((\d+)\)$/,(m,n)=>`Não registrados (${n})`],
+ [/^Eingetragen \((\d+)\)$/,(m,n)=>`Registrados (${n})`],
+ [/^(\d+) von (\d+)$/,(m,a,b)=>`${a} de ${b}`],
+ [/^Wer hat die App\? \((\d+) freigegeben(?:, (\d+) wartet)?\)$/,(m,a,b)=>`Quem tem o app? (${a} aprovados${b?', '+b+' aguardando':''})`],
+ [/^Frühstück: (.+) · Mittag: (.+)$/,(m,a,b)=>`Café da manhã: ${trs(a)} · Almoço: ${trs(b)}`],
+ [/^(.+): noch frei$/,(m,x)=>`${x}: ainda livre`]
 ];

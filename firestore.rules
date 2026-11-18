@@ -139,6 +139,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Manuelle Nachträge zur Anwesenheit (wer hat ohne Eintrag gefrühstückt): Admin und Rolf (Recht Anwesenheit sehen)
+    match /attMan/{id} {
+      allow read, create, update: if perm('anwSee');
+      allow delete: if false;
+    }
+
     // Essensplan: alle lesen, Küche, Chef und Admin tragen ein
     match /meals/{id} {
       allow read: if isMember();

@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-18 A';
+const APP_VERSION='2026-11-19 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -433,10 +433,10 @@ const DEFAULT=()=>({
     {id:'p7',name:'Nordmann 2,5kg',price:6,cost:0},
     {id:'p8',name:'Nordmann 17 €',price:17,cost:0},
     {id:'p9',name:'Nordmann Blau',price:20,cost:6,color:'#1ea7e8'},
-    {id:'p10',name:'Nordmann Gelb',price:27,cost:8,color:'#ffe600'},
-    {id:'p11',name:'Nordmann Orange',price:35,cost:10,color:'#f0a07c'},
-    {id:'p12',name:'Nordmann Grün',price:40,cost:14,color:'#8fce3c'},
-    {id:'p13',name:'Nordmann Lila/Gelb',price:45,cost:0,color:'#d96cc8'},
+    {id:'p10',name:'Nordmann Gelb',price:29,cost:8,color:'#ffe600'},
+    {id:'p11',name:'Nordmann Orange',price:38,cost:10,color:'#f0a07c'},
+    {id:'p12',name:'Nordmann Grün',price:45,cost:14,color:'#8fce3c'},
+    {id:'p13',name:'Nordmann Lila/Gelb',price:49,cost:0,color:'#d96cc8'},
     {id:'p14',name:'Nordmann Lila',price:45,cost:7,color:'#b04fd6'},
     {id:'p15',name:'Nordmann Rot',price:25,cost:13,color:'#ff2d2d'},
     {id:'p16',name:'Nordmann 25 €',price:25,cost:0},
@@ -447,7 +447,7 @@ const DEFAULT=()=>({
 let S;
 function normalizeS(){
   const D=['Cedric','Felix','Magnus','Lukas','Till','Rolf'];
-  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.treeSpots=S.treeSpots||[];S.attendance=S.attendance||[];S.meals=S.meals||[];S.attStats=S.attStats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
+  S.tasks=S.tasks||[];S.notes=S.notes||[];S.events=S.events||[];S.penalties=S.penalties||[];S.shopping=S.shopping||[];S.reports=S.reports||[];S.orders=S.orders||[];S.bestellungen=S.bestellungen||[];S.days=S.days||[];S.rolesCfg=S.rolesCfg||{};S.questions=S.questions||[];S.stats=S.stats||{};S.treeSpots=S.treeSpots||[];S.attendance=S.attendance||[];S.meals=S.meals||[];S.attMan=S.attMan||[];S.attStats=S.attStats||{};S.packs=S.packs||[];S.tours=S.tours||[];S.feld=S.feld||[];S.perms=S.perms||{};S.traits=S.traits||{};S.approved=S.approved||{};S.emailVerified=S.emailVerified||{};S.hofInfo=S.hofInfo||{address:''};
   if(CLOUD){S.people=S.people||[];S.roles=S.roles||{}}
   else{S.people=[...D,...(S.people||[]).filter(n=>!D.includes(n))];
     S.roles=S.roles||{};D.forEach(n=>{if(!S.roles[n])S.roles[n]=n==='Till'?'admin':n==='Rolf'?'verkauf':'team'})}
@@ -637,7 +637,7 @@ function render(){
   if(tab!=='feld')cur.fedit=false;
   if(!cur.fedit||tab!=='feld')document.body.classList.remove('fedit');
   if(tab==='auswertung'&&!isAdmin())tab='einstellungen';
-  const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,(has('lieferungen')||has('bstand'))?['lieferungen',icon('lieferungen'),'Logistik']:null,has('feld')?['feld',icon('feld'),'Feld']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
+  const items=[['ich',icon('ich'),'Übersicht'],['plan',icon('plan'),'Plan'],has('staende')?['staende',icon('staende'),'Stände']:null,(has('lieferungen')||has('bstand'))?['lieferungen',icon('lieferungen'),has('lieferungen')?'Logistik':'Standorte']:null,has('feld')?['feld',icon('feld'),'Schonung']:null,has('preise')?['preise',icon('preise'),'Preise']:null,has('kueche')?['kueche',icon('kueche'),'Küche']:null].filter(Boolean);
   {const vis=items.map(i=>i[0]);if(['staende','lieferungen','feld','preise','kueche'].includes(tab)&&!vis.includes(tab))tab='plan';if((tab==='erfassen'||tab==='zahlen')&&!vis.includes('staende'))tab='plan'}
   const nav=$('#nav'),oc=openCount();nav.style.display='';
   if(homeMode()){
@@ -964,7 +964,7 @@ const roleOf=n=>{const r=realRole(n);return(r==='demo'&&n===S.me)?(ASROLES.inclu
 const isAdmin=()=>roleOf(S.me)==='admin';
 const canApprove=()=>isAdmin()||has('approve');
 const RIGHTS=[
-  ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Feld','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
+  ['staende','Reiter Stände (Packlisten)','Reiter und Bereiche'],['lieferungen','Reiter Logistik ansehen','Reiter und Bereiche'],['feld','Reiter Schonung','Reiter und Bereiche'],['preise','Reiter Preise','Reiter und Bereiche'],
   ['kalender','Kalender im Plan ansehen','Reiter und Bereiche'],['verkauf','Verkauf eintragen','Reiter und Bereiche'],['zahlen','Zahlen ansehen','Reiter und Bereiche'],['einkauf','Einkaufsliste','Reiter und Bereiche'],
   ['archiv','Archiv','Reiter und Bereiche'],['instagram','Instagram-Kalender ansehen','Reiter und Bereiche'],['kueche','Reiter Küche (Essen, Küchen-Einkauf)','Reiter und Bereiche'],['bstand','Baumstandorte sehen und als gesägt markieren','Reiter und Bereiche'],['approve','Neue Nutzer freigeben oder ablehnen','Bearbeiten'],
   ['tasksAll','Alle Aufgaben sehen','Fremde Daten sehen'],['reportsAll','Alle Meldungen sehen und bearbeiten','Fremde Daten sehen'],['toursAll','Alle Touren sehen (sonst nur eigene)','Fremde Daten sehen'],['anwSee','Anwesenheit aller mit Namen sehen','Fremde Daten sehen'],['anwCount','Anwesenheit als Zahlen sehen (Küche)','Fremde Daten sehen'],
@@ -972,7 +972,7 @@ const RIGHTS=[
 const PERMS=RIGHTS.map(r=>[r[0],r[1]]);
 const ROLECOLS=[['chef','Ch'],['verkauf','Ve'],['team','Te'],['allrounder','Al'],['schonung','Sc'],['fahrer','Fa'],['kueche','Kü']];
 const DEF_ROLECFG=(()=>{const all={};RIGHTS.forEach(r=>all[r[0]]=true);const pick=l=>{const o={};RIGHTS.forEach(r=>o[r[0]]=l.includes(r[0]));return o};
-  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),allrounder:pick(['instagram','staende','preise','kalender','tasksGive']),schonung:pick(['feld','feldEdit']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender']),kueche:pick(['kueche','anwCount','preise'])}})();
+  return {chef:all,verkauf:pick(['verkauf','zahlen','instagram','staende','preise','kalender']),team:pick(['instagram','staende','preise','kalender']),allrounder:pick(['instagram','staende','preise','kalender','tasksGive']),schonung:pick(['feld','feldEdit']),fahrer:pick(['lieferungen','instagram','staende','preise','kalender']),kueche:pick(['kueche','anwCount','preise','bstand'])}})();
 function presetFor(role){
   const o={};if(role==='admin'||role==='demo'){RIGHTS.forEach(r=>o[r[0]]=true);return o}
   const rc={...(DEF_ROLECFG[role]||{}),...(((S&&S.rolesCfg)||{})[role]||{})};RIGHTS.forEach(r=>o[r[0]]=!!rc[r[0]]);return o}
@@ -981,6 +981,7 @@ const permsOf=n=>{const r=roleOf(n),base=presetFor(r),ov=(realRole(n)==='demo'&&
 const has=k=>isAdmin()||!!permsOf(S.me)[k];
 const canCal=()=>has('calEdit');
 const seeAllTasks=()=>has('tasksAll');
+const kOnly=()=>!isAdmin()&&roleOf(S.me)==='kueche';
 const canGive=()=>isAdmin()||has('tasksAll')||has('tasksGive');
 const pill=(n,c)=>`<span class="pill ${c||''}">${n}</span>`;
 const blk=(title,body,o={})=>`<section class="blk${o.tone?' t-'+o.tone:''}${o.go?' click':''}"${o.go?` data-pl="${o.go}"`:''}><div class="blk-h"><h3>${title}</h3>${o.pill||''}</div>${body}</section>`;
@@ -1192,7 +1193,7 @@ function vIch(){
   const live=S.tasks.filter(t=>!t.deleted);
   const doneTodayL=live.filter(t=>t.done&&t.doneAt&&(t.doneBy===me||t.person===me)&&new Date(t.doneAt).toDateString()===nowS).sort((a,b)=>(a.doneAt||0)-(b.doneAt||0));
   const today=live.filter(t=>t.person===me&&!t.done&&t.date&&t.date<=td).sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?-1:1);
-  const free=live.filter(t=>!t.person&&!t.done).length;
+  const free=kOnly()?0:live.filter(t=>!t.person&&!t.done).length;
   const doneBy=live.filter(t=>t.done&&t.doneBy===me&&t.doneAt);
   const doneToday=doneBy.filter(t=>new Date(t.doneAt).toDateString()===nowS).length;
   const week=doneBy.filter(t=>t.doneAt>Date.now()-7*864e5).length;
@@ -1219,7 +1220,7 @@ function vIch(){
   const blk=(title,body,o={})=>`<section class="blk${o.tone?' t-'+o.tone:''}${o.go?' click':''}"${o.go?` data-pl="${o.go}"`:''}><div class="blk-h"><h3>${title}</h3>${o.pill||''}</div>${body}</section>`;
   const nQ=isAdmin()?S.questions.filter(q=>!q.deleted&&!q.done).length:0;
   const myTours=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.status!=='beendet'&&t.date>=td&&t.date<=shiftDate(td,7)&&isCrew(t,me)).sort((a,b)=>a.date<b.date?-1:1).slice(0,3);
-  $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>${gateStatus()}
+  $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>${gateStatus()}${gateList()}
   <div id="wx" style="margin:8px 0 14px">${wxHtml()}</div>${beerBlock()}
   <div class="mini" style="margin-bottom:14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
@@ -1571,7 +1572,7 @@ function taskRow(t,showDate,pop){
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
     <div style="min-width:0;flex:1"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
     <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${(()=>{const by=t.assignedBy||t.createdBy;return by&&by!==t.person?`<div class="p">Von ${esc(by)}</div>`:''})()}${(()=>{const ri=repInfo(t);return ri?`<div class="p" style="color:var(--orange)">Gemeldet von ${esc(ri.by)} · ${repDate(ri.at)}</div>`:''})()}${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.handedFrom&&!t.done?`<div class="p">Abgegeben von ${esc(t.handedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
-    ${(!t.person&&!t.done)?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${t.photo?thumbBtn(t.photo,'sdopen',t.id):''}${t.done?'':`<button class="rowedit" data-pl="sdopen" data-v="${t.id}" aria-label="Aufgabe bearbeiten" title="Bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}</div>`;
+    ${(!t.person&&!t.done&&!kOnly())?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${t.photo?thumbBtn(t.photo,'sdopen',t.id):''}${t.done?'':`<button class="rowedit" data-pl="sdopen" data-v="${t.id}" aria-label="Aufgabe bearbeiten" title="Bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}</div>`;
 }
 function taskDetail(){
   const t=S.tasks.find(x=>x.id===cur.sd);if(!t)return '<div class="hint">Aufgabe nicht gefunden.</div>';
@@ -1659,8 +1660,8 @@ const attFrom=()=>(S.hofInfo&&S.hofInfo.attFrom)||'2026-11-15',attTo=()=>(S.hofI
 const attDays=()=>{const o=[];let d=attFrom();const e=attTo();while(d<=e&&o.length<120){o.push(d);d=shiftDate(d,1)}return o};
 const attDoc=n=>(S.attendance||[]).find(x=>x.name===n);
 /* Tagesabfrage: jeden Morgen (ab 7 Uhr) einmal sagen, ob man da ist, isst und wo man ist */
-const gateDay=()=>{const d=new Date();d.setHours(d.getHours()-7);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
-const gateNeed=()=>{if(!S.me)return false;if(cur.gateOpen)return true;if(window.APP&&APP.attReady===false)return false;if(new Date().getHours()<7)return false;const g=gateDay();if(g<attFrom()||g>attTo())return false;return !((attDoc(S.me)||{}).chk||{})[g]};
+const gateDay=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+const gateNeed=()=>{if(!S.me)return false;if(cur.gateOpen)return true;if(window.APP&&APP.attReady===false)return false;const g=gateDay();if(g<attFrom()||g>attTo())return false;return !((attDoc(S.me)||{}).chk||{})[g]};
 function gateSave(g,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}
   d.days=d.days||{};d.locf=d.locf||{};d.locm=d.locm||{};d.chk=d.chk||{};
   if(v.da===false){d.days[g]='nein';delete d.locf[g];delete d.locm[g]}
@@ -1675,7 +1676,7 @@ setInterval(()=>{if(typeof S==='undefined'||!S||!S.me)return;const cds=document.
 const gateLockMs=()=>new Date(gateDay()+'T'+GATE_END+':00').getTime();
 const gateLocked=()=>Date.now()>=gateLockMs();
 const gateMins=()=>Math.max(0,Math.ceil((gateLockMs()-Date.now())/60000));
-const gateCd=()=>gateLocked()?'':`Noch <b data-cd>${gateMins()}</b> Min. änderbar (bis 9:00 Uhr)`;
+const gateCd=()=>gateLocked()?'':`Noch <b data-cd>${gateMins()}</b> Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)`;
 const LOCS=[['hof','Am Hof'],['schonung','In der Schonung'],['unklar','Weiß ich noch nicht']];
 function vGate(){
   const g=gateDay(),me=S.me,o=cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};
@@ -1685,10 +1686,10 @@ function vGate(){
   document.body.classList.add('gate');
   $('#app').innerHTML=`<h2 style="margin-top:4px">Guten Morgen, ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${fmtD(g)}</div>
     <section class="blk"><div class="blk-h"><h3>Bist du heute da?</h3></div>
-      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'Es ist nach 9:00 Uhr. Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
+      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'<b style="color:var(--red)">Es ist nach 9:00 Uhr. Eintragen nach 9:00 Uhr kostet 6 Bier (¼ Kiste).</b> Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
       ${meal('fr','locf','Frühstück')}${meal('mi','locm','Mittagessen')}
       <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button></section>
-    <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Morgen um 7 Uhr neu abgefragt.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
+    <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
 }
 function gateStatus(){const g=gateDay(),d=attDoc(S.me)||{};if(g<attFrom()||g>attTo()||!(d.chk||{})[g])return '';
   const lab=x=>(LOCS.find(y=>y[0]===x)||[0,''])[1],lf=(d.locf||{})[g],lm=(d.locm||{})[g];
@@ -1723,6 +1724,33 @@ function anwBlock(){
     <div class="mini" style="margin-bottom:8px"><select class="t" id="att-bulk" style="min-width:0"><option value="">Alle offenen Tage setzen auf …</option>${ATT.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select><button class="btn sec" data-pl="attbulk" style="margin:0">Anwenden</button></div>
     ${future.map(row).join('')||'<div class="row"><span class="p">Der Zeitraum ist vorbei.</span></div>'}
     ${past.length?`<details data-det="attpast"><summary style="padding:8px 0">Vergangene Tage (${past.length})</summary>${past.map(row).join('')}</details>`:''}`,{pill:pill(open?open+' offen':'komplett',open?'o':'g')})}`}
+
+/* Anwesenheitsliste des Tages (Admin und alle mit Recht "Anwesenheit sehen", z. B. Rolf): wer hat sich eingetragen, wer nicht; Nachtrag "hat gefrühstückt" von Hand. Die PDF zum Aushängen erzeugt der Mac ab 9 Uhr in OneDrive. */
+const attManDoc=ds=>(S.attMan||[]).find(x=>x.id===ds);
+function manToggle(n,ds){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};if(d.names[n])delete d.names[n];else d.names[n]=Date.now();d.by=S.me;d.updated=Date.now();save()}
+function gateList(){
+  if(!has('anwSee'))return '';
+  const g=gateDay();if(g<attFrom()||g>attTo())return '';
+  const ppl=S.people.filter(n=>S.approved[n]!==false&&roleOf(n)!=='demo'&&!/^Test /.test(n)).sort((a,b)=>a.localeCompare(b,'de'));
+  const lab=x=>(LOCS.find(y=>y[0]===x)||[0,''])[1],lk=gateLockMs();
+  const yes=[],no=[];ppl.forEach(n=>{const d=attDoc(n)||{};if((d.chk||{})[g])yes.push([n,d]);else no.push(n)});
+  const man=(attManDoc(g)||{}).names||{};
+  const yrow=([n,d])=>{const late=d.chk[g]>lk,v=(d.days||{})[g],lf=(d.locf||{})[g],lm=(d.locm||{})[g];
+    const t=v==='nein'?'nicht da':`Frühstück: ${lf?esc(lab(lf)):'Nein'} · Mittag: ${lm?esc(lab(lm)):'Nein'}`;
+    return `<div class="row" style="display:block"><div class="n" style="font-size:15px">${esc(n)}${late?' <span class="pill r">nach 9:00</span>':''}</div><div class="p">${t}</div></div>`};
+  const nrow=n=>`<div class="row"><div class="n" style="font-size:15px;flex:1">${esc(n)}${man[n]?' <span class="pill o">hat gefrühstückt</span>':''}</div><button class="claim" data-pl="manfr" data-v="${esc(n)}">${man[n]?'Zurücknehmen':'Hat gefrühstückt'}</button></div>`;
+  const open=gateLocked();
+  return `<section class="blk"><div class="blk-h"><h3>Eingetragen heute</h3>${pill(yes.length+' von '+ppl.length,no.length?'o':'g')}</div>
+    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
+    <details data-det="gl-no" ${open?'open':''}><summary style="padding:8px 0"><b>Nicht eingetragen (${no.length})</b></summary>${no.map(nrow).join('')||'<div class="p">Alle eingetragen.</div>'}</details>
+    <details data-det="gl-yes"><summary style="padding:8px 0"><b>Eingetragen (${yes.length})</b></summary>${yes.map(yrow).join('')||'<div class="p">Noch niemand.</div>'}</details></section>`}
+/* Liste aller, die die App haben (Admin) */
+function appUsers(){
+  if(!isAdmin())return '';
+  const ppl=S.people.filter(n=>roleOf(n)!=='demo'),ok=ppl.filter(n=>S.approved[n]!==false),wait=ppl.filter(n=>S.approved[n]===false);
+  const row=n=>`<div class="row"><div class="n" style="font-size:15px;flex:1">${esc(n)}</div><div class="p">${esc(ROLE[roleOf(n)]||roleOf(n))}</div></div>`;
+  return `<details data-det="appusers" class="card pad"><summary style="padding:4px 0"><b>Wer hat die App? (${ok.length} freigegeben${wait.length?', '+wait.length+' wartet':''})</b></summary>
+    ${ok.sort((a,b)=>a.localeCompare(b,'de')).map(row).join('')}${wait.length?`<div class="hint" style="margin-top:10px">Wartet auf Freigabe</div>${wait.map(row).join('')}`:''}</details>`}
 const mealOf=ds=>((S.meals||[]).find(x=>x.id===ds)||{}).text||'';
 function mealSet(ds,txt){let m=(S.meals||[]).find(x=>x.id===ds);if(!m){m={id:ds,date:ds};S.meals.push(m)}m.text=txt.trim();m.by=S.me;m.updated=Date.now();save()}
 function kVotes(d){
@@ -1828,10 +1856,10 @@ function planKal(){
 function planAufg(){
   const td=todayStr(),pfl=cur.pf;
   const keep=t=>!pfl||(pfl==='@me'?t.person===S.me:pfl==='@open'?!t.person:t.person===pfl);
-  const list=S.tasks.filter(t=>!t.deleted&&keep(t)&&(seeAllTasks()||!t.person||t.person===S.me)),open=list.filter(t=>!t.done);
+  const list=S.tasks.filter(t=>!t.deleted&&keep(t)&&(seeAllTasks()||(!kOnly()&&!t.person)||t.person===S.me)),open=list.filter(t=>!t.done);
   const srt=a=>a.slice().sort((x,y)=>((x.date||'9')+(x.time||''))<((y.date||'9')+(y.time||''))?-1:1);
   const groups=[['Überfällig',open.filter(t=>t.date&&t.date<td),'r'],['Heute',open.filter(t=>t.date===td),'o'],['Demnächst',open.filter(t=>t.date>td),''],['Ohne Datum',open.filter(t=>!t.date),'']];
-  const fl=[['','Alle'],['@me','Meine'],['@open','Offen']].concat(seeAllTasks()?S.people.map(p=>[p,p]):[]);
+  const fl=(kOnly()?[['@me','Meine']]:[['','Alle'],['@me','Meine'],['@open','Offen']]).concat(seeAllTasks()?S.people.map(p=>[p,p]):[]);
   const nDone=list.filter(t=>t.done).length;
   return `<div class="mini" style="margin:4px 0 14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   <div class="chips">${fl.map(([v,l])=>`<button class="chip ${pfl===v?'on':''}" data-pl="pf" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>
@@ -1858,6 +1886,8 @@ function planArch(){
   ${list.length>lim?'<button class="btn sec" data-pl="amore">Mehr anzeigen</button>':''}`;
 }
 const shopState=x=>x.done?'erl':x.ordered?'best':'kauf';
+/* Einkaufslisten-Eintrag in der Sprache der App anzeigen (Übersetzung erzeugt die Cloud Function, Feld trl; ohne Übersetzung der Originaltext) */
+const shT=(x,k)=>{const o=x.trl&&x.trl[LANG]&&x.trl[LANG][k];return o||(k==='t'?x.text:x.note)||''};
 const shopTs=at=>new Date(at).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 function planEinkauf(lst){
   lst=lst||'hof';cur.shlist=lst;
@@ -1866,7 +1896,7 @@ function planEinkauf(lst){
   by.kauf.sort((a,b)=>(b.at||0)-(a.at||0));by.best.sort((a,b)=>(b.at||0)-(a.at||0));by.erl.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const list=by[st].slice(0,st==='erl'?40:200);
   const row=x=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${x.done?'on':''}" data-pl="shopdone" data-v="${x.id}">${x.done?'✓':''}</button>
-    <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${esc(x.text)}</div><div class="p">${x.by?'Von '+esc(x.by):''}${x.at?' am '+shopTs(x.at):''}</div>${x.done&&x.doneBy?`<div class="p">Abgehakt von ${esc(x.doneBy)}${x.doneAt?' am '+shopTs(x.doneAt):''}</div>`:''}${x.note?`<div class="p" style="font-style:italic">${esc(x.note.length>80?x.note.slice(0,80)+' …':x.note)}</div>`:''}</div></div>
+    <div style="min-width:0;flex:1"><div class="n ${x.done?'done':''}">${esc(shT(x,'t'))}</div><div class="p">${x.by?'Von '+esc(x.by):''}${x.at?' am '+shopTs(x.at):''}</div>${x.done&&x.doneBy?`<div class="p">Abgehakt von ${esc(x.doneBy)}${x.doneAt?' am '+shopTs(x.doneAt):''}</div>`:''}${shT(x,'n')?`<div class="p" style="font-style:italic">${esc(shT(x,'n').length>80?shT(x,'n').slice(0,80)+' …':shT(x,'n'))}</div>`:''}</div></div>
     ${x.photo?thumbBtn(x.photo,'shopen',x.id):''}<button class="rowedit" data-pl="shopen" data-v="${x.id}" aria-label="Eintrag bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>`;
   const seg=`<div class="seg">${[['kauf','Einkaufen ('+by.kauf.length+')'],['best','Bestellt ('+by.best.length+')'],['erl','Erledigt ('+by.erl.length+')']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="shs" data-v="${k}">${l}</button>`).join('')}</div>`;
   return `<button class="qtile g" data-pl="shnew" style="width:100%;flex-direction:row;justify-content:center;gap:12px;margin:4px 0 12px"><b>+</b>Neuer Eintrag</button>${seg}
@@ -2024,6 +2054,7 @@ document.addEventListener('click',ev=>{
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
   if(a==='gset'){const [k,b]=v.split('|');cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};cur.gate[k]=(k==='fr'||k==='mi')?b==='true':b;return render()}
   if(a==='gsave'){const o=cur.gate||{};if(o.fr===null||o.mi===null||(o.fr&&!o.locf)||(o.mi&&!o.locm))return;gateSave(gateDay(),{da:true,fr:o.fr,mi:o.mi,locf:o.locf,locm:o.locm});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
+  if(a==='manfr'){if(!has('anwSee'))return;manToggle(v,gateDay());return render()}
   if(a==='gno'){gateSave(gateDay(),{da:false});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
   if(a==='gchg'&&gateLocked()){toast('Heute nicht mehr änderbar');return render()}
   if(a==='gchg'){const g=gateDay(),d=attDoc(S.me)||{},v=(d.days||{})[g],lf=(d.locf||{})[g],lm=(d.locm||{})[g];cur.gate=(v&&v!=='nein')?{fr:!!lf,mi:!!lm,locf:lf||'',locm:lm||''}:{fr:null,mi:null,locf:'',locm:''};cur.gateOpen=true;return render()}
@@ -2190,7 +2221,7 @@ document.addEventListener('click',ev=>{
     return;
   }
   if(a==='shopdone'){const x=S.shopping.find(y=>y.id===v);if(x){x.done=!x.done;if(x.done){x.doneBy=S.me;x.doneAt=Date.now()}else{delete x.doneBy;delete x.doneAt}save();render()}return}
-  if(a==='tclaim'){const x=S.tasks.find(x=>x.id===v);x.person=S.me;x.assignedBy=S.me;save();return render()}
+  if(a==='tclaim'){if(kOnly())return;const x=S.tasks.find(x=>x.id===v);x.person=S.me;x.assignedBy=S.me;save();return render()}
   if(a==='tdone'){
     const x=S.tasks.find(x=>x.id===v);if(!x)return;
     return x.done?askConfirm('Wieder auf offen setzen?','Ja, wieder öffnen',()=>completeTask(v)):askConfirm(`„${x.title}“ wirklich als erledigt markieren?`,'Ja, erledigt',()=>completeTask(v));
@@ -2685,7 +2716,7 @@ function planItem(o,P,mi){const ci=orderCrewInfo(o,P.date);let ws=winStart(o.win
   if(ci.win){ws=Math.max(ws==null?0:ws,ci.win[0]);we=we==null?ci.win[1]:Math.min(we,ci.win[1])}
   return {o,lat:o.lat,lng:o.lng,mi,k:ci.k,ci,ws,we,svc2:orderSvc(o),sv:orderSv(o),n:nTrees(o),must:(o.to||o.from||'')<=P.date?1:0}}
 function crewTxtOf(list){const crew=Math.max(...list.map(x=>x.k)),sehr=Math.max(0,...list.map(x=>x.ci.sehr)),kr=crew===1&&list.some(x=>x.ci.kraeftig),req=crew===3?'3 Personen':crew===2?'2 Personen':'1 Person';
-  return {crew,txt:req+(sehr?', davon mindestens '+sehr+' sehr kräftig':'')+(kr&&!sehr?', Person mindestens kräftig':'')}}
+  return {crew,txt:req}}
 function buildToursV2(orders,dep,P){
   dep={...dep,mi:0};P={...P,dep};
   const items=orders.map(o=>planItem(o,P,orders.indexOf(o)+1));
@@ -2717,8 +2748,8 @@ function buildToursV2(orders,dep,P){
   }
   return tours.map(T=>{const crew=T.e.crew||Math.max(...T.list.map(x=>x.k)),sehr=Math.max(0,...T.list.map(x=>x.ci.sehr)),kr=crew===1&&T.list.some(x=>x.ci.kraeftig);
     const req=crew===3?'3 Personen':crew===2?'2 Personen':'1 Person';
-    const txt=req+(sehr?', davon mindestens '+sehr+' sehr kräftig':'')+(kr&&!sehr?', Person mindestens kräftig':'');
-    const mx=T.list.filter(x=>x.k===crew).slice(0,3).map(x=>{const c=x.ci;return `${x.o.name} (${c.L>4?'längster Baum '+mFmt(c.L)+(c.sehr?', davon '+c.sehr+' sehr kräftig nötig':''):c.L>2.5?'längster Baum '+mFmt(c.L)+', 2,5 bis 4 m':c.n>=30&&!c.win?c.n+' Bäume, ab 30 zu zweit':c.L?'längster Baum '+mFmt(c.L):'wenige kleine Bäume'})`});
+    const txt=req;
+    const mx=T.list.filter(x=>x.k===crew).slice(0,3).map(x=>{const c=x.ci;return `${x.o.name} (${c.L>4?'längster Baum '+mFmt(c.L):c.L>2.5?'längster Baum '+mFmt(c.L)+', 2,5 bis 4 m':c.n>=30&&!c.win?c.n+' Bäume, ab 30 zu zweit':c.L?'längster Baum '+mFmt(c.L):'wenige kleine Bäume'})`});
     return {orders:T.list.map(x=>x.o),crew,reqTxt:txt,late:!!T.late,bid:T.id,cost:Math.round(T.e.cost),crewWhy:mx,stopsWhy:T.list.map(x=>({id:x.o.id,hist:hist[x.o.id]||[],ws:x.ws,we:x.we}))};});
 }
 function assemblePlan(pd,tours){
@@ -2843,13 +2874,12 @@ async function optimizeTour(t){
 const infoBtn=k=>`<button class="infoi" data-pl="info" data-v="${k}" aria-label="Info">i</button>`;
 const infoBox=(k,t)=>(cur.info&&cur.info[k])?`<div class="hint infobox">${t}</div>`:'';
 
-/* Besetzungsempfehlung: wer passt nach Kraft und Führerschein (nur Vorschlag, die Zuweisung bleibt von Hand) */
+/* Besetzungsempfehlung: freie Personen vorschlagen (nur Vorschlag, die Zuweisung bleibt von Hand). Kraft und Führerschein spielen keine Rolle mehr. */
 const KRAFTL={normal:'normal',kraeftig:'kräftig',sehr:'sehr kräftig'},KRANK={normal:0,kraeftig:1,sehr:2},KRAFT_L=[['normal','Normal'],['kraeftig','Kräftig'],['sehr','Sehr kräftig']];
 function stopsNeeds(stops){
   const arr=Array.isArray(stops)?stops:Object.values(stops||{});
-  const L=Math.max(0,...arr.flatMap(s=>(s.lines||[]).filter(l=>['Baum','Laternenbaum'].includes(l.c)).map(l=>+l.l||0)));
   const crew=crewNum(arr);
-  return {crew,sehr:L>5?2:L>4?1:0,kr:crew===1&&arr.some(s=>/aufstellen/i.test(s.service||''))};
+  return {crew,sehr:0,kr:false};
 }
 const USE_LICENSE=false;
 const crewList=()=>((S.hofInfo&&S.hofInfo.crew)||[]);
@@ -2867,11 +2897,11 @@ function recommendCrew(needs,used,anh){
   const picked=[],miss=[];
   for(let i=0;i<needs.sehr;i++){const x=take(y=>rk(y)>=2,(a,b)=>(lic(a)-lic(b)));if(x)picked.push(x);else miss.push('sehr kräftig')}
   let drv=picked.find(licOk)||null;if(drv)picked.splice(picked.indexOf(drv),1);
-  if(!drv){drv=take(y=>licOk(y)&&(!needs.kr||rk(y)>=1),(a,b)=>rk(a)-rk(b));if(!drv)miss.push(needs.kr?'Person mit mindestens „kräftig“ (alle vergeben oder nicht eingetragen)':USE_LICENSE?(anh?'Fahrer mit Anhängerführerschein':'Fahrer mit Führerschein'):'weitere Person')}
+  if(!drv){drv=take(y=>licOk(y)&&(!needs.kr||rk(y)>=1),(a,b)=>rk(a)-rk(b));if(!drv)miss.push(USE_LICENSE?(anh?'Fahrer mit Anhängerführerschein':'Fahrer mit Führerschein'):'weitere Person')}
   const others=picked.slice();
   while(others.length<needs.crew-1){const x=take(()=>true,(a,b)=>rk(a)-rk(b));if(!x)break;others.push(x)}
-  const lab=x=>`${x.p} (${KRAFTL[x.kraft]}${USE_LICENSE?(x.lizenz==='anhaenger'?', Anhänger':x.lizenz==='auto'?', Auto':''):''})`;
-  const why=[];let sehrN=0;others.forEach(x=>{if(rk(x)>=2&&sehrN<needs.sehr){sehrN++;why.push(x.p+': sehr kräftig, wird auf dieser Tour gebraucht ('+needs.sehr+' nötig)')}else why.push(x.p+': stärkste noch freie Person')});if(drv)why.push(drv.p+': Fahrer'+(needs.kr?' (allein aufstellen: mindestens kräftig)':''));
+  const lab=x=>x.p;
+  const why=[];others.forEach(x=>why.push(x.p+': noch frei'));if(drv)why.push(drv.p+': Fahrer');
   if(used.size)why.push('Nicht verfügbar, weil gleichzeitig in anderen Touren eingeplant: '+[...used].join(', '));
   const parts=[];if(drv)parts.push('Fahrer: '+lab(drv));
   others.slice(0,needs.crew-1).forEach((x,i)=>parts.push((needs.crew>2?'Beifahrer '+(i+1):'Beifahrer')+': '+lab(x)));
@@ -3646,13 +3676,14 @@ function vDaten(){
   ${anwBlock()}
   ${isAdmin()?'<h2>Auswertung</h2><button class="btn sec" data-go="auswertung">Auswertung öffnen</button>':''}
   <h2>Team</h2>
+  ${appUsers()}
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  ${S.people.map((p,i)=>`<div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div><div class="edit" style="margin-top:-2px"><select class="t" data-trait="${i}|kraft">${KRAFT.map(([k,l])=>`<option value="${k}" ${traitsOf(p).kraft===k?'selected':''}>Kraft: ${l}</option>`).join('')}</select><select class="t" data-trait="${i}|lizenz">${LIZ.map(([k,l])=>`<option value="${k}" ${traitsOf(p).lizenz===k?'selected':''}>${l}</option>`).join('')}</select></div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${permBlock(p,i)}`).join('')}
+  ${S.people.map((p,i)=>`<div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${permBlock(p,i)}`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Mitarbeiter für die Planung</h2>
-  <div class="card pad"><div class="hint">Alle, die für Touren in Frage kommen, auch ohne App-Konto. Die Kraft bestimmt die Besetzungsempfehlung. Personen mit App-Konto werden automatisch dazugenommen.</div>
-  ${crewList().map((c,i)=>`<div class="edit"><input class="t" data-cr="${i}|n" value="${esc(c.n||'')}" placeholder="Name"><select class="t" style="width:140px" data-cr="${i}|k">${KRAFT_L.map(([k,l])=>`<option value="${k}" ${(c.k||'normal')===k?'selected':''}>${l}</option>`).join('')}</select><button class="x" data-pl="crewdel" data-v="${i}">×</button></div>`).join('')}
+  <div class="card pad"><div class="hint">Alle, die für Touren in Frage kommen, auch ohne App-Konto. Personen mit App-Konto werden automatisch dazugenommen.</div>
+  ${crewList().map((c,i)=>`<div class="edit"><input class="t" data-cr="${i}|n" value="${esc(c.n||'')}" placeholder="Name"><button class="x" data-pl="crewdel" data-v="${i}">×</button></div>`).join('')}
   <button class="btn sec" data-pl="crewadd">+ Mitarbeiter</button></div>
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
   <div class="card pad"><div class="hint">Datei einspielen (z. B. Instagram-Plan oder Packlisten der Stände). Schon vorhandene Einträge werden übersprungen.</div>

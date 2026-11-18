@@ -1369,7 +1369,23 @@ window.RO_DICT={
 "+ Person": "+ Persoană",
 "netto": "net",
 "bis 10 km": "până la 10 km",
-"pro Meter": "pe metru"
+"pro Meter": "pe metru",
+"Reiter Schonung": "Fila Plantație",
+"Nach dem Speichern kannst du es heute nicht mehr ändern.": "După salvare nu mai poți modifica azi.",
+"Es ist nach 9:00 Uhr. Eintragen nach 9:00 Uhr kostet 6 Bier (¼ Kiste).": "Este după ora 9:00. Înscrierea după ora 9:00 costă 6 beri (¼ de lădiță).",
+"Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)": "min. modificabil (până la 9:00, apoi costă 6 beri)",
+"Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.": "Atunci poți vedea aplicația oricum. Se întreabă din nou în fiecare zi de la ora 0:00, înscrierea este posibilă până la 9:00.",
+"Eingetragen heute": "Înscriși azi",
+"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "De la 9:00: cine nu s-a înscris plătește 6 beri (¼ de lădiță). Cine a luat micul dejun fără înscriere se marchează aici. Lista de afișat este ca PDF în OneDrive, folderul Hof-Droste_Büro.",
+"Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.": "Până la 9:00 te poți încă înscrie. După aceea apare aici lista cu completările.",
+"Alle eingetragen.": "Toți sunt înscriși.",
+"Noch niemand.": "Încă nimeni.",
+"nicht da": "nu este aici",
+"nach 9:00": "după 9:00",
+"hat gefrühstückt": "a luat micul dejun",
+"Hat gefrühstückt": "A luat micul dejun",
+"Zurücknehmen": "Retrage",
+"Wartet auf Freigabe": "Așteaptă aprobarea"
 };
 
 window.RO_PATTERNS=[
@@ -1815,5 +1831,11 @@ window.RO_PATTERNS=[
  [/^Umbenennen fehlgeschlagen: (.*)$/,(m,x)=>`Redenumirea a eșuat: ${x}`],
  [/^Benachrichtigungen konnten nicht eingeschaltet werden\.\n\nFehler: (.*)$/,(m,x)=>`Notificările nu au putut fi activate.\n\nEroare: ${x}`],
  [/^noch offen \((\d+) Frühstück, (\d+) Mittag\)$/,(m,a,b)=>`încă deschis (${a} mic dejun, ${b} prânz)`],
- [/^Rolle: (.+)$/,(m,x)=>`Rol: ${trs(x)}`]
+ [/^Rolle: (.+)$/,(m,x)=>`Rol: ${trs(x)}`],
+ [/^Nicht eingetragen \((\d+)\)$/,(m,n)=>`Neînscriși (${n})`],
+ [/^Eingetragen \((\d+)\)$/,(m,n)=>`Înscriși (${n})`],
+ [/^(\d+) von (\d+)$/,(m,a,b)=>`${a} din ${b}`],
+ [/^Wer hat die App\? \((\d+) freigegeben(?:, (\d+) wartet)?\)$/,(m,a,b)=>`Cine are aplicația? (${a} aprobați${b?', '+b+' în așteptare':''})`],
+ [/^Frühstück: (.+) · Mittag: (.+)$/,(m,a,b)=>`Mic dejun: ${trs(a)} · Prânz: ${trs(b)}`],
+ [/^(.+): noch frei$/,(m,x)=>`${x}: încă liber`]
 ];

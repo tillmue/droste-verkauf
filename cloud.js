@@ -49,6 +49,7 @@ function initCloud(FB) {
     stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; T.S.attStats = (m.attendance && m.attendance.days) || {}; }, del: false },
     attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days', 'locf', 'locm', 'chk'], mapDel: true },
     treeSpots: { get: () => (T.S.treeSpots || []).map(x => [x.id, x]), put: m => { T.S.treeSpots = Object.values(m); }, del: false },
+    attMan:   { get: () => (T.S.attMan || []).map(x => [x.id, x]), put: m => { T.S.attMan = Object.values(m); }, del: false, maps: ['names'], mapDel: true },
     meals:    { get: () => (T.S.meals || []).map(x => [x.id, x]), put: m => { T.S.meals = Object.values(m); }, del: false },
     reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
     orders:   { get: () => T.S.orders.map(x => [x.id, x]), put: m => { T.S.orders = Object.values(m); }, del: true },
@@ -154,7 +155,7 @@ function initCloud(FB) {
     if (name === 'reports' && !T.permFor(profile, 'reportsAll')) qs = [FB.query(base, FB.where('byUid', '==', uid))];
     /* Team, Verkauf und Schonung sehen nur eigene und offene Aufgaben (die Regeln erzwingen das ebenfalls) */
     if (name === 'tasks' && !T.permFor(profile, 'tasksAll'))
-      qs = [FB.query(base, FB.where('person', '==', profile.name)), FB.query(base, FB.where('person', '==', ''))];
+      qs = profile.role === 'kueche' ? [FB.query(base, FB.where('person', '==', profile.name))] : [FB.query(base, FB.where('person', '==', profile.name)), FB.query(base, FB.where('person', '==', ''))];
     const parts = qs.map(() => null);
     qs.forEach((q, qi) => unsubs.push(FB.onSnapshot(q, snap => {
       const m = {};
@@ -189,7 +190,7 @@ function initCloud(FB) {
     deactivate(); activeKey = key; T.attReady = false;
     T.backupLocal();
     const S = T.S;
-    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.attendance = []; S.treeSpots = []; S.meals = []; S.attStats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
+    S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.attendance = []; S.treeSpots = []; S.meals = []; S.attMan = []; S.attStats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
@@ -203,6 +204,7 @@ function initCloud(FB) {
     if (T.permFor(p, 'lieferplanung')) { listen('orders'); listen('bestellungen'); }
     if (T.permFor(p, 'einkauf') || T.permFor(p, 'kueche')) listen('shopping');
     listen('attendance'); listen('meals');
+    if (T.permFor(p, 'anwSee')) listen('attMan');
     if (T.permFor(p, 'bstand')) listen('treeSpots');
     if (T.permFor(p, 'feld')) listen('feld');
   }

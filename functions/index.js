@@ -28,7 +28,12 @@ const T = {
   repDone: { de: t => `Deine Meldung ist erledigt: ${t}`, ro: t => `Raportarea ta este rezolvată: ${t}` },
   newUser: { de: n => `Neue Freigabe nötig: ${n} hat sich registriert.`, ro: n => `Aprobare necesară: ${n} s-a înregistrat.` },
   question: { de: (b, t) => `Neue Frage zur App von ${b}: ${t}`, ro: (b, t) => `Întrebare nouă despre aplicație de la ${b}: ${t}` },
-  title: { de: 'Hof Droste', ro: 'Hof Droste' },
+  title: { de: 'Hof Droste', ro: 'Hof Droste', pt: 'Hof Droste' },
+  shopNew: {
+    de: (by, t) => `Neu auf der Einkaufsliste${by ? ' von ' + by : ''}: ${t}`,
+    ro: (by, t) => `Nou pe lista de cumpărături${by ? ' de la ' + by : ''}: ${t}`,
+    pt: (by, t) => `Novo na lista de compras${by ? ' de ' + by : ''}: ${t}`
+  },
   morning: {
     de: (n, a, e) => `Guten Morgen ${n}: ${a} offene ${a === 1 ? 'Aufgabe' : 'Aufgaben'}${e ? `, ${e} ${e === 1 ? 'Termin' : 'Termine'} heute` : ''}.`,
     ro: (n, a, e) => `Bună dimineața ${n}: ${a} ${a === 1 ? 'sarcină deschisă' : 'sarcini deschise'}${e ? `, ${e} ${e === 1 ? 'termen' : 'termene'} astăzi` : ''}.`
@@ -54,14 +59,16 @@ async function approvedUsers() {
 async function pushTo(user, text) {
   const tokens = user.fcmTokens || [];
   if (!tokens.length) return 0;
-  const lang = user.lang === 'ro' ? 'ro' : 'de';
-  const body = typeof text === 'function' ? text(lang) : text;
+  const lang = user.lang === 'ro' ? 'ro' : user.lang === 'pt' ? 'pt' : 'de';
+  let body;
+  try { body = typeof text === 'function' ? text(lang) : text; } catch (e) { body = undefined; }
+  if (body === undefined || body === null || body === '') body = typeof text === 'function' ? text('de') : text;
   let ok = 0;
   for (const token of tokens) {
     try {
       await admin.messaging().send({
         token,
-        data: { title: T.title[lang], body, url: './' },
+        data: { title: T.title[lang] || T.title.de, body, url: './' },
         webpush: { headers: { Urgency: 'high', TTL: '86400' } }
       });
       ok++;
@@ -393,6 +400,53 @@ exports.questionCreated = onDocumentCreated('questions/{id}', async event => {
   const q = event.data.data();
   const users = (await approvedUsers()).filter(u => u.role === 'admin' && u.id !== q.byUid);
   for (const u of users) await pushTo(u, lang => T.question[lang](q.by || '?', q.text || ''));
+});
+
+
+/* Einkaufsliste: Eintraege automatisch in alle drei Sprachen uebersetzen (Cloud Translation, Feld trl) und
+   bei einem neuen Eintrag Küche und alle mit Küchenrecht benachrichtigen */
+async function translateAll(texts) {
+  const token = await admin.app().options.credential.getAccessToken();
+  const out = { de: texts.slice(), ro: texts.slice(), pt: texts.slice() };
+  let src = '';
+  for (const tg of ['de', 'ro', 'pt']) {
+    const r = await fetch('https://translation.googleapis.com/language/translate/v2', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: texts, target: tg, format: 'text' })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error('Translation ' + r.status + ' ' + JSON.stringify(j.error || j).slice(0, 300));
+    const tr = (j.data && j.data.translations) || [];
+    out[tg] = tr.map((x, i) => (texts[i] ? x.translatedText : ''));
+    if (!src) { const d = tr.find((x, i) => texts[i] && x.detectedSourceLanguage); if (d) src = String(d.detectedSourceLanguage).slice(0, 2); }
+  }
+  if (out[src]) out[src] = texts.slice();
+  return out;
+}
+exports.shoppingWritten = onDocumentWritten('shopping/{id}', async event => {
+  const a = event.data.after.exists ? event.data.after.data() : null;
+  const b = event.data.before.exists ? event.data.before.data() : null;
+  if (!a || a.deleted) return;
+  const key = (a.text || '') + '\u0001' + (a.note || '');
+  const created = !b;
+  let trl = a.trl;
+  if (a.trlKey !== key && (a.text || a.note)) {
+    try {
+      const o = await translateAll([a.text || '', a.note || '']);
+      trl = {};
+      for (const l of ['de', 'ro', 'pt']) trl[l] = { t: o[l][0] || '', n: o[l][1] || '' };
+      await event.data.after.ref.update({ trl, trlKey: key });
+    } catch (e) { console.error('Übersetzung fehlgeschlagen', e.message); trl = null; }
+  }
+  if (!created) return;
+  const can = await canDoAll('kueche');
+  const users = (await approvedUsers()).filter(u => u.role !== 'demo' && can(u) && u.name !== a.by);
+  for (const u of users) {
+    const l = u.lang === 'ro' ? 'ro' : u.lang === 'pt' ? 'pt' : 'de';
+    const t = (trl && trl[l] && trl[l].t) || a.text || '';
+    await pushTo(u, lang => T.shopNew[lang](a.by || '', t));
+  }
 });
 
 /* Anwesenheit: Zahlen pro Tag ohne Namen (für die Küche), Änderungs-Log für Rolf */
