@@ -47,7 +47,7 @@ function initCloud(FB) {
     tours:    { get: () => T.S.tours.map(x => [x.id, x]), put: m => { T.S.tours = Object.values(m); }, del: false, maps: ['stops', 'loaded', 'pack'] },
     questions:{ get: () => T.S.questions.map(x => [x.id, x]), put: m => { T.S.questions = Object.values(m); }, del: false },
     stats:    { get: () => [], put: m => { T.S.stats = m.ranking || {}; T.S.attStats = (m.attendance && m.attendance.days) || {}; }, del: false },
-    attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days', 'locf', 'locm', 'chk'] },
+    attendance: { get: () => (T.S.attendance || []).map(x => [x.id, x]), put: m => { T.S.attendance = Object.values(m); }, del: false, maps: ['days', 'locf', 'locm', 'chk'], mapDel: true },
     treeSpots: { get: () => (T.S.treeSpots || []).map(x => [x.id, x]), put: m => { T.S.treeSpots = Object.values(m); }, del: false },
     meals:    { get: () => (T.S.meals || []).map(x => [x.id, x]), put: m => { T.S.meals = Object.values(m); }, del: false },
     reports:  { get: () => T.S.reports.map(x => [x.id, x]), put: m => { T.S.reports = Object.values(m); }, del: false },
@@ -117,12 +117,13 @@ function initCloud(FB) {
               if (d.maps && d.maps.includes(key)) {
                 const pm = prev[key] || {}, cm = cur[id][key] || {};
                 for (const k in cm) if (stable(cm[k]) !== stable(pm[k])) args.push(new FB.FieldPath(key, k), cm[k]);
+                if (d.mapDel) for (const k in pm) if (!(k in cm)) args.push(new FB.FieldPath(key, k), FB.deleteField());
               } else if (stable(cur[id][key]) !== stable(prev[key])) args.push(new FB.FieldPath(key), cur[id][key]);
             }
             for (const key of Object.keys(prev)) if (!(key in cur[id]) && !(d.maps && d.maps.includes(key))) args.push(new FB.FieldPath(key), FB.deleteField());
             if (args.length) FB.updateDoc(FB.doc(db, name, id), ...args).catch(gone);
           } else {
-            FB.setDoc(FB.doc(db, name, id), cur[id]).catch(e => permissionNote(name, id, e));
+            FB.setDoc(FB.doc(db, name, id), cur[id], d.mapDel ? { merge: true } : undefined).catch(e => permissionNote(name, id, e));
           }
         }
       }
@@ -166,6 +167,7 @@ function initCloud(FB) {
       pending[name] = parts.some(p => p.pend);
       d.put(map);
       hydrated[name] = true;
+      if (name === 'attendance') T.attReady = true;
       if (name === 'tasks' && T.rollTasks) T.rollTasks();
       seedIfEmpty(name, { size: Object.keys(map).length, metadata: parts[0].meta });
       T.ready = hydrated.stands && hydrated.products;
@@ -184,7 +186,7 @@ function initCloud(FB) {
   function activate(p, id) {
     const key = id + ':' + p.role + ':' + JSON.stringify(p.perms || null) + ':' + JSON.stringify(T.S.rolesCfg || {});
     if (activeKey === key) return;
-    deactivate(); activeKey = key;
+    deactivate(); activeKey = key; T.attReady = false;
     T.backupLocal();
     const S = T.S;
     S.tasks = []; S.events = []; S.notes = []; S.penalties = []; S.shopping = []; S.reports = []; S.orders = []; S.bestellungen = []; S.days = []; S.questions = []; S.stats = {}; S.attendance = []; S.treeSpots = []; S.meals = []; S.attStats = {}; S.packs = []; S.tours = []; S.feld = []; S.hofInfo = { address: '' }; S.moves = []; S.entries = {}; S.products = []; S.stands = [];

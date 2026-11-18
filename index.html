@@ -343,6 +343,7 @@ body.gate nav{display:none}.gyn{display:grid;grid-template-columns:1fr 1fr;gap:8
 /* iOS: Kopfzeile fest statt klebend (sonst legt iOS 26 den Unschärfe-Verlauf der Statusleiste über sie), Seite immer mindestens so hoch wie der Bildschirm (sonst rutscht die untere Leiste auf kurzen Seiten hoch) */
 header{position:fixed;top:0;left:0;right:0;-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;isolation:isolate}
 body{padding-top:var(--hh,72px);min-height:calc(100vh + 1px);min-height:calc(100dvh + 1px)}
+nav,.fsave{-webkit-transform:translate3d(0,var(--navoff,0px),0);transform:translate3d(0,var(--navoff,0px),0);will-change:transform}
 body.run{padding-top:0}
 .chk{display:inline-flex;align-items:center;justify-content:center;line-height:1}
 .selbar{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin:10px 0}
@@ -386,12 +387,17 @@ setTimeout(function(){try{
   if(txt&&!/^(Lade …|Daten werden geladen …)$/.test(txt))return;
   var er=(window.__errs||[]).slice(-4).join(' | ').replace(/[<>&]/g,' ');
   var ui='';try{ui=navigator.userAgent.replace(/[<>&]/g,' ').slice(0,160)}catch(x){}
-  a.innerHTML='<div id="diag" style="margin:24px 0;padding:16px;border:1px solid #3a5a4e;border-radius:16px;background:rgba(0,0,0,.25);color:#f5f7f6;font:16px/1.4 -apple-system,Helvetica,Arial,sans-serif"><div style="font-size:18px;font-weight:700">Die App lädt nicht richtig</div><div style="margin:8px 0;color:#c4cdc9">Zuerst "Neu laden". Hilft das nicht: "Zurücksetzen" löscht nur den Zwischenspeicher dieses Geräts, die Daten bleiben in der Cloud.</div><div style="font-size:13px;color:#9aa7a2;word-break:break-word">'+(typeof APP_VERSION!=='undefined'?'Version '+APP_VERSION+' · ':'Hauptprogramm nicht gestartet · ')+(window.APP?'App ja':'App nein')+(typeof cur!=='undefined'&&cur.cloud?' · Status '+cur.cloud.status:'')+(er?' · Fehler: '+er:'')+'<br>'+ui+'</div><button id="diag-reload" style="display:block;width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:#0071e3;color:#fff;font-size:16px;font-weight:600">Neu laden</button><button id="diag-reset" style="display:block;width:100%;margin-top:8px;padding:14px;border:1px solid #3a5a4e;border-radius:14px;background:none;color:#f5f7f6;font-size:16px;font-weight:600">Zurücksetzen und neu laden</button></div>';
+  var L='de';try{L=localStorage.getItem('droste-lang')||'de'}catch(x){}
+  var XT={de:{t1:'Die App lädt nicht richtig',t2:'Zuerst &quot;Neu laden&quot;. Hilft das nicht: &quot;Zurücksetzen&quot; löscht nur den Zwischenspeicher dieses Geräts, die Daten bleiben in der Cloud.',v:'Version',nm:'Hauptprogramm nicht gestartet',a1:'App ja',a0:'App nein',st:'Status',er:'Fehler',b1:'Neu laden',b2:'Zurücksetzen und neu laden'},
+   ro:{t1:'Aplicația nu se încarcă corect',t2:'Mai întâi &quot;Reîncarcă&quot;. Dacă nu ajută: &quot;Resetează&quot; șterge doar memoria temporară a acestui dispozitiv, datele rămân în cloud.',v:'Versiune',nm:'Programul principal nu a pornit',a1:'App da',a0:'App nu',st:'Stare',er:'Eroare',b1:'Reîncarcă',b2:'Resetează și reîncarcă'},
+   pt:{t1:'O app não carrega corretamente',t2:'Primeiro &quot;Recarregar&quot;. Se não ajudar: &quot;Redefinir&quot; apaga apenas a memória temporária deste aparelho, os dados continuam na nuvem.',v:'Versão',nm:'Programa principal não iniciou',a1:'App sim',a0:'App não',st:'Estado',er:'Erro',b1:'Recarregar',b2:'Redefinir e recarregar'}};
+  var X=XT[L]||XT.de;
+  a.innerHTML='<div id="diag" style="margin:24px 0;padding:16px;border:1px solid #3a5a4e;border-radius:16px;background:rgba(0,0,0,.25);color:#f5f7f6;font:16px/1.4 -apple-system,Helvetica,Arial,sans-serif"><div style="font-size:18px;font-weight:700">'+X.t1+'</div><div style="margin:8px 0;color:#c4cdc9">'+X.t2+'</div><div style="font-size:13px;color:#9aa7a2;word-break:break-word">'+(typeof APP_VERSION!=='undefined'?X.v+' '+APP_VERSION+' · ':X.nm+' · ')+(window.APP?X.a1:X.a0)+(typeof cur!=='undefined'&&cur.cloud?' · '+X.st+' '+cur.cloud.status:'')+(er?' · '+X.er+': '+er:'')+'<br>'+ui+'</div><button id="diag-reload" style="display:block;width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:#0071e3;color:#fff;font-size:16px;font-weight:600">'+X.b1+'</button><button id="diag-reset" style="display:block;width:100%;margin-top:8px;padding:14px;border:1px solid #3a5a4e;border-radius:14px;background:none;color:#f5f7f6;font-size:16px;font-weight:600">'+X.b2+'</button></div>';
   document.getElementById('diag-reload').onclick=function(){location.reload()};
   document.getElementById('diag-reset').onclick=function(){try{localStorage.removeItem('droste-verkauf-v1')}catch(x){}try{caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))})}catch(x){}try{navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}).then(function(){location.reload()},function(){location.reload()})}catch(x){location.reload()}setTimeout(function(){location.reload()},1500)};
 }catch(x){}},9000);
 </script>
-<script nomodule>document.addEventListener('DOMContentLoaded',function(){var a=document.getElementById('app');if(a)a.innerHTML='<div style="margin:24px 0;padding:16px;color:#f5f7f6;font:16px/1.4 sans-serif"><b>Dieser Browser ist zu alt für die App.</b><br>Bitte Chrome oder Safari aktualisieren oder einen anderen Browser öffnen.</div>'});</script>
+<script nomodule>document.addEventListener('DOMContentLoaded',function(){var a=document.getElementById('app');if(a)a.innerHTML='<div style="margin:24px 0;padding:16px;color:#f5f7f6;font:16px/1.4 sans-serif"><b>Dieser Browser ist zu alt für die App.</b><br>Bitte Chrome oder Safari aktualisieren oder einen anderen Browser öffnen.<br><br><i>Acest browser este prea vechi pentru aplicație. Actualizează Chrome sau Safari sau deschide alt browser.</i><br><br><i>Este navegador é antigo demais para o app. Atualize o Chrome ou o Safari ou abra outro navegador.</i></div>'});</script>
 <script src="firebase-config.js"></script>
 <script src="i18n-ro.js"></script>
 <script src="i18n-pt.js"></script>
@@ -401,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-15 E';
+const APP_VERSION='2026-11-18 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1654,7 +1660,7 @@ const attDays=()=>{const o=[];let d=attFrom();const e=attTo();while(d<=e&&o.leng
 const attDoc=n=>(S.attendance||[]).find(x=>x.name===n);
 /* Tagesabfrage: jeden Morgen (ab 7 Uhr) einmal sagen, ob man da ist, isst und wo man ist */
 const gateDay=()=>{const d=new Date();d.setHours(d.getHours()-7);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
-const gateNeed=()=>{if(!S.me)return false;if(cur.gateOpen)return true;const g=gateDay();if(g<attFrom()||g>attTo())return false;return !((attDoc(S.me)||{}).chk||{})[g]};
+const gateNeed=()=>{if(!S.me)return false;if(cur.gateOpen)return true;if(window.APP&&APP.attReady===false)return false;if(new Date().getHours()<7)return false;const g=gateDay();if(g<attFrom()||g>attTo())return false;return !((attDoc(S.me)||{}).chk||{})[g]};
 function gateSave(g,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,days:{}};S.attendance.push(d)}
   d.days=d.days||{};d.locf=d.locf||{};d.locm=d.locm||{};d.chk=d.chk||{};
   if(v.da===false){d.days[g]='nein';delete d.locf[g];delete d.locm[g]}
@@ -3861,7 +3867,7 @@ document.addEventListener('change',ev=>{
 
 /* ---------- Brücke zur Cloud-Schicht (cloud.js) ---------- */
 function toast(msg){const el=$('#saved');el.textContent=msg;el.classList.add('show');clearTimeout(saveT);saveT=setTimeout(()=>{el.classList.remove('show');el.textContent='Gespeichert'},3000)}
-function updateHeader(){const h=$('#hstat');if(h&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'&&cur.cloud.profile.approved)))h.textContent=headerStat();const p=$('#prof');if(p){const st=(window.APP&&APP.status)||'';p.dataset.st=st==='offline'?'off':st==='wird übertragen'?'wait':st==='synchronisiert'?'ok':'';p.title='Einstellungen'+(S.me?' · '+S.me:'')+(st?' · '+st:'')}}
+function updateHeader(){const h=$('#hstat');if(h&&S.me&&(!CLOUD||(cur.cloud&&cur.cloud.status==='in'&&cur.cloud.profile.approved)))h.textContent=headerStat();const p=$('#prof');if(p){const st=(window.APP&&APP.status)||'';p.dataset.st=st==='offline'?'off':st==='wird übertragen'?'wait':st==='synchronisiert'?'ok':'';p.title=trs('Einstellungen')+(S.me?' · '+S.me:'')+(st?' · '+trs(st):'')}}
 let needR=false;
 const editing=()=>{const a=document.activeElement,sh=document.getElementById('sheet');return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&($('#app').contains(a)||(sh&&sh.contains(a))))};
 function softRender(){if(editing()){needR=true;return}needR=false;render()}
@@ -3986,11 +3992,21 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch((
     if(Date.now()-t0<10000||a.querySelector('#diag'))return;
     const c=(typeof cur!=='undefined'&&cur.cloud)||{},er=(window.__errs||[]).slice(-3).map(x=>String(x).replace(/[<>&]/g,' ')).join(' | ');
     a.innerHTML=`<div id="diag" class="card pad" style="margin:24px 0"><div class="n" style="font-size:18px">Die App lädt nicht richtig</div><div class="p" style="margin:8px 0">Zuerst "Neu laden". Hilft das nicht, "Zurücksetzen" löscht nur den Zwischenspeicher dieses Geräts, deine Daten bleiben in der Cloud.</div>
-      <div class="p" style="word-break:break-word">Version ${APP_VERSION} · Status ${c.status||'?'} · bereit ${window.APP&&APP.ready?'ja':'nein'}${er?' · Fehler: '+er:''}</div>
+      <div class="p" style="word-break:break-word">Version ${APP_VERSION} · Status ${c.status||'?'} · ${trs('bereit')} ${window.APP&&APP.ready?trs('ja'):trs('nein')}${er?' · '+trs('Fehler')+': '+er:''}</div>
       <button class="btn" id="diag-reload" style="margin-top:12px">Neu laden</button><button class="btn sec" id="diag-reset">Zurücksetzen und neu laden</button></div>`;
     document.getElementById('diag-reload').onclick=()=>location.reload();
     document.getElementById('diag-reset').onclick=async()=>{try{localStorage.removeItem(KEY)}catch(e){}try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}try{const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()))}catch(e){}location.reload()};
   }catch(e){}},3000);}
+/* iOS: die feste untere Leiste rutscht manchmal nach oben (Tastatur, Bildschirmdrehung, Rückkehr in die App). Messen, wie weit die sichtbare Fläche vom festen Rand abweicht, und die Leiste dorthin zurückschieben. */
+{const pr=document.createElement('div');pr.setAttribute('aria-hidden','true');pr.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:0;visibility:hidden;pointer-events:none';document.body.appendChild(pr);
+ let raf=0,last=null;
+ const fix=()=>{raf=0;try{const v=window.visualViewport;let off=0;if(v&&v.scale<=1.02&&!document.body.classList.contains('kb')){off=Math.round(v.offsetTop+v.height-pr.getBoundingClientRect().bottom);if(off<0||off>600)off=0}
+   if(off!==last){last=off;document.documentElement.style.setProperty('--navoff',off+'px')}}catch(e){}};
+ const q=()=>{if(!raf)raf=requestAnimationFrame(fix)};
+ if(window.visualViewport){visualViewport.addEventListener('resize',q);visualViewport.addEventListener('scroll',q)}
+ ['resize','scroll','orientationchange','pageshow','focusout','touchend'].forEach(e=>window.addEventListener(e,()=>{q();setTimeout(q,300)},{passive:true}));
+ document.addEventListener('visibilitychange',()=>{q();setTimeout(q,400)});
+ setInterval(q,1500);q()}
 {const hd=document.querySelector('header'),setHH=()=>{if(hd&&hd.offsetHeight)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px')};setHH();window.addEventListener('resize',setHH);window.addEventListener('orientationchange',()=>setTimeout(setHH,200));if(window.ResizeObserver&&hd)new ResizeObserver(setHH).observe(hd);}
 </script>
 <script type="module" src="cloud.js" onerror="window.__errs.push('cloud.js nicht ladbar')"></script>
