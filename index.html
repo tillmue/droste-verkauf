@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 A';
+const APP_VERSION='2026-11-19 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -489,6 +489,7 @@ function entry(st,d,create){
 }
 const price=(e,p)=>e.prices&&e.prices[p.id]!=null?e.prices[p.id]:p.price;
 const exq=x=>x.qty||1;
+const penFmt=q=>{q=+q||0;const k=Math.floor(q+1e-9),b=Math.round((q-k)*24);return k&&b?k+' Kiste'+(k===1?'':'n')+' + '+b+' Bier':k?String(k):b+' Bier'};
 const qtyOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0),0)+(e.extra||[]).reduce((a,x)=>a+exq(x),0);
 const revOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*price(e,p),0)+(e.extra||[]).reduce((a,x)=>a+x.price*exq(x),0);
 const costOf=e=>S.products.reduce((a,p)=>a+(+e.counts[p.id]||0)*(p.cost||0),0)+(e.extra||[]).reduce((a,x)=>a+exq(x)*((prod(x.pid)||{}).cost||0),0);
@@ -1212,7 +1213,7 @@ function vIch(){
   const rank=Object.entries(src).map(([l,v])=>({l,v})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,5);
   const pens=S.penalties.filter(p=>!p.deleted),openPen=pens.filter(p=>!p.paid).sort((a,b)=>(b.at||0)-(a.at||0)),paidPen=pens.filter(p=>p.paid).sort((a,b)=>(b.paidAt||b.at||0)-(a.paidAt||a.at||0));
   const penSum={};pens.forEach(p=>{const x=penSum[p.person]||(penSum[p.person]={o:0,b:0});x[p.paid?'b':'o']+=(p.qty||1)});
-  const penRow=(p,paid)=>`<div class="row"><div style="min-width:0"><div class="n">${esc(p.person)}${(p.qty||1)>1?' ×'+p.qty:''}</div><div class="p">${esc(p.reason||'ohne Angabe')}</div><div class="p">Vergeben von ${esc(p.by||'?')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div><div style="display:flex;gap:6px;flex:none">${!paid&&isAdmin()?`<button class="btn sec" data-pl="penpaid" data-v="${p.id}" style="margin:0;width:auto;padding:8px 14px">bezahlt</button>`:''}${isAdmin()?`<button class="btn no" data-pl="pendel" data-v="${p.id}" style="margin:0;width:auto;padding:8px 12px" aria-label="Löschen">×</button>`:''}</div></div>`;
+  const penRow=(p,paid)=>`<div class="row"><div style="min-width:0"><div class="n">${esc(p.person)}${(p.qty||1)!==1?' ('+penFmt(p.qty||1)+')':''}</div><div class="p">${esc(p.reason||'ohne Angabe')}</div><div class="p">Vergeben von ${esc(p.by||'?')} · ${new Date(p.at||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div></div><div style="display:flex;gap:6px;flex:none">${!paid&&isAdmin()?`<button class="btn sec" data-pl="penpaid" data-v="${p.id}" style="margin:0;width:auto;padding:8px 14px">bezahlt</button>`:''}${isAdmin()?`<button class="btn no" data-pl="pendel" data-v="${p.id}" style="margin:0;width:auto;padding:8px 12px" aria-label="Löschen">×</button>`:''}</div></div>`;
   const nRep=openReports().length,attDue=td>=attFrom()&&attOpen(me).length,mealToday=mealOf(td);
   const hello=now.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});
   const pn=cur.pen;
@@ -1235,12 +1236,12 @@ function vIch(){
   ${myTours.length?blk('Meine Tour',myTours.map(t=>{const st=tourStops(t);return `<div class="row" data-pl="goliefer" data-v="${t.date}|lief" style="cursor:pointer;display:block"><div class="n"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div><div class="p">${wdD(t.date)} · ${esc(t.vehicle||'')}</div><div class="p"><b>${t.driver===me?'Fahrer':'Beifahrer'}</b> · ${st.length} Stopps${t.status==='gestartet'?' · <b style="color:var(--orange)">läuft</b>':''}</div></div>`}).join(''),{pill:pill(myTours.length)}):''}
   ${sb?blk('Verkauf heute',`<div class="kv" style="padding:6px 0 10px"><span>Alle Stände</span><span>${sb.q} Stk. · ${eur0(sb.r)}</span></div>`,{tone:'',pill:pill('heute','g')}):''}
   ${blk('Meine Zahlen',`<div class="tiles" style="margin:6px 0 10px">
-    <div class="tile ${myPen?'r':''}"><small>Strafbierkisten offen</small><b>${myPen}</b></div>
+    <div class="tile ${myPen?'r':''}"><small>Strafbierkisten offen</small><b>${penFmt(myPen)}</b></div>
     <div class="tile"><small>Aufgaben eingetragen</small><b>${created}</b></div>
     <div class="tile g"><small>Aufgaben erledigt</small><b>${doneAll}</b><small>${week} in den letzten 7 Tagen</small></div>
     <div class="tile b"><small>Serie</small><b>${streak} ${streak===1?'Tag':'Tage'}</b></div></div>`)}
   ${blk('Spitzenreiter',`<div class="seg" style="margin:6px 0 10px">${[['all','Gesamt'],['week','7 Tage']].map(([k,l])=>`<button class="${rv===k?'on':''}" data-pl="rankv" data-v="${k}">${l}</button>`).join('')}</div>${rank.length?hbars(rank,v=>v+' erledigt'):'<div class="hint" style="margin:0 0 8px">Noch nichts erledigt.</div>'}`)}
-  ${blk('Strafbierkisten',`${Object.keys(penSum).length?Object.entries(penSum).sort((a,b)=>b[1].o-a[1].o).map(([n,x])=>`<div class="row"><div class="n">${esc(n)}</div><div class="p"><b style="color:${x.o?'var(--red)':'var(--mut)'}">${x.o} offen</b> · ${x.b} bezahlt</div></div>`).join(''):'<div class="hint">Noch keine Strafbierkisten vergeben.</div>'}
+  ${blk('Strafbierkisten',`${Object.keys(penSum).length?Object.entries(penSum).sort((a,b)=>b[1].o-a[1].o).map(([n,x])=>`<div class="row"><div class="n">${esc(n)}</div><div class="p"><b style="color:${x.o?'var(--red)':'var(--mut)'}">${penFmt(x.o)} offen</b> · ${penFmt(x.b)} bezahlt</div></div>`).join(''):'<div class="hint">Noch keine Strafbierkisten vergeben.</div>'}
     ${openPen.length?`<h3 style="margin:12px 0 2px">Offen (${openPen.length})</h3>${openPen.map(p=>penRow(p,false)).join('')}`:''}
     ${paidPen.length?`<details data-det="penpaid"><summary>Bezahlt (${paidPen.length})</summary>${paidPen.map(p=>penRow(p,true)).join('')}</details>`:''}
     <div style="border-top:1px solid var(--line);margin:10px 0 0;padding-top:12px"><label class="f" style="margin:0 0 6px">Kiste vergeben</label>
@@ -1669,11 +1670,17 @@ function gateSave(g,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,d
     d.days[g]=fh&&mh?'ja':fh?'vm':mh?'nm':'da';
     if(v.fr)d.locf[g]=v.locf;else delete d.locf[g];
     if(v.mi)d.locm[g]=v.locm;else delete d.locm[g]}
-  d.chk[g]=Date.now();d.updated=Date.now();save()}
+  d.chk[g]=Date.now();d.updated=Date.now();
+  if(v.da!==false&&g===gateDay()&&gateLocked())latePen(S.me,'Zu spät eingetragen am '+dmy(g)+' (nach 9:00 Uhr)');
+  save()}
 const GATE_END='09:00';
 setInterval(()=>{if(typeof S==='undefined'||!S||!S.me)return;const cds=document.querySelectorAll('[data-cd]');if(cur.gateOpen&&gateLocked()){cur.gateOpen=false;cur.gate=null;render();return}
   if(!cds.length)return;if(gateLocked()){if(!document.body.classList.contains('gate'))render();return}cds.forEach(e=>e.textContent=gateMins())},20000);
 const gateLockMs=()=>new Date(gateDay()+'T'+GATE_END+':00').getTime();
+/* Automatische Strafe: 6 Bier (¼ Kiste) fürs Eintragen nach 9:00 Uhr und fürs Frühstück ohne Eintrag */
+const dmy=ds=>ds.slice(8)+'.'+ds.slice(5,7)+'.';
+function latePen(n,reason){if(S.penalties.some(x=>!x.deleted&&x.person===n&&x.reason===reason))return;S.penalties.push({id:uid(),person:n,reason,qty:0.25,by:S.me||'App',at:Date.now(),paid:false,auto:true})}
+function latePenOff(n,reason){S.penalties.filter(x=>!x.deleted&&x.person===n&&x.reason===reason&&!x.paid).forEach(x=>softDel(x))}
 const gateLocked=()=>Date.now()>=gateLockMs();
 const gateMins=()=>Math.max(0,Math.ceil((gateLockMs()-Date.now())/60000));
 const gateCd=()=>gateLocked()?'':`Noch <b data-cd>${gateMins()}</b> Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)`;
@@ -1727,7 +1734,7 @@ function anwBlock(){
 
 /* Anwesenheitsliste des Tages (Admin und alle mit Recht "Anwesenheit sehen", z. B. Rolf): wer hat sich eingetragen, wer nicht; Nachtrag "hat gefrühstückt" von Hand. Die PDF zum Aushängen erzeugt der Mac ab 9 Uhr in OneDrive. */
 const attManDoc=ds=>(S.attMan||[]).find(x=>x.id===ds);
-function manToggle(n,ds){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};if(d.names[n])delete d.names[n];else d.names[n]=Date.now();d.by=S.me;d.updated=Date.now();save()}
+function manToggle(n,ds){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};const why='Frühstück ohne Eintrag am '+dmy(ds);if(d.names[n]){delete d.names[n];latePenOff(n,why)}else{d.names[n]=Date.now();latePen(n,why)}d.by=S.me;d.updated=Date.now();save()}
 function gateList(){
   if(!has('anwSee'))return '';
   const g=gateDay();if(g<attFrom()||g>attTo())return '';
@@ -1741,7 +1748,7 @@ function gateList(){
   const nrow=n=>`<div class="row"><div class="n" style="font-size:15px;flex:1">${esc(n)}${man[n]?' <span class="pill o">hat gefrühstückt</span>':''}</div><button class="claim" data-pl="manfr" data-v="${esc(n)}">${man[n]?'Zurücknehmen':'Hat gefrühstückt'}</button></div>`;
   const open=gateLocked();
   return `<section class="blk"><div class="blk-h"><h3>Eingetragen heute</h3>${pill(yes.length+' von '+ppl.length,no.length?'o':'g')}</div>
-    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
+    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
     <details data-det="gl-no" ${open?'open':''}><summary style="padding:8px 0"><b>Nicht eingetragen (${no.length})</b></summary>${no.map(nrow).join('')||'<div class="p">Alle eingetragen.</div>'}</details>
     <details data-det="gl-yes"><summary style="padding:8px 0"><b>Eingetragen (${yes.length})</b></summary>${yes.map(yrow).join('')||'<div class="p">Noch niemand.</div>'}</details></section>`}
 /* Liste aller, die die App haben (Admin) */

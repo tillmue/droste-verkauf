@@ -1376,7 +1376,7 @@ window.RO_DICT={
 "Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)": "min. modificabil (până la 9:00, apoi costă 6 beri)",
 "Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.": "Atunci poți vedea aplicația oricum. Se întreabă din nou în fiecare zi de la ora 0:00, înscrierea este posibilă până la 9:00.",
 "Eingetragen heute": "Înscriși azi",
-"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "De la 9:00: cine nu s-a înscris plătește 6 beri (¼ de lădiță). Cine a luat micul dejun fără înscriere se marchează aici. Lista de afișat este ca PDF în OneDrive, folderul Hof-Droste_Büro.",
+"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "De la 9:00: cine nu s-a înscris plătește 6 beri (¼ de lădiță). Cine a luat micul dejun fără înscriere se marchează aici: aplicația introduce automat 6 beri (¼ de lădiță). Lista de afișat este ca PDF în OneDrive, folderul Hof-Droste_Büro.",
 "Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.": "Până la 9:00 te poți încă înscrie. După aceea apare aici lista cu completările.",
 "Alle eingetragen.": "Toți sunt înscriși.",
 "Noch niemand.": "Încă nimeni.",
@@ -1837,5 +1837,12 @@ window.RO_PATTERNS=[
  [/^(\d+) von (\d+)$/,(m,a,b)=>`${a} din ${b}`],
  [/^Wer hat die App\? \((\d+) freigegeben(?:, (\d+) wartet)?\)$/,(m,a,b)=>`Cine are aplicația? (${a} aprobați${b?', '+b+' în așteptare':''})`],
  [/^Frühstück: (.+) · Mittag: (.+)$/,(m,a,b)=>`Mic dejun: ${trs(a)} · Prânz: ${trs(b)}`],
- [/^(.+): noch frei$/,(m,x)=>`${x}: încă liber`]
+ [/^(.+): noch frei$/,(m,x)=>`${x}: încă liber`],
+ [/^Zu spät eingetragen am (.+) \(nach 9:00 Uhr\)$/,(m,d)=>`Înscris târziu pe ${d} (după 9:00)`],
+ [/^Frühstück ohne Eintrag am (.+)$/,(m,d)=>`Mic dejun fără înscriere pe ${d}`],
+ [/^(\d+) Bier$/,(m,n)=>`${n} beri`],
+ [/^(\d+) Kisten? \+ (\d+) Bier$/,(m,k,b)=>`${k} ${k==1?'lădiță':'lădițe'} + ${b} beri`],
+ [/^\((\d+ Bier|\d+ Kisten? \+ \d+ Bier)\)$/,(m,x)=>`(${trs(x)})`],
+ [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} deschise`],
+ [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} plătite`]
 ];

@@ -15,19 +15,21 @@ const db = admin.firestore();
 const TZ = 'Europe/Berlin';
 
 const T = {
-  newTask: { de: (t, d) => `Neue Aufgabe für dich: ${t}${d}`, ro: (t, d) => `Sarcină nouă pentru tine: ${t}${d}` },
+  newTask: { de: (t, d) => `Neue Aufgabe für dich: ${t}${d}`, ro: (t, d) => `Sarcină nouă pentru tine: ${t}${d}`, pt: (t, d) => `Nova tarefa para você: ${t}${d}` },
   newTour: {
     de: (n, d, role) => `Neue Tour für dich: ${n} am ${d} (${role === 'driver' ? 'Fahrer' : 'Beifahrer'})`,
-    ro: (n, d, role) => `Tur nou pentru tine: ${n} pe ${d} (${role === 'driver' ? 'șofer' : 'însoțitor'})`
+    ro: (n, d, role) => `Tur nou pentru tine: ${n} pe ${d} (${role === 'driver' ? 'șofer' : 'însoțitor'})`,
+    pt: (n, d, role) => `Nova rota para você: ${n} em ${d} (${role === 'driver' ? 'motorista' : 'ajudante'})`
   },
   report: {
     de: (u, c, o, t) => `${u ? 'DRINGEND: ' : ''}Neue Meldung (${c}${o ? ', ' + o : ''}): ${t}`,
-    ro: (u, c, o, t) => `${u ? 'URGENT: ' : ''}Raportare nouă (${c}${o ? ', ' + o : ''}): ${t}`
+    ro: (u, c, o, t) => `${u ? 'URGENT: ' : ''}Raportare nouă (${c}${o ? ', ' + o : ''}): ${t}`,
+    pt: (u, c, o, t) => `${u ? 'URGENTE: ' : ''}Novo aviso (${c}${o ? ', ' + o : ''}): ${t}`
   },
-  repWork: { de: t => `Deine Meldung wird bearbeitet: ${t}`, ro: t => `Raportarea ta este în lucru: ${t}` },
-  repDone: { de: t => `Deine Meldung ist erledigt: ${t}`, ro: t => `Raportarea ta este rezolvată: ${t}` },
-  newUser: { de: n => `Neue Freigabe nötig: ${n} hat sich registriert.`, ro: n => `Aprobare necesară: ${n} s-a înregistrat.` },
-  question: { de: (b, t) => `Neue Frage zur App von ${b}: ${t}`, ro: (b, t) => `Întrebare nouă despre aplicație de la ${b}: ${t}` },
+  repWork: { de: t => `Deine Meldung wird bearbeitet: ${t}`, ro: t => `Raportarea ta este în lucru: ${t}`, pt: t => `Seu aviso está em andamento: ${t}` },
+  repDone: { de: t => `Deine Meldung ist erledigt: ${t}`, ro: t => `Raportarea ta este rezolvată: ${t}`, pt: t => `Seu aviso foi resolvido: ${t}` },
+  newUser: { de: n => `Neue Freigabe nötig: ${n} hat sich registriert.`, ro: n => `Aprobare necesară: ${n} s-a înregistrat.`, pt: n => `Aprovação necessária: ${n} se registrou.` },
+  question: { de: (b, t) => `Neue Frage zur App von ${b}: ${t}`, ro: (b, t) => `Întrebare nouă despre aplicație de la ${b}: ${t}`, pt: (b, t) => `Nova pergunta sobre o app de ${b}: ${t}` },
   title: { de: 'Hof Droste', ro: 'Hof Droste', pt: 'Hof Droste' },
   shopNew: {
     de: (by, t) => `Neu auf der Einkaufsliste${by ? ' von ' + by : ''}: ${t}`,
@@ -36,10 +38,11 @@ const T = {
   },
   morning: {
     de: (n, a, e) => `Guten Morgen ${n}: ${a} offene ${a === 1 ? 'Aufgabe' : 'Aufgaben'}${e ? `, ${e} ${e === 1 ? 'Termin' : 'Termine'} heute` : ''}.`,
-    ro: (n, a, e) => `Bună dimineața ${n}: ${a} ${a === 1 ? 'sarcină deschisă' : 'sarcini deschise'}${e ? `, ${e} ${e === 1 ? 'termen' : 'termene'} astăzi` : ''}.`
+    ro: (n, a, e) => `Bună dimineața ${n}: ${a} ${a === 1 ? 'sarcină deschisă' : 'sarcini deschise'}${e ? `, ${e} ${e === 1 ? 'termen' : 'termene'} astăzi` : ''}.`,
+    pt: (n, a, e) => `Bom dia ${n}: ${a} ${a === 1 ? 'tarefa aberta' : 'tarefas abertas'}${e ? `, ${e} ${e === 1 ? 'compromisso' : 'compromissos'} hoje` : ''}.`
   },
-  remind1h: { de: (t, h) => `Erinnerung: ${t} um ${h}`, ro: (t, h) => `Memento: ${t} la ${h}` },
-  remind1d: { de: (t, h) => `Erinnerung für morgen: ${t}${h ? ' um ' + h : ''}`, ro: (t, h) => `Memento pentru mâine: ${t}${h ? ' la ' + h : ''}` }
+  remind1h: { de: (t, h) => `Erinnerung: ${t} um ${h}`, ro: (t, h) => `Memento: ${t} la ${h}`, pt: (t, h) => `Lembrete: ${t} às ${h}` },
+  remind1d: { de: (t, h) => `Erinnerung für morgen: ${t}${h ? ' um ' + h : ''}`, ro: (t, h) => `Memento pentru mâine: ${t}${h ? ' la ' + h : ''}`, pt: (t, h) => `Lembrete para amanhã: ${t}${h ? ' às ' + h : ''}` }
 };
 
 const berlinDate = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(d);
@@ -578,7 +581,8 @@ exports.morning = onSchedule({ schedule: '0 7 * * *', timeZone: TZ }, async () =
 /* Anwesenheit: um 7:15 an alle, die heute noch nichts eingetragen haben */
 T.attRemind = {
   de: () => 'Guten Morgen! Bitte trag jetzt ein, ob du heute da bist und isst (bis 9:00 Uhr änderbar).',
-  ro: () => 'Bună dimineața! Te rugăm să treci acum dacă ești prezent azi și dacă mănânci (modificabil până la 9:00).'
+  ro: () => 'Bună dimineața! Te rugăm să treci acum dacă ești prezent azi și dacă mănânci (modificabil până la 9:00).',
+  pt: () => 'Bom dia! Por favor, informe agora se você está aqui hoje e se vai comer (pode alterar até as 9:00).'
 };
 exports.attRemind = onSchedule({ schedule: '15 7 * * *', timeZone: TZ }, async () => {
   const today = berlinDate();

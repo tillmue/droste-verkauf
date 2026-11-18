@@ -1375,7 +1375,7 @@ window.PT_DICT={
 "Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)": "min. para alterar (até 9:00, depois custa 6 cervejas)",
 "Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.": "Então você ainda pode ver o app. Isso é perguntado de novo todo dia a partir da meia-noite, o registro vale até as 9:00.",
 "Eingetragen heute": "Registrados hoje",
-"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "A partir das 9:00: quem não se registrou paga 6 cervejas (¼ de caixa). Quem tomou café da manhã sem registro é marcado aqui. A lista para pendurar está como PDF no OneDrive, pasta Hof-Droste_Büro.",
+"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "A partir das 9:00: quem não se registrou paga 6 cervejas (¼ de caixa). Quem tomou café da manhã sem registro é marcado aqui: o app lança automaticamente 6 cervejas (¼ de caixa). A lista para pendurar está como PDF no OneDrive, pasta Hof-Droste_Büro.",
 "Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.": "Até as 9:00 ainda dá para se registrar. Depois, a lista com os complementos aparece aqui.",
 "Alle eingetragen.": "Todos registrados.",
 "Noch niemand.": "Ainda ninguém.",
@@ -1659,5 +1659,12 @@ window.PT_PATTERNS=[
  [/^(\d+) von (\d+)$/,(m,a,b)=>`${a} de ${b}`],
  [/^Wer hat die App\? \((\d+) freigegeben(?:, (\d+) wartet)?\)$/,(m,a,b)=>`Quem tem o app? (${a} aprovados${b?', '+b+' aguardando':''})`],
  [/^Frühstück: (.+) · Mittag: (.+)$/,(m,a,b)=>`Café da manhã: ${trs(a)} · Almoço: ${trs(b)}`],
- [/^(.+): noch frei$/,(m,x)=>`${x}: ainda livre`]
+ [/^(.+): noch frei$/,(m,x)=>`${x}: ainda livre`],
+ [/^Zu spät eingetragen am (.+) \(nach 9:00 Uhr\)$/,(m,d)=>`Registrou tarde em ${d} (depois das 9:00)`],
+ [/^Frühstück ohne Eintrag am (.+)$/,(m,d)=>`Café da manhã sem registro em ${d}`],
+ [/^(\d+) Bier$/,(m,n)=>`${n} cervejas`],
+ [/^(\d+) Kisten? \+ (\d+) Bier$/,(m,k,b)=>`${k} ${k==1?'caixa':'caixas'} + ${b} cervejas`],
+ [/^\((\d+ Bier|\d+ Kisten? \+ \d+ Bier)\)$/,(m,x)=>`(${trs(x)})`],
+ [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} em aberto`],
+ [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} pagas`]
 ];
