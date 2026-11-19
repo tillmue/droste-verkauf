@@ -17,9 +17,9 @@ const TZ = 'Europe/Berlin';
 const T = {
   newTask: { de: (t, d) => `Neue Aufgabe für dich: ${t}${d}`, ro: (t, d) => `Sarcină nouă pentru tine: ${t}${d}`, pt: (t, d) => `Nova tarefa para você: ${t}${d}` },
   newTour: {
-    de: (n, d, role) => `Neue Tour für dich: ${n} am ${d} (${role === 'driver' ? 'Fahrer' : 'Beifahrer'})`,
-    ro: (n, d, role) => `Tur nou pentru tine: ${n} pe ${d} (${role === 'driver' ? 'șofer' : 'însoțitor'})`,
-    pt: (n, d, role) => `Nova rota para você: ${n} em ${d} (${role === 'driver' ? 'motorista' : 'ajudante'})`
+    de: (n, d, role) => `Neue Tour für dich: ${n} am ${d} (${role === 'driver' ? 'Fahrer' : role === 'packer' ? 'Packer' : 'Beifahrer'})`,
+    ro: (n, d, role) => `Tur nou pentru tine: ${n} pe ${d} (${role === 'driver' ? 'șofer' : role === 'packer' ? 'încărcător' : 'însoțitor'})`,
+    pt: (n, d, role) => `Nova rota para você: ${n} em ${d} (${role === 'driver' ? 'motorista' : role === 'packer' ? 'responsável pela carga' : 'ajudante'})`
   },
   report: {
     de: (u, c, o, t) => `${u ? 'DRINGEND: ' : ''}Neue Meldung (${c}${o ? ', ' + o : ''}): ${t}`,
@@ -111,7 +111,7 @@ exports.tourAssigned = onDocumentWritten('tours/{id}', async event => {
   const users = await approvedUsers();
   const name = 'Tour' + (TCOLOR[after.color] ? ' ' + TCOLOR[after.color] : '');
   const date = after.date ? `${after.date.slice(8)}.${after.date.slice(5, 7)}.` : '';
-  for (const role of ['driver', 'codriver', 'codriver2']) {
+  for (const role of ['driver', 'packer', 'codriver', 'codriver2']) {
     const who = after[role];
     if (!who || (before && before[role] === who)) continue;
     const u = users.find(x => x.name === who);
@@ -591,7 +591,7 @@ exports.eveningBrief = onSchedule({ schedule: '0 17 * * *', timeZone: TZ }, asyn
     if (myTasks.length) parts.push(P('Aufgaben morgen: ', 'Sarcini mâine: ', 'Tarefas amanhã: ') + myTasks.slice(0, 3).map(t => trTxt(t, lg, 'title')).join(', ') + (myTasks.length > 3 ? ` (+${myTasks.length - 3})` : ''));
     const myEv = events.filter(e => !e.person || e.person === u.name);
     if (myEv.length) parts.push(P('Termine: ', 'Termene: ', 'Compromissos: ') + myEv.slice(0, 3).map(e => (e.time ? e.time + ' ' : '') + trTxt(e, lg, 'title')).join(', '));
-    const myTours = tours.filter(t => [t.driver, t.codriver, t.codriver2].includes(u.name));
+    const myTours = tours.filter(t => [t.driver, t.packer, t.codriver, t.codriver2].includes(u.name));
     if (myTours.length) parts.push(P('Tour: ', 'Tură: ', 'Rota: ') + myTours.map(t => `${TCOLOR[t.color] || ''} (${Object.values(t.stops || {}).filter(s => !s.deleted).length} ${P('Stopps', 'opriri', 'paradas')})`).join(', '));
     if ((canKueche(u) || u.role === 'kueche') && (meal || cnt)) parts.push(P('Essen morgen: ', 'Mâncare mâine: ', 'Comida amanhã: ') + (meal || P('noch offen', 'încă deschis', 'ainda em aberto')) + (cnt ? ` (${P('Frühstück', 'mic dejun', 'café da manhã')} ${cnt.fr || 0}, ${P('Mittag', 'prânz', 'almoço')} ${cnt.mi || 0})` : ''));
     if (u.role === 'chef') {

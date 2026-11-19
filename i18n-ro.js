@@ -1389,7 +1389,10 @@ window.RO_DICT={
 "Frühstück zurücknehmen": "Retrage micul dejun",
 "Mittag zurücknehmen": "Retrage prânzul",
 "Hat Mittag gegessen": "A luat prânzul",
-"hat Mittag gegessen": "a luat prânzul"
+"hat Mittag gegessen": "a luat prânzul",
+"Packer offen": "Încărcător: liber",
+"Packer zuweisen": "Alocă încărcătorul",
+"Packer:": "Încărcător:"
 };
 
 window.RO_PATTERNS=[

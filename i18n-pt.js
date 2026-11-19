@@ -1388,7 +1388,10 @@ window.PT_DICT={
 "Frühstück zurücknehmen": "Desfazer café da manhã",
 "Mittag zurücknehmen": "Desfazer almoço",
 "Hat Mittag gegessen": "Almoçou",
-"hat Mittag gegessen": "almoçou"
+"hat Mittag gegessen": "almoçou",
+"Packer offen": "Responsável pela carga: em aberto",
+"Packer zuweisen": "Atribuir responsável pela carga",
+"Packer:": "Responsável pela carga:"
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[
