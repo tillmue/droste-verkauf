@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 E';
+const APP_VERSION='2026-11-19 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -704,6 +704,7 @@ window.addEventListener('resize',fitAllPins);
 /* iPhone: feste Leisten (Reiter, Speichern) rutschen mit der Tastatur nach oben und bleiben dort. Solange ein Eingabefeld aktiv ist, ausblenden; danach Ansicht neu ausrichten. */
 {const FLD='input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]):not([type=file]),textarea,select';
  document.addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches(FLD))document.body.classList.add('kb')});
+ setInterval(()=>{if(document.body.classList.contains('kb')){const a=document.activeElement;if(!(a&&a.matches&&a.matches(FLD)))document.body.classList.remove('kb')}},400);
  document.addEventListener('focusout',()=>setTimeout(()=>{const a=document.activeElement;if(a&&a.matches&&a.matches(FLD))return;document.body.classList.remove('kb');window.scrollTo(window.scrollX,window.scrollY)},250))}
 function openMapViewer(act,focus){
   const sc2=schon(cur.fs),u2=imgUrl(sc2.img);
@@ -4041,8 +4042,9 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch((
   }catch(e){}},3000);}
 /* iOS: die feste untere Leiste rutscht manchmal nach oben (Tastatur, Bildschirmdrehung, Rückkehr in die App). Messen, wie weit die sichtbare Fläche vom festen Rand abweicht, und die Leiste dorthin zurückschieben. */
 {const pr=document.createElement('div');pr.setAttribute('aria-hidden','true');pr.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:0;visibility:hidden;pointer-events:none';document.body.appendChild(pr);
- let raf=0,last=null;
- const fix=()=>{raf=0;try{const v=window.visualViewport;let off=0;if(v&&v.scale<=1.02&&!document.body.classList.contains('kb')){off=Math.round(v.offsetTop+v.height-pr.getBoundingClientRect().bottom);if(off<0||off>600)off=0}
+ let raf=0,last=null,pend=null;
+ const fix=()=>{raf=0;try{const v=window.visualViewport;let off=0;if(v&&v.scale<=1.02&&!document.body.classList.contains('kb')){off=Math.round(v.offsetTop+v.height-pr.getBoundingClientRect().bottom);if(off<0||off>400)off=0;const sy=window.scrollY,mx=document.documentElement.scrollHeight-window.innerHeight;if(sy<0||sy>mx+1)off=0}
+   if(off!==pend){pend=off;setTimeout(q,260);return}
    if(off!==last){last=off;document.documentElement.style.setProperty('--navoff',off+'px')}}catch(e){}};
  const q=()=>{if(!raf)raf=requestAnimationFrame(fix)};
  if(window.visualViewport){visualViewport.addEventListener('resize',q);visualViewport.addEventListener('scroll',q)}
