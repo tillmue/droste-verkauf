@@ -1407,7 +1407,10 @@ window.RO_DICT={
 "Keine Besonderheiten.": "Fără particularități.",
 "Baum bohren:": "Pom de găurit:",
 "Service:": "Serviciu:",
-"Aufstellen:": "Montare:"
+"Aufstellen:": "Montare:",
+"Tour auflösen": "Desface tura",
+"Ja, auflösen": "Da, desface",
+"Tour aufgelöst": "Tură desfăcută"
 };
 
 window.RO_PATTERNS=[
@@ -1872,5 +1875,6 @@ window.RO_PATTERNS=[
  [/^Lieferschein (.+)$/,(m,n)=>`Aviz de livrare ${n}`],
  [/^· Kunde (.+)$/,(m,n)=>`· Client ${n}`],
  [/^In Tour: (.+) am (.+)$/,(m,a,b)=>`În tura: ${a} pe ${b}`],
- [/^Liefern ab (.+?)( bis (.+))?$/,(m,a,b,c)=>`Livrare de la ${a}${c?' până la '+c:''}`]
+ [/^Liefern ab (.+?)( bis (.+))?$/,(m,a,b,c)=>`Livrare de la ${a}${c?' până la '+c:''}`],
+ [/^(.+) auflösen\? (\d+) (?:Kunde geht|Kunden gehen) zurück in die Planung \(offen\)\.( Die Tour ist schon als gepackt markiert, die Packhaken gehen verloren\.)?$/,(m,t,n,p)=>`${trs(t)}: desfaci tura? ${n} ${n==1?'client revine':'clienți revin'} în planificare (deschis).${p?' Tura este deja marcată ca împachetată, bifele de împachetare se pierd.':''}`]
 ];

@@ -1406,7 +1406,10 @@ window.PT_DICT={
 "Keine Besonderheiten.": "Sem particularidades.",
 "Baum bohren:": "Árvore a furar:",
 "Service:": "Serviço:",
-"Aufstellen:": "Montagem:"
+"Aufstellen:": "Montagem:",
+"Tour auflösen": "Desfazer rota",
+"Ja, auflösen": "Sim, desfazer",
+"Tour aufgelöst": "Rota desfeita"
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[
@@ -1694,5 +1697,6 @@ window.PT_PATTERNS=[
  [/^Lieferschein (.+)$/,(m,n)=>`Nota de entrega ${n}`],
  [/^· Kunde (.+)$/,(m,n)=>`· Cliente ${n}`],
  [/^In Tour: (.+) am (.+)$/,(m,a,b)=>`Na rota: ${a} em ${b}`],
- [/^Liefern ab (.+?)( bis (.+))?$/,(m,a,b,c)=>`Entregar a partir de ${a}${c?' até '+c:''}`]
+ [/^Liefern ab (.+?)( bis (.+))?$/,(m,a,b,c)=>`Entregar a partir de ${a}${c?' até '+c:''}`],
+ [/^(.+) auflösen\? (\d+) (?:Kunde geht|Kunden gehen) zurück in die Planung \(offen\)\.( Die Tour ist schon als gepackt markiert, die Packhaken gehen verloren\.)?$/,(m,t,n,p)=>`Desfazer ${trs(t)}? ${n} ${n==1?'cliente volta':'clientes voltam'} para o planejamento (em aberto).${p?' A rota já está marcada como embalada, os checks de embalagem se perdem.':''}`]
 ];

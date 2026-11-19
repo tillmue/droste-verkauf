@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 K';
+const APP_VERSION='2026-11-19 L';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2097,6 +2097,7 @@ document.addEventListener('click',ev=>{
     else{if(!f.color){const free=TCOL.find(c=>!S.tours.some(t=>!t.deleted&&t.type!=='abholung'&&t.date===f.date&&t.color===c[0]));f.color=(free||TCOL[0])[0]}S.tours.push({id:uid(),date:f.date,driver:f.driver,packer:f.packer||'',codriver:f.codriver||'',codriver2:f.codriver2||'',vehicle:f.vehicle,trailer:f.trailer||'',color:f.color||'',size:f.size||'',note:f.note,stops:{},createdBy:S.me,created:Date.now()})}
     cur.lday=f.date;cur.tourOpen=false;save();return render();
   }
+  if(a==='tourdissolve'){const t=S.tours.find(x=>x.id===v);if(!t||t.status==='gestartet'||t.status==='beendet')return;const n=Object.values(t.stops||{}).filter(s=>!s.deleted).length;return askConfirm(`${tourName(t)} auflösen? ${n} ${n===1?'Kunde geht':'Kunden gehen'} zurück in die Planung (offen).${t.packed?' Die Tour ist schon als gepackt markiert, die Packhaken gehen verloren.':''}`,'Ja, auflösen',()=>{Object.values(t.stops||{}).filter(s=>!s.deleted).forEach(freeStopOrder);softDel(t);cur.lstage='plan';save();toast('Tour aufgelöst');render()})}
   if(a==='tourdel'){const t=S.tours.find(x=>x.id===cur.tour.id);if(t&&confirm('Tour ins Archiv verschieben? Die Aufträge der Tour gehen zurück auf offen.')){Object.values(t.stops||{}).filter(s=>!s.deleted).forEach(freeStopOrder);softDel(t);cur.tourOpen=false;save();render()}return}
   if(a==='picknew'){const day=cur.lday||td,p=S.tours.find(x=>!x.deleted&&x.type==='abholung'&&x.date===day);cur.stop=newStop(p?p.id:'pick:'+day);cur.stopOpen=true;cur.tourOpen=false;return render()}
   if(a==='pickst'){
@@ -3351,7 +3352,7 @@ function tourCard(t,plan){
   const stgBtn=plan&&!stt&&!t.packed&&st.length?(t.toPack?`<button class="claim" data-pl="tpack" data-v="${t.id}" style="margin-top:8px">Zurück in die Planung</button>`:`<button class="btn sec" data-pl="tpack" data-v="${t.id}" style="margin-top:8px">Fertig geplant, zum Packen</button>`):'';
   const ctrl=stgBtn+(run&&!stt&&st.length&&(t.toPack||t.packed)?`<button class="btn sec" data-pl="pkopen" data-v="${t.id}" style="margin-top:12px">Packen</button><button class="btn green go" data-pl="tstart" data-v="${t.id}">Tour starten</button>`:(run&&stt==='gestartet'?`${t.paused&&mineRun(t)?`<button class="btn green go" data-pl="tresume" data-v="${t.id}" style="margin-top:12px">Tour fortsetzen</button>`:''}${st.length&&done===st.length?`<button class="btn green go" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden</button>`:(has('lieferplanung')&&!mineRun(t)?`<button class="btn sec" data-pl="tfinish" data-v="${t.id}" style="margin-top:12px">Tour beenden (Admin, mit offenen Stopps)</button>`:`<div class="hint">Noch ${st.length-done} Stopps offen. Beenden geht, sobald jeder Stopp auf Geliefert oder Nicht angetroffen steht.</div>`)}`:''));
   const body=open?`${st.length?`<div class="barw" style="margin:8px 0"><i style="width:${Math.round(done/st.length*100)}%"></i></div>`:''}${moreInfo}${assign}${durBtns}${selBar(t)}<div class="card">${st.map((x,i)=>stopRow(t,x,i,st.length,plan)).join('')||'<div class="row"><span class="p">Noch keine Stopps.</span></div>'}</div>
-    <div class="mini">${routeBtns(url,appleRoute(st))}${plan?`<button class="btn add" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div>${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}" style="margin-top:8px">Tour ändern</button>`:''}`:'';
+    <div class="mini">${routeBtns(url,appleRoute(st))}${plan?`<button class="btn add" data-pl="stopnew" data-v="${t.id}" style="margin:0">+ Stopp</button>`:''}</div>${plan?`<button class="claim" data-pl="touredit" data-v="${t.id}" style="margin-top:8px">Tour ändern</button>${t.type!=='abholung'&&t.status!=='gestartet'&&t.status!=='beendet'?`<button class="btn no" data-pl="tourdissolve" data-v="${t.id}" style="margin-top:8px">Tour auflösen</button>`:''}`:''}`:'';
   return `<div class="tour">${head}${ctrl}${body}</div>`;
 }
 function tourForm(){
