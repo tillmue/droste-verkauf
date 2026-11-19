@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 H';
+const APP_VERSION='2026-11-19 I';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2567,12 +2567,12 @@ function vPacken(t){
   const rev=stops.map((s,i)=>({s,nr:i+1})).reverse(),isTree=l=>['Baum','Deko','Laternenbaum'].includes(l.c);
   const labels=`<div class="card pad"><div class="ihead"><b>1. Etiketten schreiben</b>${infoBtn('pklabel')}</div>${infoBox('pklabel','Eine Zeile pro Baum, in der Reihenfolge zum Schreiben: der letzte Stopp zuerst. Ø = Stammdurchmesser, X = Baum wird gebohrt. Schreibe die Etiketten der Reihe nach und lege sie zu den Bäumen.')}
     ${rev.map(({s,nr})=>labelItems(s).map(it=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(it.text)}</b>${it.x?' <b style="color:var(--red)">X</b>':''}</span><span class="p">Stopp ${nr}</span></div>`).join('')).join('')||'<div class="p">Keine Bäume.</div>'}</div>`;
-  const sp=rev.map(({s,nr})=>{const ds=[...(s.lines||[]).filter(l=>isTree(l)&&l.d).map(l=>`${lineLabel(l)}: ${l.d}`),s.note].filter(Boolean);return ds.length?`<div style="margin-bottom:8px"><b>${nr}. ${esc(s.name)}</b><div class="p" style="color:var(--orange)">${ds.map(esc).join('<br>')}</div></div>`:''}).join('');
+  const sp=rev.map(({s,nr})=>{const ds=[...(s.lines||[]).filter(l=>isTree(l)&&l.d).map(l=>`${lineLabel(l)}: ${l.d}`),s.note].filter(Boolean);return ds.length?`<div style="margin-bottom:8px"><b>${nr}. ${esc(s.name)}</b>${s.orderId?` <button class="claim" data-pl="ordopen" data-v="${s.orderId}">Auftrag</button>`:''}<div class="p" style="color:var(--orange)">${ds.map(esc).join('<br>')}</div></div>`:''}).join('');
   const special=sp?`<div class="card pad"><div class="n">Sonderwünsche und Hinweise</div><div class="hint" style="margin-top:2px">Zum Beispiel Stamm vorher passend sägen.</div>${sp}</div>`:'';
   const lastStop={};
   const rows=units.map(u=>{const first=lastStop[u.nr]===undefined;lastStop[u.nr]=1;
     const lab=`${nm(u.line)}${u.line.l?' '+mFmt(u.line.l):''}${u.mult>1?' × '+u.mult:''}`;
-    return `${first?`<div class="n" style="margin-top:10px">${u.nr}. ${esc(u.stop.name)}${u.stop.bohren?` <span class="bdg">Baum bohren ×${u.stop.bohren}</span>`:''}</div>${warn(u.stop)}`:''}
+    return `${first?`<div class="n" style="margin-top:10px">${u.nr}. ${esc(u.stop.name)}${u.stop.bohren?` <span class="bdg">Baum bohren ×${u.stop.bohren}</span>`:''}${u.stop.orderId?` <button class="claim" data-pl="ordopen" data-v="${u.stop.orderId}">Auftrag ansehen</button>`:''}</div>${warn(u.stop)}`:''}
       <div class="row pk" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(lab)}</div><span class="p">Etikett ${u.nr}${u.bohren?' · X':''}</span></div>
       ${u.line.d?`<div class="p" style="color:var(--orange)"><b>${esc(u.line.d)}</b></div>`:''}
       <div class="pkrow">${u.bohren?chk(u,'b','Gebohrt'):''}${chk(u,'a','Geladen')}</div></div>`}).join('');
@@ -3132,7 +3132,7 @@ function nacharbeit(){
 function nachBox(){
   const L=nacharbeit();if(!L.length)return '';
   return `<div class="card pad"><div class="ihead"><b>Nacharbeit (${L.length})</b>${infoBtn('nach')}</div>${infoBox('nach','Aufträge, die nicht geliefert wurden: nicht angetroffen, in keiner Tour geplant oder nicht abgehakt. Über die drei Punkte rechts markierst du sie als geliefert oder verlegst sie auf einen anderen Tag.')}
-    <div class="card">${L.map(x=>`<div class="row" style="align-items:flex-start"><div style="min-width:0;flex:1"><div class="n">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div><div class="p">${esc(orderAddr(x.o))}</div><div class="p" style="color:var(--orange)">${x.why} · ${wdD(x.day)}</div>${x.note?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.note)}</div>`:''}</div><button class="dots" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Mehr">⋯</button></div>`).join('')}</div></div>`;
+    <div class="card">${L.map(x=>`<div class="row" style="align-items:flex-start"><div style="min-width:0;flex:1"><div class="n" data-pl="ordopen" data-v="${x.o.id}" style="cursor:pointer;color:var(--link)">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div><div class="p">${esc(orderAddr(x.o))}</div><div class="p" style="color:var(--orange)">${x.why} · ${wdD(x.day)}</div>${x.note?`<div class="p" style="color:var(--link)"><b>Fahrer-Notiz:</b> ${esc(x.note)}</div>`:''}</div><button class="dots" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Mehr">⋯</button></div>`).join('')}</div></div>`;
 }
 function orderDone(o){
   const t=S.tours.find(x=>x.id===o.tourId),s=t&&t.stops&&t.stops[o.stopId];
