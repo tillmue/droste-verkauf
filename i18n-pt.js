@@ -1391,7 +1391,22 @@ window.PT_DICT={
 "hat Mittag gegessen": "almoçou",
 "Packer offen": "Responsável pela carga: em aberto",
 "Packer zuweisen": "Atribuir responsável pela carga",
-"Packer:": "Responsável pela carga:"
+"Packer:": "Responsável pela carga:",
+"Auftrag": "Pedido",
+"Auftrag ansehen": "Ver pedido",
+"Handschein": "Nota manuscrita",
+"Wann": "Quando",
+"Zeitfenster:": "Janela de horário:",
+"Noch in keiner Tour": "Ainda em nenhuma rota",
+"Wohin und Kontakt": "Destino e contato",
+"Ansprechperson:": "Pessoa de contato:",
+"Rechnungsadresse:": "Endereço de cobrança:",
+"Das bekommt der Kunde": "O que o cliente recebe",
+"Keine Positionen.": "Sem itens.",
+"Keine Besonderheiten.": "Sem particularidades.",
+"Baum bohren:": "Árvore a furar:",
+"Service:": "Serviço:",
+"Aufstellen:": "Montagem:"
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[
@@ -1675,5 +1690,9 @@ window.PT_PATTERNS=[
  [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} em aberto`],
  [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} pagas`],
  [/^(\d+) Freigaben? offen$/,(m,n)=>+n===1?'1 aprovação pendente':`${n} aprovações pendentes`],
- [/^Essen ohne Eintrag am (.+)$/,(m,d)=>`Refeição sem registro em ${d}`]
+ [/^Essen ohne Eintrag am (.+)$/,(m,d)=>`Refeição sem registro em ${d}`],
+ [/^Lieferschein (.+)$/,(m,n)=>`Nota de entrega ${n}`],
+ [/^· Kunde (.+)$/,(m,n)=>`· Cliente ${n}`],
+ [/^In Tour: (.+) am (.+)$/,(m,a,b)=>`Na rota: ${a} em ${b}`],
+ [/^Liefern ab (.+?)( bis (.+))?$/,(m,a,b,c)=>`Entregar a partir de ${a}${c?' até '+c:''}`]
 ];

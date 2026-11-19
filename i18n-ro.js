@@ -1392,7 +1392,22 @@ window.RO_DICT={
 "hat Mittag gegessen": "a luat prânzul",
 "Packer offen": "Încărcător: liber",
 "Packer zuweisen": "Alocă încărcătorul",
-"Packer:": "Încărcător:"
+"Packer:": "Încărcător:",
+"Auftrag": "Comandă",
+"Auftrag ansehen": "Vezi comanda",
+"Handschein": "Bon scris de mână",
+"Wann": "Când",
+"Zeitfenster:": "Interval orar:",
+"Noch in keiner Tour": "Încă în nicio tură",
+"Wohin und Kontakt": "Unde și contact",
+"Ansprechperson:": "Persoană de contact:",
+"Rechnungsadresse:": "Adresă de facturare:",
+"Das bekommt der Kunde": "Ce primește clientul",
+"Keine Positionen.": "Fără poziții.",
+"Keine Besonderheiten.": "Fără particularități.",
+"Baum bohren:": "Pom de găurit:",
+"Service:": "Serviciu:",
+"Aufstellen:": "Montare:"
 };
 
 window.RO_PATTERNS=[
@@ -1853,5 +1868,9 @@ window.RO_PATTERNS=[
  [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} deschise`],
  [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} plătite`],
  [/^(\d+) Freigaben? offen$/,(m,n)=>+n===1?'1 aprobare deschisă':`${n} aprobări deschise`],
- [/^Essen ohne Eintrag am (.+)$/,(m,d)=>`Masă fără înscriere pe ${d}`]
+ [/^Essen ohne Eintrag am (.+)$/,(m,d)=>`Masă fără înscriere pe ${d}`],
+ [/^Lieferschein (.+)$/,(m,n)=>`Aviz de livrare ${n}`],
+ [/^· Kunde (.+)$/,(m,n)=>`· Client ${n}`],
+ [/^In Tour: (.+) am (.+)$/,(m,a,b)=>`În tura: ${a} pe ${b}`],
+ [/^Liefern ab (.+?)( bis (.+))?$/,(m,a,b,c)=>`Livrare de la ${a}${c?' până la '+c:''}`]
 ];
