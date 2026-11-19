@@ -356,7 +356,7 @@ exports.driveKm = onCall(async req => {
   if (pl && typeof pl.lat === 'number' && typeof pl.lng === 'number') {
     dest = { location: { latLng: { latitude: pl.lat, longitude: pl.lng } } }; plz = String(pl.plz || ''); addrTxt = String(pl.addr || address);
   } else {
-    const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
+    const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('51.64,7.04|52.99,9.25')}&key=${k.data().key}`)).json();
     if (gr.status === 'REQUEST_DENIED') throw new HttpsError('failed-precondition', 'Geocoding API nicht erlaubt: ' + (gr.error_message || ''));
     const g0 = gr.results && gr.results[0];
     if (!g0) throw new HttpsError('not-found', 'Adresse nicht gefunden');
@@ -397,7 +397,7 @@ exports.addrSuggest = onCall(async req => {
       const pr = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key },
-        body: JSON.stringify({ input, includedRegionCodes: ['de'], languageCode: 'de', locationBias: { circle: { center: { latitude: 52.3125, longitude: 8.1475 }, radius: 40000.0 } } })
+        body: JSON.stringify({ input, includedRegionCodes: ['de'], languageCode: 'de', locationRestriction: { rectangle: { low: { latitude: 51.637, longitude: 7.04 }, high: { latitude: 52.987, longitude: 9.25 } } } })
       });
       if (pr.ok) {
         const pj = await pr.json();
@@ -411,7 +411,7 @@ exports.addrSuggest = onCall(async req => {
       placesOff = Date.now() + 10 * 60 * 1000;
     } catch (e) { placesOff = Date.now() + 10 * 60 * 1000; }
   }
-  const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(input)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
+  const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(input)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('51.64,7.04|52.99,9.25')}&key=${k.data().key}`)).json();
   const items = (gr.results || []).filter(g => (g.types || []).some(t => ['street_address', 'route', 'premise', 'subpremise', 'establishment', 'point_of_interest'].includes(t))).slice(0, 5).map(g => ({ addr: g.formatted_address.replace(/, Deutschland$/, ''), lat: g.geometry.location.lat, lng: g.geometry.location.lng, plz: ((g.address_components || []).find(c => c.types.includes('postal_code')) || {}).long_name || '', partial: !!g.partial_match }));
   return { items };
 });
