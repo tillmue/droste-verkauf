@@ -382,16 +382,37 @@ exports.driveKm = onCall(async req => {
 });
 
 /* Adressvorschläge für den Lieferrechner (Geocoding, bevorzugt Umgebung des Hofs) */
+let placesOff = 0;
 exports.addrSuggest = onCall(async req => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
   const u = await db.collection('users').doc(req.auth.uid).get();
   if (!u.exists || u.data().approved !== true) throw new HttpsError('permission-denied', 'Nicht freigegeben');
   const input = String((req.data && req.data.input) || '').trim().slice(0, 150);
-  if (input.length < 5) return { items: [] };
+  if (input.length < 3) return { items: [] };
   const k = await db.doc('secrets/maps').get();
   if (!k.exists || !k.data().key) return { items: [] };
+  /* Schnell und mit Teileingaben: Places Autocomplete (falls im Projekt aktiviert und im Schlüssel erlaubt), sonst Geocoding */
+  if (!placesOff || Date.now() > placesOff) {
+    try {
+      const pr = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': k.data().key },
+        body: JSON.stringify({ input, includedRegionCodes: ['de'], languageCode: 'de', locationBias: { circle: { center: { latitude: 52.3125, longitude: 8.1475 }, radius: 40000.0 } } })
+      });
+      if (pr.ok) {
+        const pj = await pr.json();
+        const its = (pj.suggestions || []).filter(s => s.placePrediction).slice(0, 6).map(s => {
+          const addr = s.placePrediction.text.text.replace(/, Deutschland$/, '');
+          const m = addr.match(/\b(\d{5})\b/);
+          return { addr, lat: null, lng: null, plz: m ? m[1] : '' };
+        });
+        return { items: its };
+      }
+      placesOff = Date.now() + 10 * 60 * 1000;
+    } catch (e) { placesOff = Date.now() + 10 * 60 * 1000; }
+  }
   const gr = await (await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(input)}&components=country:DE&region=de&language=de&bounds=${encodeURIComponent('52.10,7.90|52.50,8.40')}&key=${k.data().key}`)).json();
-  const items = (gr.results || []).slice(0, 5).map(g => ({ addr: g.formatted_address.replace(/, Deutschland$/, ''), lat: g.geometry.location.lat, lng: g.geometry.location.lng, plz: ((g.address_components || []).find(c => c.types.includes('postal_code')) || {}).long_name || '', partial: !!g.partial_match }));
+  const items = (gr.results || []).filter(g => (g.types || []).some(t => ['street_address', 'route', 'premise', 'subpremise', 'establishment', 'point_of_interest'].includes(t))).slice(0, 5).map(g => ({ addr: g.formatted_address.replace(/, Deutschland$/, ''), lat: g.geometry.location.lat, lng: g.geometry.location.lng, plz: ((g.address_components || []).find(c => c.types.includes('postal_code')) || {}).long_name || '', partial: !!g.partial_match }));
   return { items };
 });
 

@@ -1376,7 +1376,7 @@ window.RO_DICT={
 "Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)": "min. modificabil (până la 9:00, apoi costă 6 beri)",
 "Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.": "Atunci poți vedea aplicația oricum. Se întreabă din nou în fiecare zi de la ora 0:00, înscrierea este posibilă până la 9:00.",
 "Eingetragen heute": "Înscriși azi",
-"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "De la 9:00: cine nu s-a înscris plătește 6 beri (¼ de lădiță). Cine a luat micul dejun fără înscriere se marchează aici: aplicația introduce automat 6 beri (¼ de lădiță). Lista de afișat este ca PDF în OneDrive, folderul Hof-Droste_Büro.",
+"Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "De la 9:00: cine nu s-a înscris plătește 6 beri (¼ de lădiță). Cine a luat micul dejun sau prânzul fără înscriere se marchează aici: aplicația introduce automat 6 beri (¼ de lădiță). Lista de afișat este ca PDF în OneDrive, folderul Hof-Droste_Büro.",
 "Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.": "Până la 9:00 te poți încă înscrie. După aceea apare aici lista cu completările.",
 "Alle eingetragen.": "Toți sunt înscriși.",
 "Noch niemand.": "Încă nimeni.",
@@ -1385,7 +1385,11 @@ window.RO_DICT={
 "hat gefrühstückt": "a luat micul dejun",
 "Hat gefrühstückt": "A luat micul dejun",
 "Zurücknehmen": "Retrage",
-"Wartet auf Freigabe": "Așteaptă aprobarea"
+"Wartet auf Freigabe": "Așteaptă aprobarea",
+"Frühstück zurücknehmen": "Retrage micul dejun",
+"Mittag zurücknehmen": "Retrage prânzul",
+"Hat Mittag gegessen": "A luat prânzul",
+"hat Mittag gegessen": "a luat prânzul"
 };
 
 window.RO_PATTERNS=[
@@ -1845,5 +1849,6 @@ window.RO_PATTERNS=[
  [/^\((\d+ Bier|\d+ Kisten? \+ \d+ Bier)\)$/,(m,x)=>`(${trs(x)})`],
  [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} deschise`],
  [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} plătite`],
- [/^(\d+) Freigaben? offen$/,(m,n)=>+n===1?'1 aprobare deschisă':`${n} aprobări deschise`]
+ [/^(\d+) Freigaben? offen$/,(m,n)=>+n===1?'1 aprobare deschisă':`${n} aprobări deschise`],
+ [/^Essen ohne Eintrag am (.+)$/,(m,d)=>`Masă fără înscriere pe ${d}`]
 ];

@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 D';
+const APP_VERSION='2026-11-19 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1337,14 +1337,14 @@ function dlRun(){
   if(!(d.addr||'').trim()){d.err='Bitte eine Adresse eingeben.';d.res=null;return render()}
   if(!window.cloud||!window.cloud.driveKm){d.err='Die Verbindung steht noch nicht, bitte gleich noch einmal versuchen.';return render()}
   d.busy=true;d.err='';d.res=null;d.sug=[];render();
-  window.cloud.driveKm({address:d.addr.trim(),place:d.pick?{lat:d.pick.lat,lng:d.pick.lng,addr:d.pick.addr,plz:d.pick.plz}:null}).then(r=>{d.res=r;d.busy=false;render()}).catch(e=>{d.busy=false;d.err=(e&&e.message)||'Die Strecke konnte nicht berechnet werden.';render()});
+  window.cloud.driveKm({address:d.addr.trim(),place:d.pick&&d.pick.lat!=null?{lat:d.pick.lat,lng:d.pick.lng,addr:d.pick.addr,plz:d.pick.plz}:null}).then(r=>{d.res=r;d.busy=false;render()}).catch(e=>{d.busy=false;d.err=(e&&e.message)||'Die Strecke konnte nicht berechnet werden.';render()});
 }
 function dlSuggest(v){
   clearTimeout(window.__dls);const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''});d.pick=null;
   const box=()=>document.getElementById('dl-sug');
-  if(v.trim().length<6){d.sug=[];if(box()){box().innerHTML='';box().style.display='none'}return}
+  if(v.trim().length<3){d.sug=[];if(box()){box().innerHTML='';box().style.display='none'}return}
   window.__dls=setTimeout(()=>{if(!window.cloud||!window.cloud.addrSuggest)return;
-    window.cloud.addrSuggest({input:v.trim()}).then(r=>{d.sug=(r&&r.items)||[];const b=box();if(b){b.innerHTML=d.sug.map((x,i)=>`<div class="row" data-pl="dlpick" data-v="${i}" style="cursor:pointer"><div class="n" style="min-width:0">${esc(x.addr)}</div></div>`).join('');b.style.display=d.sug.length?'':'none'}}).catch(()=>{})},600);
+    window.cloud.addrSuggest({input:v.trim()}).then(r=>{d.sug=(r&&r.items)||[];const b=box();if(b){b.innerHTML=d.sug.map((x,i)=>`<div class="row" data-pl="dlpick" data-v="${i}" style="cursor:pointer"><div class="n" style="min-width:0">${esc(x.addr)}</div></div>`).join('');b.style.display=d.sug.length?'':'none'}}).catch(()=>{})},250);
 }
 function delivBox(){
   const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''}),r=d.res;
@@ -1739,21 +1739,21 @@ function anwBlock(){
 
 /* Anwesenheitsliste des Tages (Admin und alle mit Recht "Anwesenheit sehen", z. B. Rolf): wer hat sich eingetragen, wer nicht; Nachtrag "hat gefrühstückt" von Hand. Die PDF zum Aushängen erzeugt der Mac ab 9 Uhr in OneDrive. */
 const attManDoc=ds=>(S.attMan||[]).find(x=>x.id===ds);
-function manToggle(n,ds){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};const why='Frühstück ohne Eintrag am '+dmy(ds);if(d.names[n]){delete d.names[n];latePenOff(n,why)}else{d.names[n]=Date.now();latePen(n,why)}d.by=S.me;d.updated=Date.now();save()}
+function manToggle(n,ds,w){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{},namesM:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};d.namesM=d.namesM||{};const m=w==='mi'?d.namesM:d.names,why='Essen ohne Eintrag am '+dmy(ds);if(m[n])delete m[n];else m[n]=Date.now();if(d.names[n]||d.namesM[n])latePen(n,why);else latePenOff(n,why);d.by=S.me;d.updated=Date.now();save()}
 function gateList(){
   if(!has('anwSee'))return '';
   const g=gateDay();if(g<attFrom()||g>attTo())return '';
   const ppl=S.people.filter(n=>S.approved[n]!==false&&roleOf(n)!=='demo'&&!/^Test /.test(n)).sort((a,b)=>a.localeCompare(b,'de'));
   const lab=x=>(LOCS.find(y=>y[0]===x)||[0,''])[1],lk=gateLockMs();
   const yes=[],no=[];ppl.forEach(n=>{const d=attDoc(n)||{};if((d.chk||{})[g])yes.push([n,d]);else no.push(n)});
-  const man=(attManDoc(g)||{}).names||{};
+  const md=attManDoc(g)||{},man=md.names||{},manM=md.namesM||{};
   const yrow=([n,d])=>{const late=d.chk[g]>lk,v=(d.days||{})[g],lf=(d.locf||{})[g],lm=(d.locm||{})[g];
     const t=v==='nein'?'nicht da':`Frühstück: ${lf?esc(lab(lf)):'Nein'} · Mittag: ${lm?esc(lab(lm)):'Nein'}`;
     return `<div class="row" style="display:block"><div class="n" style="font-size:15px">${esc(n)}${late?' <span class="pill r">nach 9:00</span>':''}</div><div class="p">${t}</div></div>`};
-  const nrow=n=>`<div class="row"><div class="n" style="font-size:15px;flex:1">${esc(n)}${man[n]?' <span class="pill o">hat gefrühstückt</span>':''}</div><button class="claim" data-pl="manfr" data-v="${esc(n)}">${man[n]?'Zurücknehmen':'Hat gefrühstückt'}</button></div>`;
+  const nrow=n=>`<div class="row" style="display:block"><div class="n" style="font-size:15px">${esc(n)}${man[n]?' <span class="pill o">hat gefrühstückt</span>':''}${manM[n]?' <span class="pill o">hat Mittag gegessen</span>':''}</div><div class="mini" style="margin-top:6px"><button class="claim" data-pl="manfr" data-v="${esc(n)}">${man[n]?'Frühstück zurücknehmen':'Hat gefrühstückt'}</button><button class="claim" data-pl="manmi" data-v="${esc(n)}">${manM[n]?'Mittag zurücknehmen':'Hat Mittag gegessen'}</button></div></div>`;
   const open=gateLocked();
   return `<section class="blk"><div class="blk-h"><h3>Eingetragen heute</h3>${pill(yes.length+' von '+ppl.length,no.length?'o':'g')}</div>
-    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
+    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
     <details data-det="gl-no" ${open?'open':''}><summary style="padding:8px 0"><b>Nicht eingetragen (${no.length})</b></summary>${no.map(nrow).join('')||'<div class="p">Alle eingetragen.</div>'}</details>
     <details data-det="gl-yes"><summary style="padding:8px 0"><b>Eingetragen (${yes.length})</b></summary>${yes.map(yrow).join('')||'<div class="p">Noch niemand.</div>'}</details></section>`}
 /* Liste aller, die die App haben (Admin) */
@@ -2065,7 +2065,7 @@ document.addEventListener('click',ev=>{
   if(a==='fmode'){cur.fmode=v;cur.frest=false;return render()}
   if(a==='gset'){const [k,b]=v.split('|');cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};cur.gate[k]=(k==='fr'||k==='mi')?b==='true':b;return render()}
   if(a==='gsave'){const o=cur.gate||{};if(o.fr===null||o.mi===null||(o.fr&&!o.locf)||(o.mi&&!o.locm))return;gateSave(gateDay(),{da:true,fr:o.fr,mi:o.mi,locf:o.locf,locm:o.locm});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
-  if(a==='manfr'){if(!has('anwSee'))return;manToggle(v,gateDay());return render()}
+  if(a==='manfr'||a==='manmi'){if(!has('anwSee'))return;manToggle(v,gateDay(),a==='manmi'?'mi':'fr');return render()}
   if(a==='gno'){gateSave(gateDay(),{da:false});cur.gate=null;cur.gateOpen=false;toast('Gespeichert');window.scrollTo(0,0);return render()}
   if(a==='gchg'&&gateLocked()){toast('Heute nicht mehr änderbar');return render()}
   if(a==='gchg'){const g=gateDay(),d=attDoc(S.me)||{},v=(d.days||{})[g],lf=(d.locf||{})[g],lm=(d.locm||{})[g];cur.gate=(v&&v!=='nein')?{fr:!!lf,mi:!!lm,locf:lf||'',locm:lm||''}:{fr:null,mi:null,locf:'',locm:''};cur.gateOpen=true;return render()}
@@ -3039,7 +3039,7 @@ function bestCard(b){
 function bfSuggest(k,v){
   clearTimeout(window['__bfs'+k]);const box=()=>document.getElementById('bf-sug-'+k);
   cur.bfsug=cur.bfsug||{};
-  if(v.trim().length<6){cur.bfsug[k]=[];if(box()){box().innerHTML='';box().style.display='none'}return}
+  if(v.trim().length<3){cur.bfsug[k]=[];if(box()){box().innerHTML='';box().style.display='none'}return}
   window['__bfs'+k]=setTimeout(()=>{if(!window.cloud||!window.cloud.addrSuggest)return;
     window.cloud.addrSuggest({input:v.trim().replace(/\s*\n\s*/g,', ')}).then(r=>{const it=(r&&r.items)||[];cur.bfsug[k]=it;const b=box();if(b){b.innerHTML=it.map((x,i)=>`<div class="row" data-pl="bfpick" data-v="${k}|${i}" style="cursor:pointer"><div class="n" style="min-width:0">${esc(x.addr)}</div></div>`).join('');b.style.display=it.length?'':'none'}}).catch(()=>{})},600);
 }
