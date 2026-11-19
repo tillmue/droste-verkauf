@@ -1844,5 +1844,6 @@ window.RO_PATTERNS=[
  [/^(\d+) Kisten? \+ (\d+) Bier$/,(m,k,b)=>`${k} ${k==1?'lădiță':'lădițe'} + ${b} beri`],
  [/^\((\d+ Bier|\d+ Kisten? \+ \d+ Bier)\)$/,(m,x)=>`(${trs(x)})`],
  [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} deschise`],
- [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} plătite`]
+ [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} plătite`],
+ [/^(\d+) Freigaben? offen$/,(m,n)=>+n===1?'1 aprobare deschisă':`${n} aprobări deschise`]
 ];

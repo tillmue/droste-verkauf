@@ -1666,5 +1666,6 @@ window.PT_PATTERNS=[
  [/^(\d+) Kisten? \+ (\d+) Bier$/,(m,k,b)=>`${k} ${k==1?'caixa':'caixas'} + ${b} cervejas`],
  [/^\((\d+ Bier|\d+ Kisten? \+ \d+ Bier)\)$/,(m,x)=>`(${trs(x)})`],
  [/^(\d+ Bier|\d+ Kisten? \+ \d+ Bier) offen$/,(m,x)=>`${trs(x)} em aberto`],
- [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} pagas`]
+ [/^· (\d+ Bier|\d+ Kisten? \+ \d+ Bier) bezahlt$/,(m,x)=>`· ${trs(x)} pagas`],
+ [/^(\d+) Freigaben? offen$/,(m,n)=>+n===1?'1 aprovação pendente':`${n} aprovações pendentes`]
 ];

@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 B';
+const APP_VERSION='2026-11-19 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1067,6 +1067,11 @@ function freigaben(){
     <div class="p">${S.emailVerified&&S.emailVerified[n]?'E-Mail bestätigt':'E-Mail noch nicht bestätigt'}</div>
     <div class="mini" style="margin-top:12px"><button class="btn green" data-appr="${esc(n)}" style="margin:0">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;color:var(--red)">Ablehnen</button></div></div>`).join('')}`;
 }
+/* Neue Nutzer zur Freigabe: groß ganz oben auf der Übersicht */
+function freigabeBig(){
+  const p=pendingNames();if(!p.length)return '';
+  return `<section class="blk t-o" style="padding:20px;border-width:2px"><div class="blk-h"><h3 style="font-size:24px">${p.length} Freigabe${p.length>1?'n':''} offen</h3></div>${p.map(n=>`<div style="background:var(--fill);border-radius:14px;padding:16px;margin-top:12px"><div class="n" style="font-size:22px">${esc(n)}</div><div class="p" style="font-size:15px">${S.emailVerified&&S.emailVerified[n]?'E-Mail bestätigt':'E-Mail noch nicht bestätigt'}</div><div class="mini" style="margin-top:14px"><button class="btn green" data-appr="${esc(n)}" style="margin:0;min-height:54px;font-size:18px">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;min-height:54px;font-size:18px;color:var(--red)">Ablehnen</button></div></div>`).join('')}</section>`;
+}
 function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>${canApprove()?freigaben():''}${anwBlock()}`;
 }
@@ -1177,9 +1182,9 @@ function abendBlock(){
   if(new Date().getHours()<17)return '';
   const td=todayStr(),tm=shiftDate(td,1),me=S.me,lines=[];
   const mt=S.tasks.filter(t=>!t.deleted&&!t.done&&t.person===me&&t.date===tm);
-  if(mt.length)lines.push(['Aufgaben',mt.slice(0,3).map(t=>esc(t.title)).join(', ')+(mt.length>3?' (+'+(mt.length-3)+')':'')]);
+  if(mt.length)lines.push(['Aufgaben',mt.slice(0,3).map(t=>esc(trF(t,'title'))).join(', ')+(mt.length>3?' (+'+(mt.length-3)+')':'')]);
   const ev=S.events.filter(e=>!e.deleted&&e.cal==='saison'&&e.date<=tm&&tm<=(e.end||e.date)&&(!e.person||e.person===me));
-  if(ev.length)lines.push(['Termine',ev.slice(0,3).map(e=>(e.time?esc(e.time)+' ':'')+esc(e.title)).join(', ')]);
+  if(ev.length)lines.push(['Termine',ev.slice(0,3).map(e=>(e.time?esc(e.time)+' ':'')+esc(trF(e,'title'))).join(', ')]);
   const tr=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.date===tm&&isCrew(t,me));
   if(tr.length)lines.push(['Auslieferung',tr.map(t=>esc(tourName(t))+' ('+tourStops(t).length+' Stopps)').join(', ')]);
   if(has('kueche')){const m=mealOf(tm),c=attCounts(tm);if(m||c)lines.push(['Essen',(m?esc(m):'noch offen')+(c?' ('+c.fr+' Frühstück, '+c.mi+' Mittag)':'')])}
@@ -1221,13 +1226,13 @@ function vIch(){
   const blk=(title,body,o={})=>`<section class="blk${o.tone?' t-'+o.tone:''}${o.go?' click':''}"${o.go?` data-pl="${o.go}"`:''}><div class="blk-h"><h3>${title}</h3>${o.pill||''}</div>${body}</section>`;
   const nQ=isAdmin()?S.questions.filter(q=>!q.deleted&&!q.done).length:0;
   const myTours=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.status!=='beendet'&&t.date>=td&&t.date<=shiftDate(td,7)&&isCrew(t,me)).sort((a,b)=>a.date<b.date?-1:1).slice(0,3);
-  $('#app').innerHTML=`${backupWarn()}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>${gateStatus()}${gateList()}
+  $('#app').innerHTML=`${backupWarn()}${canApprove()?freigabeBig():''}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>${gateStatus()}${gateList()}
   <div id="wx" style="margin:8px 0 14px">${wxHtml()}</div>${beerBlock()}
   <div class="mini" style="margin-bottom:14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
   ${abendBlock()}
-  ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(e.title)}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(t.title)}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
+  ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(trF(e,'title'))}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(trF(t,'title'))}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
   ${mealToday?blk('Essen heute',`<div class="p" style="padding:2px 0 10px;font-size:16px;color:var(--text)">${esc(mealToday)}</div>`,{pill:pill('heute','g')}):''}
   ${blk('Meine Aufgaben heute',`${attDue?`<div class="row" data-pl="goatt" style="cursor:pointer"><div style="min-width:0"><div class="n">Anwesenheit ausfüllen</div><div class="p">${attDue} ${attDue===1?'Tag':'Tage'} noch offen, tippen zum Ausfüllen</div></div></div>`:''}${today.map(t=>taskRow(t,true,true)).join('')||(attDue?'':'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>')}
     ${doneTodayL.length?`<div class="p" style="margin:12px 0 2px;font-weight:600">Heute erledigt (${doneTodayL.length}), zum Zurückholen antippen</div>${doneTodayL.map(t=>taskRow(t,true,true)).join('')}`:''}
@@ -1467,7 +1472,7 @@ function askConfirm(msg,ok,cb,no){
 function handOver(id){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
   const d=document.createElement('div');d.className='cheers';
-  d.innerHTML=`<div><p>${esc(t.title)}</p><label class="f">Aufgabe abgeben an</label><select class="t" id="hand-to"><option value="">Offen (jeder kann übernehmen)</option>${S.people.filter(p=>p!==t.person).map(p=>`<option>${esc(p)}</option>`).join('')}</select><div style="height:18px"></div><button class="btn green" data-ok="1" style="padding:18px">Abgeben</button><div style="height:18px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
+  d.innerHTML=`<div><p>${esc(trF(t,'title'))}</p><label class="f">Aufgabe abgeben an</label><select class="t" id="hand-to"><option value="">Offen (jeder kann übernehmen)</option>${S.people.filter(p=>p!==t.person).map(p=>`<option>${esc(p)}</option>`).join('')}</select><div style="height:18px"></div><button class="btn green" data-ok="1" style="padding:18px">Abgeben</button><div style="height:18px"></div><button class="btn sec" data-no="1" style="padding:18px">Abbrechen</button></div>`;
   d.addEventListener('click',e=>{const x=e.target;
     if(x.dataset.ok){const to=d.querySelector('#hand-to').value;d.remove();t.handedFrom=t.person||S.me;t.person=to;t.assignedBy=S.me;save();render()}
     else if(x.dataset.no||x===d)d.remove()});
@@ -1505,7 +1510,7 @@ function planMeld(){
   const seg=`<div class="seg">${[['offen','Offen ('+n.offen+')'],['arbeit','In Arbeit ('+n.arbeit+')'],['erledigt','Erledigt ('+n.erledigt+')']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="rst" data-v="${k}">${l}</button>`).join('')}</div>
     <div class="chips">${[['','Alle']].concat(RCAT).map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-pl="rcatf" data-v="${k}">${l}</button>`).join('')}</div>`;
   const card=r=>{const url=r.photo?imgUrl(r.photo):'',s=sOf(r);
-    const body=`<div style="margin-top:2px">${esc(r.text)}</div>
+    const body=`<div style="margin-top:2px">${esc(trF(r,'text'))}</div>
       ${r.photo?(url?`<img class="rimg" src="${url}" alt="" data-pl="fzoom" data-v="${esc(url)}" style="max-height:200px;object-fit:cover">`:`<div class="hint">${IMGERR[r.photo]?'Foto konnte nicht geladen werden (Fehler: '+esc(IMGERR[r.photo])+').':'Foto wird geladen …'}</div>`):''}
       <div class="p" style="margin:6px 0 8px">Gemeldet von ${esc(r.by||'?')} · ${new Date(r.created||Date.now()).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div>${r.assignedTo?`<div class="p" style="margin:-4px 0 8px">Zugewiesen von ${esc(r.assignedBy||'?')} an ${esc(r.assignedTo)}</div>`:''}
       ${all&&s!=='erledigt'?`<div class="mini" style="margin:0 0 10px"><button class="btn sec" data-pl="rassign" data-v="${r.id}" style="margin:0">Zuweisen</button>${s==='offen'?`<button class="btn sec" data-pl="rwork" data-v="${r.id}" style="margin:0">In Arbeit</button>`:''}<button class="btn" data-pl="rdone" data-v="${r.id}" style="margin:0">Erledigt</button></div>`:''}`;
@@ -1571,7 +1576,7 @@ function taskRow(t,showDate,pop){
   const who=t.person?`<span class="who">${esc(t.person)}</span>`:'<span style="color:var(--orange);font-weight:600">Offen</span>';
   return `<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">
     <button class="chk ${t.done?'on':''}" data-pl="tdone" data-v="${t.id}">${t.done?'✓':''}</button>
-    <div style="min-width:0;flex:1"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(t.title)}</div>
+    <div style="min-width:0;flex:1"><div class="n ${t.done?'done':''}">${t.type==='termin'?'◷ ':''}${esc(trF(t,'title'))}</div>
     <div class="p ${over?'neg':''}">${who}${meta?' · '+esc(meta):''}</div>${(()=>{const by=t.assignedBy||t.createdBy;return by&&by!==t.person?`<div class="p">Von ${esc(by)}</div>`:''})()}${(()=>{const ri=repInfo(t);return ri?`<div class="p" style="color:var(--orange)">Gemeldet von ${esc(ri.by)} · ${repDate(ri.at)}</div>`:''})()}${t.movedFrom&&!t.done?`<div class="p">Verschoben von ${wdD(t.movedFrom)}</div>`:''}${t.handedFrom&&!t.done?`<div class="p">Abgegeben von ${esc(t.handedFrom)}</div>`:''}${t.note?`<div class="p" style="margin-top:2px;font-style:italic">${esc(t.note.length>90?t.note.slice(0,90)+' …':t.note)}</div>`:''}</div></div>
     ${(!t.person&&!t.done&&!kOnly())?`<button class="claim" data-pl="tclaim" data-v="${t.id}">Ich mache das</button>`:''}${t.photo?thumbBtn(t.photo,'sdopen',t.id):''}${t.done?'':`<button class="rowedit" data-pl="sdopen" data-v="${t.id}" aria-label="Aufgabe bearbeiten" title="Bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}</div>`;
 }
@@ -1580,7 +1585,7 @@ function taskDetail(){
   const canEdit=isAdmin()||has('tasksAll')||t.createdBy===S.me,canMove=canEdit||t.person===S.me,give=canGive();
   const f=cur.sdf||(cur.sdf={title:t.title,date:t.date||'',time:t.time||'',person:t.person||'',stand:t.stand||'',note:''}),sel=(a,b)=>a===b?'selected':'';
   const by=t.assignedBy||t.createdBy,pu=t.photo?imgUrl(t.photo):'';
-  return `${canEdit?`<input class="t" id="sd-title" value="${esc(f.title)}" style="font-weight:700;font-size:20px">`:`<div class="n" style="font-size:21px">${esc(t.title)}</div>`}
+  return `${canEdit?`<input class="t" id="sd-title" value="${esc(f.title)}" style="font-weight:700;font-size:20px">`:`<div class="n" style="font-size:21px">${esc(trF(t,'title'))}</div>`}
     <div class="p" style="margin:6px 0 0">${by?'Von '+esc(by):''}${t.done?' · <b style="color:var(--green)">erledigt</b>':''}${canMove?'':` · ${t.person?esc(t.person):'Offen'}${t.date?' · '+esc(wdD(t.date)):''}${t.stand?' · '+esc(standNm(t.stand)):''}`}</div>
     ${canMove?`<div class="mini" style="margin-top:12px"><input class="t" type="date" id="sd-date" value="${esc(f.date)}" style="min-width:0"><input class="t" type="time" id="sd-time" value="${esc(f.time)}" style="min-width:0"></div>
     <div class="mini" style="margin-top:10px">${give?`<select class="t" id="sd-person"><option value="">Offen (jeder kann übernehmen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>`:''}
@@ -1588,7 +1593,7 @@ function taskDetail(){
     ${t.photo?(pu?`<img class="rimg" src="${pu}" alt="" data-pl="fzoom" data-v="${esc(pu)}">`:'<div class="hint">Foto wird geladen …</div>'):''}
     ${canMove?photoPick('sp-photo',!!t.photo,cur.sfile):''}
     ${(()=>{const ri=repInfo(t);return ri?`<label class="f" style="margin-top:14px">Meldung</label><div class="blk t-o" style="margin:0"><div class="n">Gemeldet von ${esc(ri.by)} · ${repDate(ri.at)}</div>${ri.text?`<div style="margin-top:4px">${esc(ri.text)}</div>`:''}</div>`:''})()}
-    ${t.note?`<label class="f" style="margin-top:14px">Notizen</label><div style="white-space:pre-wrap;color:var(--text);font-size:16px;line-height:1.45;background:var(--fill);border-radius:14px;padding:12px 14px">${esc(t.note)}</div>`:''}
+    ${t.note?`<label class="f" style="margin-top:14px">Notizen</label><div style="white-space:pre-wrap;color:var(--text);font-size:16px;line-height:1.45;background:var(--fill);border-radius:14px;padding:12px 14px">${esc(trF(t,'note'))}</div>`:''}
     <textarea class="t" id="sd-note" rows="3" placeholder="Neue Notiz zu dieser Aufgabe" style="margin-top:14px">${esc(f.note||'')}</textarea>
     ${canEdit&&!t.done?`<button class="btn sec" data-pl="sddone" style="margin-top:10px">Als erledigt markieren</button>`:''}
     ${canEdit?`<button class="btn red" data-pl="sddel" style="margin-top:10px">Löschen</button>`:''}
@@ -1606,10 +1611,10 @@ function renderSheet(){
 }
 function evView(){
   const e=S.events.find(x=>x.id===cur.evv);if(!e)return '<div class="hint">Eintrag nicht gefunden.</div>';
-  return `<div class="n" style="font-size:21px">${esc(e.title)}</div>
+  return `<div class="n" style="font-size:21px">${esc(trF(e,'title'))}</div>
     <div class="p" style="margin:6px 0 12px">${esc(({saison:'Saison',lieferung:'Lieferung',insta:'Instagram'})[e.cal]||'')}</div>
     <div class="kv"><span>Datum</span><span>${esc(evLabel(e))}</span></div>${e.time?`<div class="kv"><span>Uhrzeit</span><span>${esc(e.time)}</span></div>`:''}${e.place?`<div class="kv"><span>Ort</span><span>${esc(e.place)}</span></div>`:''}${e.person?`<div class="kv"><span>Zuständig</span><span>${esc(e.person)}</span></div>`:''}
-    ${e.note?`<div style="white-space:pre-wrap;font-size:16px;line-height:1.45;background:var(--fill);border-radius:14px;padding:12px 14px;margin-top:12px">${esc(e.note)}</div>`:''}
+    ${e.note?`<div style="white-space:pre-wrap;font-size:16px;line-height:1.45;background:var(--fill);border-radius:14px;padding:12px 14px;margin-top:12px">${esc(trF(e,'note'))}</div>`:''}
     <button class="btn sec" data-pl="sselclose" style="margin:16px 0 0">Schließen</button>`;
 }
 function besSheet(){
@@ -1637,7 +1642,7 @@ function taskForm(inSheet){
 function evLabel(e){return e.end&&e.end!==e.date?wdD(e.date)+' bis '+wdD(e.end):wdD(e.date)}
 function evMeta(e,noDate){return [noDate?'':evLabel(e),e.time,e.place,e.person,e.cal==='insta'?ST[e.status]:'',e.note?e.note.slice(0,40):''].filter(Boolean).map(esc).join(' · ')}
 function evRow(e,noDate){
-  return `<div class="row" ${canCal()?`data-pl="eedit" data-v="${e.id}"`:''}><div style="min-width:0"><div class="n">${esc(e.title)}</div>
+  return `<div class="row" ${canCal()?`data-pl="eedit" data-v="${e.id}"`:''}><div style="min-width:0"><div class="n">${esc(trF(e,'title'))}</div>
     <div class="p">${evMeta(e,noDate)}</div></div></div>`;
 }
 function eventForm(){
@@ -1810,9 +1815,7 @@ function vPlan(){
   const ptabs=[['aufg','Aufgaben'],has('kalender')?['kal','Kalender']:null,['meld','Meldungen'],has('einkauf')?['einkauf','Einkauf']:null,['arch','Archiv']].filter(Boolean);
   if(!ptabs.some(x=>x[0]===cur.ptab))cur.ptab='aufg';
   const seg=`<div class="seg ptabs">${ptabs.map(([k,l])=>`<button class="${cur.ptab===k?'on':''}" data-pl="ptab" data-v="${k}">${l}</button>`).join('')}</div>`;
-  const np=canApprove()?pendingNames().length:0;
-  const pend=np?`<div class="tbanner" data-go="einstellungen">${np} Freigabe${np>1?'n':''} offen, tippen zum Prüfen →</div>`:'';
-  $('#app').innerHTML=backupWarn()+pend+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
+  $('#app').innerHTML=backupWarn()+seg+({kal:planKal,aufg:planAufg,meld:planMeld,arch:planArch,einkauf:has('einkauf')?planEinkauf:planAufg})[cur.ptab]();
 }
 const canHof=()=>has('lieferungen')||has('lieferplanung');
 function calItems(ct,ds){
@@ -1838,11 +1841,11 @@ function planKal(){
   const off=(new Date(y,m-1,1).getDay()+6)%7,dim=new Date(y,m,0).getDate();
   const kwOf=ds=>{const d=new Date(ds+'T12:00:00');d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7)};
   const chipOf=it=>{const o=it.o;
-    if(it.k==='task')return `<i class="c-x">${esc(o.title)}</i>`;
+    if(it.k==='task')return `<i class="c-x">${esc(trF(o,'title'))}</i>`;
     if(it.k==='tour')return `<i class="c-t" style="border-color:${tcol(o)}">${esc(tourName(o))}</i>`;
     if(it.k==='pick')return `<i class="c-o">${esc(tourStops(o).map(x=>x.name).join(', ')||'Abholung')}</i>`;
     const c=ct==='insta'?({idee:'c-x',bereit:'',gepostet:'c-g'}[o.status]||''):(ct==='meine'?'c-v':'');
-    return `<i class="${c}">${esc(o.title)}</i>`};
+    return `<i class="${c}">${esc(trF(o,'title'))}</i>`};
   const monGrid=()=>{
     const first=`${y}-${p2(m)}-01`,start=shiftDate(first,-off),rows=Math.ceil((off+dim)/7);let g='<u></u>'+WDS.map(x=>`<u>${x}</u>`).join('');
     for(let r=0;r<rows;r++){
@@ -1885,7 +1888,7 @@ function planArch(){
   const lim=cur.alim||60,shown=list.slice(0,lim);
   const dstr=at=>at?new Date(at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'}):'';
   const row=({t,del,at})=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1">${del?'<span class="chk del" aria-hidden="true">×</span>':`<button class="chk on" data-pl="tdone" data-v="${t.id}">✓</button>`}
-    <div style="min-width:0;flex:1"><div class="n done">${esc(t.title)}</div><div class="p">${t.person?'<span class="who">'+esc(t.person)+'</span> · ':''}${del?'Gelöscht von '+esc(t.deletedBy||'?'):'Erledigt'+(t.doneBy&&t.doneBy!==t.person?' von '+esc(t.doneBy):'')}${at?' am '+dstr(at):''}</div></div></div>${t.photo?thumbBtn(t.photo,'sdopen',t.id):''}${del&&has('archiv')?`<button class="claim" data-pl="restore" data-v="task:${t.id}">Wiederherstellen</button>`:''}</div>`;
+    <div style="min-width:0;flex:1"><div class="n done">${esc(trF(t,'title'))}</div><div class="p">${t.person?'<span class="who">'+esc(t.person)+'</span> · ':''}${del?'Gelöscht von '+esc(t.deletedBy||'?'):'Erledigt'+(t.doneBy&&t.doneBy!==t.person?' von '+esc(t.doneBy):'')}${at?' am '+dstr(at):''}</div></div></div>${t.photo?thumbBtn(t.photo,'sdopen',t.id):''}${del&&has('archiv')?`<button class="claim" data-pl="restore" data-v="task:${t.id}">Wiederherstellen</button>`:''}</div>`;
   const seg=`<div class="seg">${[['alle','Alle ('+rows.length+')'],['erledigt','Erledigt ('+nE+')'],['geloescht','Gelöscht ('+nG+')']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="ast" data-v="${k}">${l}</button>`).join('')}</div>`;
   const ppl=adm?`<div class="chips">${[['','Alle'],['@open','Ohne Person']].concat(S.people.map(p=>[p,p])).map(([v,l])=>`<button class="chip ${pf===v?'on':''}" data-pl="af" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>`:'';
   return `<h2 style="margin-top:4px">Aufgabenarchiv</h2><div class="hint" style="margin-top:-4px">${adm?'Alle erledigten und gelöschten Aufgaben, nach Mitarbeiter filterbar.':'Deine erledigten und gelöschten Aufgaben.'}</div>${seg}${ppl}
@@ -1894,7 +1897,8 @@ function planArch(){
 }
 const shopState=x=>x.done?'erl':x.ordered?'best':'kauf';
 /* Einkaufslisten-Eintrag in der Sprache der App anzeigen (Übersetzung erzeugt die Cloud Function, Feld trl; ohne Übersetzung der Originaltext) */
-const shT=(x,k)=>{const o=x.trl&&x.trl[LANG]&&x.trl[LANG][k];return o||(k==='t'?x.text:x.note)||''};
+const trF=(x,f)=>{const tx=f==='text'?x.text:x.title,nt=f==='text'?'':x.note,o=x.trl&&x.trl[LANG]&&x.trlKey===(tx||'')+'\u0001'+(nt||'')&&x.trl[LANG][f==='note'?'n':'t'];return o||x[f]||''};
+const shT=(x,k)=>{const o=x.trl&&x.trl[LANG]&&x.trlKey===(x.text||'')+'\u0001'+(x.note||'')&&x.trl[LANG][k];return o||(k==='t'?x.text:x.note)||''};
 const shopTs=at=>new Date(at).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 function planEinkauf(lst){
   lst=lst||'hof';cur.shlist=lst;

@@ -45,6 +45,10 @@ const T = {
   remind1d: { de: (t, h) => `Erinnerung für morgen: ${t}${h ? ' um ' + h : ''}`, ro: (t, h) => `Memento pentru mâine: ${t}${h ? ' la ' + h : ''}`, pt: (t, h) => `Lembrete para amanhã: ${t}${h ? ' às ' + h : ''}` }
 };
 
+const pick = (lang, de, ro, pt) => (lang === 'ro' ? ro : lang === 'pt' ? pt : de);
+const langOf = u => (u.lang === 'ro' ? 'ro' : u.lang === 'pt' ? 'pt' : 'de');
+/* Text in der Sprache der Person: Übersetzung (trl) falls vorhanden, sonst Original */
+const trTxt = (x, lang, f) => (x.trl && x.trl[lang] && x.trl[lang][f === 'note' ? 'n' : 't']) || x[f] || '';
 const berlinDate = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(d);
 function addDays(ds, n) { const d = new Date(ds + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function berlinToUtc(ds, hm) {
@@ -95,7 +99,7 @@ exports.taskAssigned = onDocumentWritten('tasks/{id}', async event => {
   const u = users.find(x => x.name === after.person);
   if (!u) return;
   const d = after.date ? ` (${after.date.slice(8)}.${after.date.slice(5, 7)}.)` : '';
-  await pushTo(u, lang => T.newTask[lang](after.title || '', d));
+  await pushTo(u, lang => T.newTask[lang](trTxt(after, lang, 'title'), d));
 });
 
 /* 1b. Neue Tour: Nachricht an Fahrer und Beifahrer */
@@ -427,6 +431,26 @@ async function translateAll(texts) {
   if (out[src]) out[src] = texts.slice();
   return out;
 }
+/* Aufgaben, Termine und Meldungen: gleiche automatische Übersetzung (Feld trl, trlKey) */
+function autoTranslate(path, tf, nf) {
+  return onDocumentWritten(path, async event => {
+    const a = event.data.after.exists ? event.data.after.data() : null;
+    if (!a || a.deleted) return;
+    const t = a[tf] || '', n = nf ? a[nf] || '' : '';
+    if (!t && !n) return;
+    const key = t + '\u0001' + n;
+    if (a.trlKey === key) return;
+    try {
+      const o = await translateAll([t, n]);
+      const trl = {};
+      for (const l of ['de', 'ro', 'pt']) trl[l] = { t: o[l][0] || '', n: o[l][1] || '' };
+      await event.data.after.ref.update({ trl, trlKey: key });
+    } catch (e) { console.error('Übersetzung fehlgeschlagen', path, e.message); }
+  });
+}
+exports.taskTranslate = autoTranslate('tasks/{id}', 'title', 'note');
+exports.eventTranslate = autoTranslate('events/{id}', 'title', 'note');
+exports.reportTranslate = autoTranslate('reports/{id}', 'text', null);
 exports.shoppingWritten = onDocumentWritten('shopping/{id}', async event => {
   const a = event.data.after.exists ? event.data.after.data() : null;
   const b = event.data.before.exists ? event.data.before.data() : null;
@@ -453,7 +477,7 @@ exports.shoppingWritten = onDocumentWritten('shopping/{id}', async event => {
 });
 
 /* Anwesenheit: Zahlen pro Tag ohne Namen (für die Küche), Änderungs-Log für Rolf */
-const ATT_TXT = { ja: ['ganztags', 'toată ziua'], vm: ['bis mittags', 'până la prânz'], nm: ['ab mittags', 'de la prânz'], viell: ['vielleicht', 'poate'], nein: ['nein', 'nu'] };
+const ATT_TXT = { ja: ['ganztags', 'toată ziua', 'o dia todo'], vm: ['bis mittags', 'până la prânz', 'até o meio-dia'], nm: ['ab mittags', 'de la prânz', 'a partir do meio-dia'], viell: ['vielleicht', 'poate', 'talvez'], nein: ['nein', 'nu', 'não'] };
 /* Zahlen je Tag: Frühstück (ganztags oder bis mittags; Standpersonal nur mit Haken "Frühstück am Hof"), Mittag (alle Anwesenden außer Standpersonal) */
 async function recomputeAtt() {
   const users = {};
@@ -497,8 +521,8 @@ exports.attDigest = onSchedule({ schedule: '30 7 * * *', timeZone: TZ }, async (
   const fmt = (x, li) => `${x.name} ${x.date.slice(8)}.${x.date.slice(5, 7)}.: ${ATT_TXT[x.from] ? ATT_TXT[x.from][li] : x.from} → ${ATT_TXT[x.to] ? ATT_TXT[x.to][li] : x.to}`;
   const users = (await approvedUsers()).filter(u => u.role === 'chef');
   for (const u of users) await pushTo(u, lang => {
-    const li = lang === 'ro' ? 1 : 0, more = items.length > 6 ? ` (+${items.length - 6})` : '';
-    return (lang === 'ro' ? 'Prezență modificată: ' : 'Anwesenheit geändert: ') + items.slice(0, 6).map(x => fmt(x, li)).join('; ') + more;
+    const li = lang === 'ro' ? 1 : lang === 'pt' ? 2 : 0, more = items.length > 6 ? ` (+${items.length - 6})` : '';
+    return pick(lang, 'Anwesenheit geändert: ', 'Prezență modificată: ', 'Presença alterada: ') + items.slice(0, 6).map(x => fmt(x, li)).join('; ') + more;
   });
 });
 
@@ -523,8 +547,9 @@ async function salesOf(day) {
   return { rows, tq, tr };
 }
 function salesText(s, lang) {
-  if (!s.rows.length) return lang === 'ro' ? 'Vânzări azi: încă nimic înregistrat' : 'Verkauf heute: noch nichts eingetragen';
-  return (lang === 'ro' ? 'Vânzări azi: ' : 'Verkauf heute: ') + s.rows.map(x => `${x.name} ${x.q} ${lang === 'ro' ? 'buc.' : 'Stk.'} ${EUR(x.r)}`).join(', ') + (lang === 'ro' ? `. Total ${s.tq} buc. ${EUR(s.tr)}` : `. Gesamt ${s.tq} Stk. ${EUR(s.tr)}`);
+  if (!s.rows.length) return pick(lang, 'Verkauf heute: noch nichts eingetragen', 'Vânzări azi: încă nimic înregistrat', 'Vendas hoje: ainda nada registrado');
+  const u = pick(lang, 'Stk.', 'buc.', 'un.');
+  return pick(lang, 'Verkauf heute: ', 'Vânzări azi: ', 'Vendas hoje: ') + s.rows.map(x => `${x.name} ${x.q} ${u} ${EUR(x.r)}`).join(', ') + pick(lang, `. Gesamt ${s.tq} Stk. ${EUR(s.tr)}`, `. Total ${s.tq} buc. ${EUR(s.tr)}`, `. Total ${s.tq} un. ${EUR(s.tr)}`);
 }
 exports.eveningBrief = onSchedule({ schedule: '0 17 * * *', timeZone: TZ }, async () => {
   const tomorrow = addDays(berlinDate(), 1), today = berlinDate();
@@ -539,22 +564,22 @@ exports.eveningBrief = onSchedule({ schedule: '0 17 * * *', timeZone: TZ }, asyn
   const cnt = (await db.doc('stats/attendance').get()).data()?.days?.[tomorrow] || null;
   const sales = await salesOf(today);
   for (const u of users) {
-    const ro = u.lang === 'ro';
+    const lg = langOf(u), P = (d, r, p) => pick(lg, d, r, p);
     const parts = [];
     const myTasks = tasks.filter(t => t.person === u.name);
-    if (myTasks.length) parts.push((ro ? 'Sarcini mâine: ' : 'Aufgaben morgen: ') + myTasks.slice(0, 3).map(t => t.title).join(', ') + (myTasks.length > 3 ? ` (+${myTasks.length - 3})` : ''));
+    if (myTasks.length) parts.push(P('Aufgaben morgen: ', 'Sarcini mâine: ', 'Tarefas amanhã: ') + myTasks.slice(0, 3).map(t => trTxt(t, lg, 'title')).join(', ') + (myTasks.length > 3 ? ` (+${myTasks.length - 3})` : ''));
     const myEv = events.filter(e => !e.person || e.person === u.name);
-    if (myEv.length) parts.push((ro ? 'Termene: ' : 'Termine: ') + myEv.slice(0, 3).map(e => (e.time ? e.time + ' ' : '') + e.title).join(', '));
+    if (myEv.length) parts.push(P('Termine: ', 'Termene: ', 'Compromissos: ') + myEv.slice(0, 3).map(e => (e.time ? e.time + ' ' : '') + trTxt(e, lg, 'title')).join(', '));
     const myTours = tours.filter(t => [t.driver, t.codriver, t.codriver2].includes(u.name));
-    if (myTours.length) parts.push((ro ? 'Tură: ' : 'Tour: ') + myTours.map(t => `${TCOLOR[t.color] || ''} (${Object.values(t.stops || {}).filter(s => !s.deleted).length} ${ro ? 'opriri' : 'Stopps'})`).join(', '));
-    if ((canKueche(u) || u.role === 'kueche') && (meal || cnt)) parts.push((ro ? 'Mâncare mâine: ' : 'Essen morgen: ') + (meal || (ro ? 'noch offen' : 'noch offen')) + (cnt ? ` (${ro ? 'mic dejun' : 'Frühstück'} ${cnt.fr || 0}, ${ro ? 'prânz' : 'Mittag'} ${cnt.mi || 0})` : ''));
+    if (myTours.length) parts.push(P('Tour: ', 'Tură: ', 'Rota: ') + myTours.map(t => `${TCOLOR[t.color] || ''} (${Object.values(t.stops || {}).filter(s => !s.deleted).length} ${P('Stopps', 'opriri', 'paradas')})`).join(', '));
+    if ((canKueche(u) || u.role === 'kueche') && (meal || cnt)) parts.push(P('Essen morgen: ', 'Mâncare mâine: ', 'Comida amanhã: ') + (meal || P('noch offen', 'încă deschis', 'ainda em aberto')) + (cnt ? ` (${P('Frühstück', 'mic dejun', 'café da manhã')} ${cnt.fr || 0}, ${P('Mittag', 'prânz', 'almoço')} ${cnt.mi || 0})` : ''));
     if (u.role === 'chef') {
       const who = att.filter(a => ['ja', 'vm', 'nm'].includes((a.days || {})[tomorrow])).map(a => a.name), maybe = att.filter(a => (a.days || {})[tomorrow] === 'viell').length;
-      parts.push((ro ? 'Mâine prezenți: ' : 'Morgen da: ') + (who.length ? `${who.length} (${who.slice(0, 12).join(', ')}${who.length > 12 ? ' …' : ''})` : (ro ? 'nimeni încă' : 'noch niemand eingetragen')) + (maybe ? (ro ? `, poate ${maybe}` : `, vielleicht ${maybe}`) : ''));
-      parts.push(salesText(sales, ro ? 'ro' : 'de'));
+      parts.push(P('Morgen da: ', 'Mâine prezenți: ', 'Amanhã presentes: ') + (who.length ? `${who.length} (${who.slice(0, 12).join(', ')}${who.length > 12 ? ' …' : ''})` : P('noch niemand eingetragen', 'nimeni încă', 'ninguém ainda')) + (maybe ? P(`, vielleicht ${maybe}`, `, poate ${maybe}`, `, talvez ${maybe}`) : ''));
+      parts.push(salesText(sales, lg));
     }
     if (!parts.length) continue;
-    await pushTo(u, () => (ro ? 'Mâine: ' : 'Morgen: ') + parts.join(' · '));
+    await pushTo(u, () => P('Morgen: ', 'Mâine: ', 'Amanhã: ') + parts.join(' · '));
   }
 });
 exports.eveningBrief2 = onSchedule({ schedule: '30 19 * * *', timeZone: TZ }, async () => {
@@ -611,6 +636,6 @@ exports.reminders = onSchedule({ schedule: 'every 10 minutes', timeZone: TZ }, a
     const ref = db.collection('reminders').doc(key);
     try { await ref.create({ at: Date.now() }); } catch (x) { continue; }   // schon verschickt
     const targets = e.person ? users.filter(u => u.name === e.person) : users;
-    for (const u of targets) await pushTo(u, lang => T[e.remind === '1h' ? 'remind1h' : 'remind1d'][lang](e.title, e.time || ''));
+    for (const u of targets) await pushTo(u, lang => T[e.remind === '1h' ? 'remind1h' : 'remind1d'][lang](trTxt(e, lang, 'title'), e.time || ''));
   }
 });
