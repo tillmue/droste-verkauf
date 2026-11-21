@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-19 L';
+const APP_VERSION='2026-11-20 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1677,7 +1677,6 @@ function gateSave(g,v){let d=attDoc(S.me);if(!d){d={id:nameKey(S.me),name:S.me,d
     if(v.fr)d.locf[g]=v.locf;else delete d.locf[g];
     if(v.mi)d.locm[g]=v.locm;else delete d.locm[g]}
   d.chk[g]=Date.now();d.updated=Date.now();
-  if(v.da!==false&&g===gateDay()&&gateLocked())latePen(S.me,'Zu spät eingetragen am '+dmy(g)+' (nach 9:00 Uhr)');
   save()}
 const GATE_END='09:00';
 setInterval(()=>{if(typeof S==='undefined'||!S||!S.me)return;const cds=document.querySelectorAll('[data-cd]');if(cur.gateOpen&&gateLocked()){cur.gateOpen=false;cur.gate=null;render();return}
@@ -1689,7 +1688,7 @@ function latePen(n,reason){if(S.penalties.some(x=>!x.deleted&&x.person===n&&x.re
 function latePenOff(n,reason){S.penalties.filter(x=>!x.deleted&&x.person===n&&x.reason===reason&&!x.paid).forEach(x=>softDel(x))}
 const gateLocked=()=>Date.now()>=gateLockMs();
 const gateMins=()=>Math.max(0,Math.ceil((gateLockMs()-Date.now())/60000));
-const gateCd=()=>gateLocked()?'':`Noch <b data-cd>${gateMins()}</b> Min. änderbar (bis 9:00 Uhr, danach kostet es 6 Bier)`;
+const gateCd=()=>gateLocked()?'':`Noch <b data-cd>${gateMins()}</b> Min. änderbar (bis 9:00 Uhr)`;
 const LOCS=[['hof','Am Hof'],['schonung','In der Schonung'],['unklar','Weiß ich noch nicht']];
 function vGate(){
   const g=gateDay(),me=S.me,o=cur.gate=cur.gate||{fr:null,mi:null,locf:'',locm:''};
@@ -1699,7 +1698,7 @@ function vGate(){
   document.body.classList.add('gate');
   $('#app').innerHTML=`<h2 style="margin-top:4px">Guten Morgen, ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${fmtD(g)}</div>
     <section class="blk"><div class="blk-h"><h3>Bist du heute da?</h3></div>
-      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'<b style="color:var(--red)">Es ist nach 9:00 Uhr. Eintragen nach 9:00 Uhr kostet 6 Bier (¼ Kiste).</b> Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
+      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'<b style="color:var(--red)">Es ist nach 9:00 Uhr.</b> Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
       ${meal('fr','locf','Frühstück')}${meal('mi','locm','Mittagessen')}
       <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button></section>
     <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
@@ -1740,7 +1739,7 @@ function anwBlock(){
 
 /* Anwesenheitsliste des Tages (Admin und alle mit Recht "Anwesenheit sehen", z. B. Rolf): wer hat sich eingetragen, wer nicht; Nachtrag "hat gefrühstückt" von Hand. Die PDF zum Aushängen erzeugt der Mac ab 9 Uhr in OneDrive. */
 const attManDoc=ds=>(S.attMan||[]).find(x=>x.id===ds);
-function manToggle(n,ds,w){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{},namesM:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};d.namesM=d.namesM||{};const m=w==='mi'?d.namesM:d.names,why='Essen ohne Eintrag am '+dmy(ds);if(m[n])delete m[n];else m[n]=Date.now();if(d.names[n]||d.namesM[n])latePen(n,why);else latePenOff(n,why);d.by=S.me;d.updated=Date.now();save()}
+function manToggle(n,ds,w){let d=attManDoc(ds);if(!d){d={id:ds,date:ds,names:{},namesM:{}};S.attMan=S.attMan||[];S.attMan.push(d)}d.names=d.names||{};d.namesM=d.namesM||{};const m=w==='mi'?d.namesM:d.names,why='Essen ohne Eintrag am '+dmy(ds);if(m[n])delete m[n];else m[n]=Date.now();latePenOff(n,why);d.by=S.me;d.updated=Date.now();save()}
 function gateList(){
   if(!has('anwSee'))return '';
   const g=gateDay();if(g<attFrom()||g>attTo())return '';
@@ -1754,7 +1753,7 @@ function gateList(){
   const nrow=n=>`<div class="row" style="display:block"><div class="n" style="font-size:15px">${esc(n)}${man[n]?' <span class="pill o">hat gefrühstückt</span>':''}${manM[n]?' <span class="pill o">hat Mittag gegessen</span>':''}</div><div class="mini" style="margin-top:6px"><button class="claim" data-pl="manfr" data-v="${esc(n)}">${man[n]?'Frühstück zurücknehmen':'Hat gefrühstückt'}</button><button class="claim" data-pl="manmi" data-v="${esc(n)}">${manM[n]?'Mittag zurücknehmen':'Hat Mittag gegessen'}</button></div></div>`;
   const open=gateLocked();
   return `<section class="blk"><div class="blk-h"><h3>Eingetragen heute</h3>${pill(yes.length+' von '+ppl.length,no.length?'o':'g')}</div>
-    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer sich nicht eingetragen hat, zahlt 6 Bier (¼ Kiste). Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, hier markieren: die App trägt dann automatisch 6 Bier (¼ Kiste) ein. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
+    <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, kann hier markiert werden. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
     <details data-det="gl-no" ${open?'open':''}><summary style="padding:8px 0"><b>Nicht eingetragen (${no.length})</b></summary>${no.map(nrow).join('')||'<div class="p">Alle eingetragen.</div>'}</details>
     <details data-det="gl-yes"><summary style="padding:8px 0"><b>Eingetragen (${yes.length})</b></summary>${yes.map(yrow).join('')||'<div class="p">Noch niemand.</div>'}</details></section>`}
 /* Liste aller, die die App haben (Admin) */

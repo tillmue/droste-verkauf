@@ -1410,7 +1410,10 @@ window.RO_DICT={
 "Aufstellen:": "Montare:",
 "Tour auflösen": "Desface tura",
 "Ja, auflösen": "Da, desface",
-"Tour aufgelöst": "Tură desfăcută"
+"Tour aufgelöst": "Tură desfăcută",
+"Es ist nach 9:00 Uhr.": "Este după ora 9:00.",
+"Min. änderbar (bis 9:00 Uhr)": "min. modificabil (până la 9:00)",
+"Ab 9:00 Uhr: Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, kann hier markiert werden. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "De la 9:00: cine a luat micul dejun sau prânzul fără înscriere poate fi marcat aici. Lista de afișat este ca PDF în OneDrive, folderul Hof-Droste_Büro."
 };
 
 window.RO_PATTERNS=[
