@@ -417,3 +417,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 E:** Tourplanung: applyPlan prüft vorher, ob der Auftrag am Tag schon einen aktiven Stopp hat (kein Doppelanlegen); Banner "Duplikate bereinigen" (dupStops/dupBanner, behält Stopp laut order.stopId, löscht doppelte und verwaiste Stopps); Banner "noch in keiner Tour" (planGaps) im Planungsreiter. Wildhagen ls-2826 als Selbstabholung ab 18:00 am 23.11. von Hand gesetzt.
 
 - **22.11.2026 F/G:** "Zurücksetzen (Test)" heißt jetzt "Diesen Tag zurücksetzen": setzt nur den Tag cur.lday zurück (Touren ins Archiv, Aufträge dieses Tages auf offen). Regel große Bäume: ab 3,50 m (Planer crew=3, Tour "gross"/Rot), vorher ab über 4 m. Alle 49 Aufträge bis 22.11. per Skript auf erledigt gesetzt (doneBulk:true).
+
+- **22.11.2026 H:** Planer buildToursV2: harte Trennung, Aufträge mit k>=3 (Baum ab 3,50 m) nur in große Touren, k<3 nie in große Touren (Einfügen und Verschieben-Durchlauf); manuelles Verschieben (planMove) bleibt erlaubt.
