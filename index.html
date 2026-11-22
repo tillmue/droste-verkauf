@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-22 B';
+const APP_VERSION='2026-11-22 C';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2165,15 +2165,19 @@ document.addEventListener('click',ev=>{
     cur.stop={id:sid,tourId:tid,name:x.name||'',address:x.address||'',time:x.time||'',phone:x.phone||'',items:x.items||'',note:x.note||'',callBefore:x.callBefore||'',standId:x.standId||'',toTour:tid,toDay:t.date};cur.stopOpen=true;cur.tourOpen=false;render();return}
   if(a==='sps'){cur.sps=v;return render()}
   if(a==='spv'){cur.spv=v;return render()}
-  if(a==='spnew'){cur.spf=spotNew();cur.sheet='spot';return render()}
-  if(a==='spedit'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;cur.spf={id:x.id,name:x.name||'',link:x.link||'',sorte:x.sorte||'',groesse:x.groesse||'',note:x.note||'',lieferdatum:x.lieferdatum||''};cur.sheet='spot';return render()}
+  if(a==='spnew'){cur.spf=spotNew();cur.spfile=null;cur.sheet='spot';return render()}
+  if(a==='spedit'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;cur.spf={id:x.id,name:x.name||'',link:x.link||'',sorte:x.sorte||'',groesse:x.groesse||'',note:x.note||'',lieferdatum:x.lieferdatum||'',photo:x.photo||''};cur.spfile=null;cur.sheet='spot';return render()}
   if(a==='spgps'){if(!navigator.geolocation)return alert('Dieses Gerät kann den Standort nicht bestimmen.');toast('Standort wird gesucht …');
     navigator.geolocation.getCurrentPosition(p=>{const f=cur.spf;if(!f)return;f.link=p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6);const el=$('#spf-link');if(el)el.value=f.link;toast('Standort übernommen (Genauigkeit ca. '+Math.round(p.coords.accuracy)+' m)')},e=>alert(e.code===1?'Standortzugriff ist nicht erlaubt. Bitte in den Einstellungen des Handys für diese App oder den Browser freigeben.':'Der Standort konnte nicht bestimmt werden. Bitte im Freien erneut versuchen.'),{enableHighAccuracy:true,timeout:20000,maximumAge:0});return}
-  if(a==='spcancel'){cur.spf=null;return closeSheet()}
+  if(a==='spcancel'){cur.spf=null;cur.spfile=null;return closeSheet()}
   if(a==='spsave'){const f=cur.spf;if(!f||!(f.name||'').trim())return alert('Bitte den Kunden eintragen.');
     const geo=parseGeo(f.link),base={name:f.name.trim(),link:(f.link||'').trim(),sorte:(f.sorte||'').trim(),groesse:(f.groesse||'').trim(),note:(f.note||'').trim(),lieferdatum:(f.lieferdatum||''),lat:geo?geo.lat:null,lng:geo?geo.lng:null};
-    if(f.id){const x=S.treeSpots.find(y=>y.id===f.id);if(x)Object.assign(x,base)}else S.treeSpots.push({id:uid(),status:'offen',by:S.me,created:Date.now(),...base});
-    cur.spf=null;save();closeSheet();toast(geo?'Gespeichert, Standort erkannt':'Gespeichert (Standort nur als Link)');return}
+    const sid=f.id||uid(),file=cur.spfile;base.photo=f.photo||'';
+    if(f.id){const x=S.treeSpots.find(y=>y.id===f.id);if(x)Object.assign(x,base)}else S.treeSpots.push({id:sid,status:'offen',by:S.me,created:Date.now(),...base});
+    cur.spf=null;cur.spfile=null;save();closeSheet();toast(geo?'Gespeichert, Standort erkannt':'Gespeichert (Standort nur als Link)');
+    if(file&&window.cloud&&window.cloud.uploadImage){toast('Gespeichert, Bild wird hochgeladen …');
+      shrinkImage(file,1600).then(bl=>window.cloud.uploadImage('aufgaben/spot-'+sid+'.jpg',bl)).then(path=>{const x=S.treeSpots.find(y=>y.id===sid);if(x){x.photo=path;delete IMG[path];delete IMGERR[path];save();render()}toast('Bild angehängt')}).catch(()=>alert('Das Bild konnte nicht hochgeladen werden. Der Standort ist ohne Bild gespeichert.'))}
+    return}
   if(a==='spdel'){const x=S.treeSpots.find(y=>y.id===(cur.spf&&cur.spf.id));if(!x)return;return askConfirm('Standort ins Archiv verschieben?','Ja, löschen',()=>{softDel(x);cur.spf=null;save();closeSheet()})}
   if(a==='spdone'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;if(x.status==='gesaegt'){x.status='offen';delete x.doneBy;delete x.doneAt}else{x.status='gesaegt';x.doneBy=S.me;x.doneAt=Date.now()}save();return render()}
   if(a==='tpack'){const t=S.tours.find(x=>x.id===v);if(t){t.toPack=!t.toPack;save();toast(t.toPack?'Tour ist beim Packen':'Tour wieder in der Planung');render()}return}
@@ -2328,6 +2332,7 @@ document.addEventListener('change',ev=>{
   if(t.id==='rp-photo'){cur.rfile=t.files[0]||null;render()}
   if(t.id==='tp-photo'){cur.tfile=t.files[0]||null;render()}
   if(t.id==='sp-photo'){cur.sfile=t.files[0]||null;render()}
+  if(t.id==='spf-photo'){cur.spfile=t.files[0]||null;render()}
   if(t.id==='hp-photo'){cur.hfile=t.files[0]||null;render()}
   if(t.dataset.meselect){S.me=t.value;save();tab='plan';cur.ptab='aufg';render()}
 });
@@ -3498,7 +3503,7 @@ function parseGeo(t){
   if(m=t.match(/(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})/))return {lat:+m[1],lng:+m[2]};
   return null}
 const spotUrl=x=>x.lat&&x.lng?`https://www.google.com/maps/search/?api=1&query=${x.lat},${x.lng}`:(/^https?:\/\//i.test(String(x.link||'').trim())?String(x.link).trim().split(/\s+/)[0]:'');
-const spotNew=()=>({id:null,name:'',link:'',sorte:'',groesse:'',note:'',lieferdatum:''});
+const spotNew=()=>({id:null,name:'',link:'',sorte:'',groesse:'',note:'',lieferdatum:'',photo:''});
 function loadLeaflet(){
   if(window.L)return Promise.resolve();if(window._lfp)return window._lfp;
   window._lfp=new Promise((res,rej)=>{const c=document.createElement('link');c.rel='stylesheet';c.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(c);
@@ -3540,6 +3545,7 @@ function spotsList(){
   const off=live.filter(x=>x.status!=='gesaegt'),don=live.filter(x=>x.status==='gesaegt'),list=(st==='done'?don:off).slice().sort((a,b)=>(a.lieferdatum||'9999').localeCompare(b.lieferdatum||'9999')||String(a.name).localeCompare(String(b.name),'de'));
   const row=x=>`<div class="row" data-sn="${esc(String(x.name).toLowerCase())}" style="${q&&!String(x.name).toLowerCase().includes(q)?'display:none;':''}align-items:flex-start"><div style="min-width:0;flex:1"><div class="n">${esc(x.name)}</div><div class="p">${[x.sorte,x.groesse].filter(Boolean).map(esc).join(' · ')||'ohne Angabe'}</div>${x.lieferdatum?`<div class="p">Lieferung am ${esc(wdD(x.lieferdatum))}</div>`:''}${x.note?`<div class="p" style="font-style:italic">${esc(x.note)}</div>`:''}
     ${spotUrl(x)?`<div class="mini" style="margin-top:6px"><a class="btn sec" href="${esc(spotUrl(x))}" target="_blank" rel="noopener" style="margin:0;text-align:center;text-decoration:none">In Google Maps öffnen</a></div>`:`<div class="p" style="color:var(--orange)">Standort fehlt oder nicht lesbar${x.link?': '+esc(String(x.link).slice(0,60)):''}</div>`}
+    ${x.photo?(()=>{const u=imgUrl(x.photo);return u?`<div class="mini" style="margin-top:6px"><button class="btn sec" data-pl="fzoom" data-v="${esc(u)}" style="margin:0">Bild öffnen</button></div>`:`<div class="p">${IMGERR[x.photo]?'Bild konnte nicht geladen werden.':'Bild wird geladen …'}</div>`})():''}
     ${x.status==='gesaegt'&&x.doneBy?`<div class="p">Gesägt von ${esc(x.doneBy)}${x.doneAt?' am '+shopTs(x.doneAt):''}</div>`:''}</div>
     <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><button class="chk big ${x.status==='gesaegt'?'on':''}" data-pl="spdone" data-v="${x.id}" aria-label="gesägt">${x.status==='gesaegt'?'✓':''}</button>${isAdmin()?`<button class="rowedit" data-pl="spedit" data-v="${x.id}" aria-label="Eintrag bearbeiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`:''}</div></div>`;
   const seg=`<div class="seg">${[['offen','Zu sägen ('+off.length+')'],['done','Gesägt ('+don.length+')']].map(([k,l])=>`<button class="${st===k?'on':''}" data-pl="sps" data-v="${k}">${l}</button>`).join('')}</div>`;
@@ -3554,6 +3560,7 @@ function spotForm(){
     <div class="mini" style="margin-top:8px"><input class="t" id="spf-sorte" placeholder="Sorte" value="${esc(f.sorte)}" style="min-width:0"><input class="t" id="spf-groesse" placeholder="Größe" value="${esc(f.groesse)}" style="min-width:0"></div>
     <label class="f" style="margin-top:10px">Lieferdatum (optional)</label><input class="t" type="date" id="spf-lieferdatum" value="${esc(f.lieferdatum||'')}">
     <input class="t" id="spf-note" placeholder="Notiz (optional)" value="${esc(f.note)}" style="margin-top:8px">
+    ${photoPick('spf-photo',!!f.photo,cur.spfile)}
     ${f.id?'<button class="btn red" data-pl="spdel" style="margin-top:10px">Löschen</button>':''}
     <div class="mini" style="margin-top:10px"><button class="btn sec" data-pl="spcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="spsave" style="margin:0">Speichern</button></div></div>`}
 const feldCanEdit=()=>has('feldEdit')&&!!cur.fedit;

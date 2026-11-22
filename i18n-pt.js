@@ -1416,6 +1416,7 @@ window.PT_DICT={
 "Benachrichtigung: an": "Notificação: ligada",
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
+"Bild öffnen": "Abrir imagem",
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[

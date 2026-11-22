@@ -1417,6 +1417,7 @@ window.RO_DICT={
 "Benachrichtigung: an": "Notificare: pornită",
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
+"Bild öffnen": "Deschide imaginea",
 };
 
 window.RO_PATTERNS=[

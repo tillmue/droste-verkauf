@@ -409,3 +409,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 A:** Team (nur Admin): pro Person "Benachrichtigung: an/aus" (aus users.fcmTokens, S.pushOn in cloud.js) plus Zeile "Benachrichtigungen an: X von Y". Erinnerung 07:15 (attRemind) geht nur an Leute mit Token.
 
 - **22.11.2026 B:** Baumstandort-Formular: Knopf "Meinen Standort verwenden" (navigator.geolocation, schreibt "lat,lng" ins Link-Feld).
+
+- **22.11.2026 C:** Baumstandorte mit Bild: Feld photo (Pfad aufgaben/spot-<id>.jpg, kein Rules-Deploy nötig), Foto-Auswahl im Formular, Knopf "Bild öffnen" in der Liste (fzoom). Anja Wildhagen und Susanne Kamradek per Skript mit Bild nachgetragen.
