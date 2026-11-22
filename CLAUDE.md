@@ -411,3 +411,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 B:** Baumstandort-Formular: Knopf "Meinen Standort verwenden" (navigator.geolocation, schreibt "lat,lng" ins Link-Feld).
 
 - **22.11.2026 C:** Baumstandorte mit Bild: Feld photo (Pfad aufgaben/spot-<id>.jpg, kein Rules-Deploy nötig), Foto-Auswahl im Formular, Knopf "Bild öffnen" in der Liste (fzoom). Anja Wildhagen und Susanne Kamradek per Skript mit Bild nachgetragen.
+
+- **22.11.2026 D:** planViewer (Bildansicht): runder Schließen-Knopf oben rechts (.pvx, z-index 70) und großer Schließen-Knopf unten (.pvc), zusätzlich zur oberen Leiste.
