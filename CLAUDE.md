@@ -419,3 +419,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 F/G:** "Zurücksetzen (Test)" heißt jetzt "Diesen Tag zurücksetzen": setzt nur den Tag cur.lday zurück (Touren ins Archiv, Aufträge dieses Tages auf offen). Regel große Bäume: ab 3,50 m (Planer crew=3, Tour "gross"/Rot), vorher ab über 4 m. Alle 49 Aufträge bis 22.11. per Skript auf erledigt gesetzt (doneBulk:true).
 
 - **22.11.2026 H:** Planer buildToursV2: harte Trennung, Aufträge mit k>=3 (Baum ab 3,50 m) nur in große Touren, k<3 nie in große Touren (Einfügen und Verschieben-Durchlauf); manuelles Verschieben (planMove) bleibt erlaubt.
+
+- **22.11.2026 I:** Google-Maps-Route ab >9 Stopps in Teile geteilt (routeUrls/routeMore), vorher wurden Stopps ab Nr. 10 still weggelassen.
