@@ -1417,6 +1417,7 @@ window.PT_DICT={
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
 "Bild öffnen": "Abrir imagem",
+"Diesen Tag zurücksetzen": "Redefinir este dia",
 "Duplikate bereinigen": "Limpar duplicados",
 "Nichts zu bereinigen": "Nada para limpar",
 "Bereinigt": "Limpo",

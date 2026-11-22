@@ -1418,6 +1418,7 @@ window.RO_DICT={
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
 "Bild öffnen": "Deschide imaginea",
+"Diesen Tag zurücksetzen": "Resetează această zi",
 "Duplikate bereinigen": "Curăță dublurile",
 "Nichts zu bereinigen": "Nimic de curățat",
 "Bereinigt": "Curățat",
