@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-22 A';
+const APP_VERSION='2026-11-22 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2167,6 +2167,8 @@ document.addEventListener('click',ev=>{
   if(a==='spv'){cur.spv=v;return render()}
   if(a==='spnew'){cur.spf=spotNew();cur.sheet='spot';return render()}
   if(a==='spedit'){const x=S.treeSpots.find(y=>y.id===v);if(!x)return;cur.spf={id:x.id,name:x.name||'',link:x.link||'',sorte:x.sorte||'',groesse:x.groesse||'',note:x.note||'',lieferdatum:x.lieferdatum||''};cur.sheet='spot';return render()}
+  if(a==='spgps'){if(!navigator.geolocation)return alert('Dieses Gerät kann den Standort nicht bestimmen.');toast('Standort wird gesucht …');
+    navigator.geolocation.getCurrentPosition(p=>{const f=cur.spf;if(!f)return;f.link=p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6);const el=$('#spf-link');if(el)el.value=f.link;toast('Standort übernommen (Genauigkeit ca. '+Math.round(p.coords.accuracy)+' m)')},e=>alert(e.code===1?'Standortzugriff ist nicht erlaubt. Bitte in den Einstellungen des Handys für diese App oder den Browser freigeben.':'Der Standort konnte nicht bestimmt werden. Bitte im Freien erneut versuchen.'),{enableHighAccuracy:true,timeout:20000,maximumAge:0});return}
   if(a==='spcancel'){cur.spf=null;return closeSheet()}
   if(a==='spsave'){const f=cur.spf;if(!f||!(f.name||'').trim())return alert('Bitte den Kunden eintragen.');
     const geo=parseGeo(f.link),base={name:f.name.trim(),link:(f.link||'').trim(),sorte:(f.sorte||'').trim(),groesse:(f.groesse||'').trim(),note:(f.note||'').trim(),lieferdatum:(f.lieferdatum||''),lat:geo?geo.lat:null,lng:geo?geo.lng:null};
@@ -3548,6 +3550,7 @@ function spotForm(){
   return `<div class="card pad formc"><label class="f">${f.id?'Standort bearbeiten':'Neuer Baumstandort'}</label>
     <input class="t" id="spf-name" placeholder="Kunde" value="${esc(f.name)}">
     <textarea class="t" id="spf-link" rows="3" placeholder="Standort aus WhatsApp einfügen (Google-Maps-Link oder Koordinaten)" style="margin-top:8px">${esc(f.link)}</textarea>
+    <button class="btn sec" data-pl="spgps" style="margin:8px 0 0">Meinen Standort verwenden</button>
     <div class="mini" style="margin-top:8px"><input class="t" id="spf-sorte" placeholder="Sorte" value="${esc(f.sorte)}" style="min-width:0"><input class="t" id="spf-groesse" placeholder="Größe" value="${esc(f.groesse)}" style="min-width:0"></div>
     <label class="f" style="margin-top:10px">Lieferdatum (optional)</label><input class="t" type="date" id="spf-lieferdatum" value="${esc(f.lieferdatum||'')}">
     <input class="t" id="spf-note" placeholder="Notiz (optional)" value="${esc(f.note)}" style="margin-top:8px">

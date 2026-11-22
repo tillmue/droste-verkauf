@@ -407,3 +407,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - 20.11.2026 A (Version 2026-11-20 A): **Keine automatische Strafe mehr** (6 Bier) fürs Eintragen nach 9:00 Uhr und fürs Markieren "Hat gefrühstückt/Mittag gegessen". Markieren bleibt (Liste, PDF), Hinweistexte ohne Bier. Bereits vergebene Auto-Strafen (`auto:true`) bleiben bestehen, bis sie gelöscht werden.
 
 - **22.11.2026 A:** Team (nur Admin): pro Person "Benachrichtigung: an/aus" (aus users.fcmTokens, S.pushOn in cloud.js) plus Zeile "Benachrichtigungen an: X von Y". Erinnerung 07:15 (attRemind) geht nur an Leute mit Token.
+
+- **22.11.2026 B:** Baumstandort-Formular: Knopf "Meinen Standort verwenden" (navigator.geolocation, schreibt "lat,lng" ins Link-Feld).
