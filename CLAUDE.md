@@ -423,3 +423,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 I:** Google-Maps-Route ab >9 Stopps in Teile geteilt (routeUrls/routeMore), vorher wurden Stopps ab Nr. 10 still weggelassen.
 
 - **22.11.2026 J:** Planer trennt drei Gruppen: klein (bis 2,5 m, k=1, size klein), mittel (2,5 bis <3,5 m, k=2, size mittel), gross (ab 3,5 m, k=3). Nie gemischt. Tourname/Auswahl um "mittlere Bäume" ergänzt.
+
+- **22.11.2026 K:** MAXBIG=4: eine große Tour (k>=3) nimmt höchstens 4 Bäume mit (Platz); ein einzelner Auftrag mit mehr als 4 Bäumen bleibt eine eigene Tour.
