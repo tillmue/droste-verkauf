@@ -427,3 +427,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 K:** MAXBIG=4: eine große Tour (k>=3) nimmt höchstens 4 Bäume mit (Platz); ein einzelner Auftrag mit mehr als 4 Bäumen bleibt eine eigene Tour.
 
 - **22.11.2026 L:** Korrektur zu K: MAXBIG=4 zählt nur Bäume ab 3,50 m (nBigTrees, Feld nb im Planer-Item), nicht alle Bäume der Tour. Kleinere Bäume zählen dafür nicht; die allgemeine Baumgrenze (treeCap) bleibt. Außerdem Fix lieferschein_import.py: Größenzeile unter der Position wurde nicht gelesen, wenn vor der ersten Position ein Hinweis stand (Voxtrup 2879).
+
+- **22.11.2026 M:** Platten-Regel (nBigTrees): nur Bäume ab 3,5 m MIT großem Ständer/Platten zählen zur Grenze 4 (24 Waschbeton-Platten, Gewicht). Räumliche Sektoraufteilung in buildToursV2: braucht eine Gruppe mehrere Touren, werden sie nach Himmelsrichtung vom Hof geschnitten (try/catch, sonst übersprungen), danach improve(). Ungetestet im echten Plan.

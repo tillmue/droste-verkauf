@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-22 L';
+const APP_VERSION='2026-11-22 M';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2641,7 +2641,9 @@ function syncPickups(){
 const orderOpen=o=>!o.deleted&&o.status!=='geplant'&&o.status!=='erledigt';
 const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),0),ls=tr.map(p=>+p.len||0).filter(Boolean),mn=ls.length?Math.min(...ls):0,mx=ls.length?Math.max(...ls):0;
   if(n<=0)return '';if(n===1)return mFmt(mx)||'1 Baum';return `${n} Stk.`+(mx?' · '+(mn===mx?mFmt(mx):mFmt(mn).replace(' m','')+' bis '+mFmt(mx)):'')};
-const nBigTrees=o=>(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)&&(+p.len||0)>=3.5).reduce((a,p)=>a+(+p.qty||1),0);
+/* Platten-Regel: höchstens 4 Bäume ab 3,50 m mit großem Ständer (Waschbeton-Platten) pro Fahrzeug, wegen des Gewichts (24 Platten) */
+const nBigTrees=o=>{const P=o.positions||[],big=P.filter(p=>['Baum','Laternenbaum'].includes(p.cat)&&(+p.len||0)>=3.5).reduce((a,p)=>a+(+p.qty||1),0);if(!big)return 0;
+  const st=P.filter(p=>p.cat==='Ständer'&&/gro(ß|ss)|platte/i.test((p.text||'')+' '+(p.detail||''))).reduce((a,p)=>a+(+p.qty||1),0);return Math.min(big,st)};
 const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>+p.len||0));
 const orderSvx=o=>({service:orderService(o),name:o.name,lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat,l:p.len||null}))});
 const orderSvc=o=>svcMin(orderSvx(o),2);
@@ -2732,7 +2734,7 @@ function evalTour(list,P,loose){
 }
 function evalTour0(list,P,loose,bfOn,luOn){
   if(!loose&&list.length>MAXSTOPS){P._why='mehr als '+MAXSTOPS+' Stopps';return null}
-  if(!loose&&list.length>1&&list.reduce((a,x)=>a+(x.nb||0),0)>MAXBIG){P._why='Bäume ab 3,50 m: höchstens '+MAXBIG+' pro Tour (Platz auf dem Fahrzeug)';return null}
+  if(!loose&&list.length>1&&list.reduce((a,x)=>a+(x.nb||0),0)>MAXBIG){P._why='Bäume ab 3,50 m mit großem Ständer: höchstens '+MAXBIG+' pro Tour (Gewicht der Platten)';return null}
   if(!loose&&list.length>1&&list.reduce((a,x)=>a+x.n,0)>treeCap()){P._why='Baumgrenze erreicht ('+list.reduce((a,x)=>a+x.n,0)+' von '+treeCap()+' Bäumen)';return null}
   const crew=Math.max(...list.map(x=>x.k)),f=CF[crew]||1,bs={},eta=[];let c=P.start,pos=P.dep,brk=0,rem=list.reduce((a,x)=>a+x.n,0),loadC=0,w0=0,first=true;
   for(const x of list){const tl=tmin(pos,x,P);loadC+=rem*tl;rem-=x.n;c+=tl;if(x.ws!=null&&c<x.ws){if(first)w0=x.ws-c;c=x.ws}first=false;if(!loose&&x.we!=null&&c>x.we-BUF){P._why='Zeitfenster von '+x.o.name+' wäre zu knapp';return null}eta.push(c);c+=x.sv?x.sv[crew]||x.sv[2]:Math.round(x.svc2*f);const c0=c;c=brkAdd(c,bs,bfOn,luOn);brk+=c-c0;pos=x}
@@ -2761,6 +2763,7 @@ function buildToursV2(orders,dep,P){
     if(best&&best.d<=solo.cost+solo.crew*NEWTOUR){const T=tours[best.ti];T.list.splice(best.p,0,it);T.e=best.e;addH(it.o,`Kommt in {T${T.id}}: kostet dort nur +${Math.round(best.d)} Personenminuten, eine eigene Fahrt hätte ${Math.round(solo.cost+solo.crew*NEWTOUR)} gekostet (inklusive ${NEWTOUR} Min Beladen am Hof je Person)`)}
     else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost+solo.crew*NEWTOUR)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${treeCap()} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
   }
+  const improve=()=>{
   for(let pass=0;pass<5;pass++){
     let moved=false;
     for(let ai=0;ai<tours.length&&!moved;ai++){const A=tours[ai];
@@ -2775,6 +2778,27 @@ function buildToursV2(orders,dep,P){
       for(let i=0;i<T.list.length-1&&!imp;i++)for(let j=i+1;j<T.list.length&&!imp;j++){const l=T.list.slice(0,i).concat(T.list.slice(i,j+1).reverse(),T.list.slice(j+1)),e=evalTour(l,P);if(e&&e.cost<T.e.cost-1){T.list=l;T.e=e;imp=true}}}});
     if(!moved)break;
   }
+  };
+  improve();
+  /* Räumliche Aufteilung: braucht eine Gruppe mehrere Touren, werden die Aufträge nach Himmelsrichtung vom Hof in zusammenhängende Sektoren geschnitten, damit nicht jede Tour durch die ganze Stadt fährt */
+  if(dep.lat!=null)try{
+    const groups={};tours.forEach(T=>{const k=T.list[0].k;(groups[k]=groups[k]||[]).push(T)});
+    Object.values(groups).forEach(G=>{
+      if(G.length<2)return;const its=G.flatMap(T=>T.list);if(its.some(x=>x.lat==null||x.lng==null))return;
+      const ang=x=>Math.atan2(x.lng-dep.lng,x.lat-dep.lat),sorted=its.slice().sort((a,b)=>ang(a)-ang(b)),n=sorted.length,m=G.length,tot=x=>x.e.cost+x.e.crew*NEWTOUR;
+      const cur=G.reduce((a,T)=>a+tot(T),0);let best=null;
+      const feas=c=>{let e=evalTour(c,P);if(e)return {l:c,e};const w=c.slice().sort((a,b)=>((a.we==null)-(b.we==null))||((a.we||0)-(b.we||0)));e=evalTour(w,P);return e?{l:w,e}:null};
+      for(let r=0;r<n;r++){
+        const rot=sorted.slice(r).concat(sorted.slice(0,r)),ch=[[]];let ok=true;
+        for(const it of rot){const c=ch[ch.length-1];if(!c.length||feas(c.concat([it])))c.push(it);else{if(ch.length>=m){ok=false;break}ch.push([it])}}
+        if(!ok)continue;const res=ch.map(feas);if(res.some(x=>!x))continue;
+        const cost=res.reduce((a,x)=>a+x.e.cost+x.e.crew*NEWTOUR,0);if(!best||cost<best.cost)best={cost,res}}
+      if(best&&best.cost<cur-2){
+        G.forEach(T=>{const i=tours.indexOf(T);if(i>=0)tours.splice(i,1)});
+        best.res.forEach(x=>{const T={id:++tid,list:x.l,e:x.e,late:false};tours.push(T);x.l.forEach(it=>addH(it.o,`Räumlich aufgeteilt: {T${T.id}} fährt einen zusammenhängenden Sektor, damit nicht jede Tour durch die ganze Stadt fährt`))})}
+    });
+    improve();
+  }catch(e){console.warn('Sektoraufteilung übersprungen',e)}
   return tours.map(T=>{const crew=T.e.crew||Math.max(...T.list.map(x=>x.k)),sehr=Math.max(0,...T.list.map(x=>x.ci.sehr)),kr=crew===1&&T.list.some(x=>x.ci.kraeftig);
     const req=crew===3?'3 Personen':crew===2?'2 Personen':'1 Person';
     const txt=req;
@@ -3001,7 +3025,7 @@ function planBox(){
   const fplan=res=>`<div class="card pad"><div class="n">Fahrereinteilung (${res.puse} ${res.puse===1?'Fahrer':'Fahrer'}${res.auto?', automatisch gewählt':res.unl?', unbegrenzt: alle Touren gleichzeitig':''})</div>${res.auto&&res.ftry&&res.ftry.length?`<details data-det="why-f" ${cur.det['why-f']?'open':''}><summary style="padding:6px 0">Warum ${res.puse} Fahrer?</summary><ul class="bul" style="margin:0 0 6px;padding-left:18px">${res.ftry.map(f=>`<li>${f.p} Fahrer: ${f.late?f.late+' Zeitfenster verletzt, ':''}fertig ca. ${hmMin(up5(f.end))}${f.p===res.puse?' (gewählt: kleinste Zahl, bei der alles bis 16:00 fertig ist und kein Zeitfenster verletzt wird)':''}</li>`).join('')}</ul></details>`:''}${res.overview.map(d=>`<div class="p" style="color:var(--text)"><b>Fahrer ${d.n}:</b> ${d.ev.length?d.ev.map(e=>`${hmMin(up5(e.start))} ${e.tour.solo?'Einzelfahrt':'Vorschlag '+(res.tours.indexOf(e.tour)+1)} bis ${hmMin(up5(e.home))}${e.hof.map(h=>' · '+h.k+' am Hof').join('')}`).join(' → '):'nicht benötigt'}</div>`).join('')}</div>`;
   const nSel=Object.values(pd.sel).filter(Boolean).length;
   const allOn=cands.length&&cands.every(x=>pd.sel[x.o.id]);
-  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie bildet Touren nach Ort, Zeitfenster (mit '+BUF+' Minuten Puffer vor dem Ende) und Teamgröße (nur Liefern: bis 2,50 m eine Person, bis unter 3,50 m zwei, ab 3,50 m drei: große Bäume) so, dass möglichst wenige Personenstunden entstehen. Es gibt drei Gruppen mit eigenen Touren: kleine Bäume (bis 2,50 m), mittlere (2,50 bis unter 3,50 m) und große (ab 3,50 m). Die Gruppen werden nie gemischt. Von den Bäumen ab 3,50 m gehen höchstens 4 auf eine Tour (Platz), kleinere Bäume zählen dafür nicht. Pro Tour siehst du Bäume gesamt und den längsten Baum, danach wählst du Fahrzeug und Anhänger. Abfahrt ist standardmäßig 8:15 Uhr. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet, die Zeiten sind auf 5 Minuten aufgerundet. Lieber wenige längere Touren als viele kurze (bis ca. 6 Std plus Pausen). Danach weist du Fahrer und Fahrzeug zu.')}
+  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie bildet Touren nach Ort, Zeitfenster (mit '+BUF+' Minuten Puffer vor dem Ende) und Teamgröße (nur Liefern: bis 2,50 m eine Person, bis unter 3,50 m zwei, ab 3,50 m drei: große Bäume) so, dass möglichst wenige Personenstunden entstehen. Es gibt drei Gruppen mit eigenen Touren: kleine Bäume (bis 2,50 m), mittlere (2,50 bis unter 3,50 m) und große (ab 3,50 m). Die Gruppen werden nie gemischt. Von den Bäumen ab 3,50 m mit großem Ständer (Platten) gehen höchstens 4 auf eine Tour (Gewicht, 24 Platten), kleinere Bäume zählen dafür nicht. Pro Tour siehst du Bäume gesamt und den längsten Baum, danach wählst du Fahrzeug und Anhänger. Abfahrt ist standardmäßig 8:15 Uhr. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet, die Zeiten sind auf 5 Minuten aufgerundet. Lieber wenige längere Touren als viele kurze (bis ca. 6 Std plus Pausen). Danach weist du Fahrer und Fahrzeug zu.')}
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option><option value="max" ${pd.P==='max'?'selected':''}>Fahrer: unbegrenzt (alle Touren gleichzeitig)</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
