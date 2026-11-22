@@ -405,3 +405,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - 19.11.2026 L (Version 2026-11-19 K): Ganze Zeile antippbar (`data-ordrow`, globaler Klick-Handler vor `ordDetail`): Kundenliste Planung, Auftragsliste, Nacharbeit, Tour-Stopps, Tourvorschlag, Noch vorzubereiten. Knöpfe, Kästchen, Links und Auswahlfelder in der Zeile behalten ihre Funktion.
 - 19.11.2026 M (Version 2026-11-19 L): **Tour auflösen**: Knopf in der aufgeklappten Tourkarte (nur Planer, nicht bei gestarteten, beendeten und Abholungs-Touren), Kunden gehen zurück auf offen (`freeStopOrder`), Tour ins Archiv (`tourdissolve`).
 - 20.11.2026 A (Version 2026-11-20 A): **Keine automatische Strafe mehr** (6 Bier) fürs Eintragen nach 9:00 Uhr und fürs Markieren "Hat gefrühstückt/Mittag gegessen". Markieren bleibt (Liste, PDF), Hinweistexte ohne Bier. Bereits vergebene Auto-Strafen (`auto:true`) bleiben bestehen, bis sie gelöscht werden.
+
+- **22.11.2026 A:** Team (nur Admin): pro Person "Benachrichtigung: an/aus" (aus users.fcmTokens, S.pushOn in cloud.js) plus Zeile "Benachrichtigungen an: X von Y". Erinnerung 07:15 (attRemind) geht nur an Leute mit Token.

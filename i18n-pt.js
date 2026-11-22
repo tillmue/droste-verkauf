@@ -1412,7 +1412,9 @@ window.PT_DICT={
 "Tour aufgelöst": "Rota desfeita",
 "Es ist nach 9:00 Uhr.": "Já passou das 9:00.",
 "Min. änderbar (bis 9:00 Uhr)": "min. para alterar (até 9:00)",
-"Ab 9:00 Uhr: Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, kann hier markiert werden. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "A partir das 9:00: quem tomou café da manhã ou almoçou sem registro pode ser marcado aqui. A lista para afixar está como PDF no OneDrive, pasta Hof-Droste_Büro."
+"Ab 9:00 Uhr: Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, kann hier markiert werden. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.": "A partir das 9:00: quem tomou café da manhã ou almoçou sem registro pode ser marcado aqui. A lista para afixar está como PDF no OneDrive, pasta Hof-Droste_Büro.",
+"Benachrichtigung: an": "Notificação: ligada",
+"Benachrichtigung: aus": "Notificação: desligada"
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[
