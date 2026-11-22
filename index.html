@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-22 I';
+const APP_VERSION='2026-11-22 J';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2495,7 +2495,7 @@ const vehiclesList=()=>(S.hofInfo&&S.hofInfo.vehicles&&S.hofInfo.vehicles.length
 const tourStops=t=>Object.values(t.stops||{}).filter(x=>!x.deleted).sort(t.type==='abholung'?((a,b)=>(a.time||'99')<(b.time||'99')?-1:(a.time||'99')>(b.time||'99')?1:(a.order||0)-(b.order||0)):((a,b)=>(a.order||0)-(b.order||0)));
 const TCOL=[['rot','Rot','#e5484d'],['blau','Blau','#3b82f6'],['gruen','Grün','#2e9e4f'],['gelb','Gelb','#f5c518'],['orange','Orange','#f97316'],['lila','Lila','#a855f7'],['tuerkis','Türkis','#14b8a6']];
 const tcol=t=>(TCOL.find(c=>c[0]===t.color)||[0,0,'#8e99a0'])[2];
-const tourName=t=>{const c=TCOL.find(x=>x[0]===t.color);return (c?'Tour '+c[1]:'Tour')+(t.size?' · '+(t.size==='gross'?'große Bäume':'kleine Bäume'):'')};
+const tourName=t=>{const c=TCOL.find(x=>x[0]===t.color);return (c?'Tour '+c[1]:'Tour')+(t.size?' · '+(t.size==='gross'?'große Bäume':t.size==='mittel'?'mittlere Bäume':'kleine Bäume'):'')};
 const mTxt=s=>String(s||'').replace(/(\d{2,3})\s*cm/gi,(m,n)=>(n/100).toFixed(2).replace('.',',')+' m');
 const dayVeh=ds=>{const d=S.days.find(x=>x.id===ds);return d&&d.vehicles&&d.vehicles.length?d.vehicles:null};
 const vlist=ds=>vehiclesList();
@@ -2752,7 +2752,7 @@ function buildToursV2(orders,dep,P){
   const addH=(o,t)=>{(hist[o.id]=hist[o.id]||[]).push(t)};
   for(const it of items){
     let best=null;const rej=[];
-    tours.forEach((T,ti)=>{if(T.list.length&&(T.list[0].k>=3)!==(it.k>=3))return;let ok=false,why='';for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);P._why='';const e=evalTour(l,P);if(!e){why=P._why||why;continue}ok=true;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}if(!ok&&why)rej.push(`Nicht möglich in {T${T.id}}: ${why}`)});
+    tours.forEach((T,ti)=>{if(T.list.length&&T.list[0].k!==it.k)return;let ok=false,why='';for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);P._why='';const e=evalTour(l,P);if(!e){why=P._why||why;continue}ok=true;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}if(!ok&&why)rej.push(`Nicht möglich in {T${T.id}}: ${why}`)});
     let solo=evalTour([it],P),late=false;if(!solo){solo=evalTour([it],P,true);late=true}
     if(it.n>=BULK)addH(it.o,`Großabnehmer (${it.n} Bäume, ab ${BULK}): die Ladung fährt nur so lange mit, wie es sich lohnt (Ladungskosten in der Rechnung)`);
     rej.slice(0,3).forEach(x=>addH(it.o,x));
@@ -2765,7 +2765,7 @@ function buildToursV2(orders,dep,P){
       for(let i=0;i<A.list.length&&!moved;i++){
         const it=A.list[i],A2=A.list.slice();A2.splice(i,1);const eA=A2.length?evalTour(A2,P):{cost:0,eta:[],crew:0,dur:0};if(!eA)continue;
         let best=null;
-        tours.forEach((B,bi)=>{if(bi===ai)return;if(B.list.length&&(B.list[0].k>=3)!==(it.k>=3))return;for(let p=0;p<=B.list.length;p++){const l=B.list.slice();l.splice(p,0,it);const eB=evalTour(l,P);if(!eB)continue;const delta=(eA.cost-A.e.cost)+(eB.cost-B.e.cost)-(A2.length?0:A.e.crew*NEWTOUR);if(delta<-2&&(!best||delta<best.delta))best={delta,bi,p,eB}}});
+        tours.forEach((B,bi)=>{if(bi===ai)return;if(B.list.length&&B.list[0].k!==it.k)return;for(let p=0;p<=B.list.length;p++){const l=B.list.slice();l.splice(p,0,it);const eB=evalTour(l,P);if(!eB)continue;const delta=(eA.cost-A.e.cost)+(eB.cost-B.e.cost)-(A2.length?0:A.e.crew*NEWTOUR);if(delta<-2&&(!best||delta<best.delta))best={delta,bi,p,eB}}});
         if(best){const B=tours[best.bi];B.list.splice(best.p,0,it);B.e=best.eB;A.list=A2;A.e=eA;moved=true;addH(it.o,`Später verschoben von {T${A.id}} nach {T${B.id}}: spart ${Math.round(-best.delta)} Personenminuten`)}
       }}
     for(let ti=tours.length-1;ti>=0;ti--)if(!tours[ti].list.length)tours.splice(ti,1);
@@ -2818,7 +2818,7 @@ async function planMove(oid,target){
       if(i!==src&&i!==tgt){out.push(res.tours[i]);continue}
       const its=lists[i].map(x=>planItem(x,cx.PP,cx.located.indexOf(x)+1)),ci=crewTxtOf(its),old=(res.tours[i]&&res.tours[i].meta)||{},e=evalTour(its,{...cx.PP},true);
       const meta={bid:++MVID,cost:e?Math.round(e.cost):0,crewWhy:its.filter(x=>x.k===ci.crew).slice(0,3).map(x=>x.o.name),stopsWhy:lists[i].map(x=>{const h=((old.stopsWhy||[]).find(w=>w.id===x.id)||{}).hist||[];return {id:x.id,hist:x.id===oid?h.concat(['Von Hand hierher verschoben']):h}})};
-      out.push(await cx.mkTour(ci.crew>=3?'gross':'klein',lists[i],ci.crew,ci.txt,meta));
+      out.push(await cx.mkTour(ci.crew>=3?'gross':ci.crew===2?'mittel':'klein',lists[i],ci.crew,ci.txt,meta));
     }
     assemblePlan(pd,out);pd.msg='';
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
@@ -2832,7 +2832,7 @@ async function planRest(){
     const orders=rest.flatMap(t=>t.stops.map(s=>s.o));
     keep.forEach(t=>{const old=t.bid;t.bid=++MVID;if(pd.locks[old]){delete pd.locks[old];pd.locks[t.bid]=true}if(t.meta)t.meta.bid=t.bid});
     const built=buildToursV2(orders.map(o=>cx.located.find(x=>x.id===o.id)||o),cx.dep,cx.PP),out=keep.slice();
-    for(const b0 of built)out.push(await cx.mkTour(b0.crew>=3?'gross':'klein',b0.orders,b0.crew,b0.reqTxt,b0));
+    for(const b0 of built)out.push(await cx.mkTour(b0.crew>=3?'gross':b0.crew===2?'mittel':'klein',b0.orders,b0.crew,b0.reqTxt,b0));
     assemblePlan(pd,out);pd.msg='';
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
   pd.busy=false;render();
@@ -2871,7 +2871,7 @@ async function runPlan(){
     pd.msg='Touren werden zusammengestellt …';render();
     const built=buildToursV2(located,dep,{start:timeToMin(pd.start),lim:pd.budget*60+45,date:pd.date,mat,dayEnd:(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0});
     let nb=0;
-    for(const b0 of built){nb++;pd.msg=`Route ${nb} von ${built.length} wird berechnet …`;render();tours.push(await mkTour(b0.crew>=3?'gross':'klein',b0.orders,b0.crew,b0.reqTxt,b0))}
+    for(const b0 of built){nb++;pd.msg=`Route ${nb} von ${built.length} wird berechnet …`;render();tours.push(await mkTour(b0.crew>=3?'gross':b0.crew===2?'mittel':'klein',b0.orders,b0.crew,b0.reqTxt,b0))}
     pd.ctx={dep,located,missing,mat,matNote,mkTour,PP:{start:timeToMin(pd.start),lim:pd.budget*60+45,date:pd.date,mat,dayEnd:(S.hofInfo&&S.hofInfo.dayEnd)?timeToMin(S.hofInfo.dayEnd):0,dep:{...dep,mi:0}}};pd.locks={};
     assemblePlan(pd,tours);
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
@@ -2999,7 +2999,7 @@ function planBox(){
   const fplan=res=>`<div class="card pad"><div class="n">Fahrereinteilung (${res.puse} ${res.puse===1?'Fahrer':'Fahrer'}${res.auto?', automatisch gewählt':res.unl?', unbegrenzt: alle Touren gleichzeitig':''})</div>${res.auto&&res.ftry&&res.ftry.length?`<details data-det="why-f" ${cur.det['why-f']?'open':''}><summary style="padding:6px 0">Warum ${res.puse} Fahrer?</summary><ul class="bul" style="margin:0 0 6px;padding-left:18px">${res.ftry.map(f=>`<li>${f.p} Fahrer: ${f.late?f.late+' Zeitfenster verletzt, ':''}fertig ca. ${hmMin(up5(f.end))}${f.p===res.puse?' (gewählt: kleinste Zahl, bei der alles bis 16:00 fertig ist und kein Zeitfenster verletzt wird)':''}</li>`).join('')}</ul></details>`:''}${res.overview.map(d=>`<div class="p" style="color:var(--text)"><b>Fahrer ${d.n}:</b> ${d.ev.length?d.ev.map(e=>`${hmMin(up5(e.start))} ${e.tour.solo?'Einzelfahrt':'Vorschlag '+(res.tours.indexOf(e.tour)+1)} bis ${hmMin(up5(e.home))}${e.hof.map(h=>' · '+h.k+' am Hof').join('')}`).join(' → '):'nicht benötigt'}</div>`).join('')}</div>`;
   const nSel=Object.values(pd.sel).filter(Boolean).length;
   const allOn=cands.length&&cands.every(x=>pd.sel[x.o.id]);
-  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie bildet Touren nach Ort, Zeitfenster (mit '+BUF+' Minuten Puffer vor dem Ende) und Teamgröße (nur Liefern: bis 2,50 m eine Person, bis unter 3,50 m zwei, ab 3,50 m drei: große Bäume) so, dass möglichst wenige Personenstunden entstehen. Große Bäume (ab 3,50 m) fahren immer auf eigenen Touren, kleine Aufträge nie auf einer großen Tour. Pro Tour siehst du Bäume gesamt und den längsten Baum, danach wählst du Fahrzeug und Anhänger. Abfahrt ist standardmäßig 8:15 Uhr. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet, die Zeiten sind auf 5 Minuten aufgerundet. Lieber wenige längere Touren als viele kurze (bis ca. 6 Std plus Pausen). Danach weist du Fahrer und Fahrzeug zu.')}
+  return `<div class="card pad formc"><div class="ihead"><b>Touren planen</b>${infoBtn('plan')}</div>${infoBox('plan','Die App zeigt die Aufträge, die an diesem Tag geliefert werden sollen. Sie bildet Touren nach Ort, Zeitfenster (mit '+BUF+' Minuten Puffer vor dem Ende) und Teamgröße (nur Liefern: bis 2,50 m eine Person, bis unter 3,50 m zwei, ab 3,50 m drei: große Bäume) so, dass möglichst wenige Personenstunden entstehen. Es gibt drei Gruppen mit eigenen Touren: kleine Bäume (bis 2,50 m), mittlere (2,50 bis unter 3,50 m) und große (ab 3,50 m). Die Gruppen werden nie gemischt. Pro Tour siehst du Bäume gesamt und den längsten Baum, danach wählst du Fahrzeug und Anhänger. Abfahrt ist standardmäßig 8:15 Uhr. Frühstück (15 Min) und Mittag (30 Min) sind in den Zeiten eingerechnet, die Zeiten sind auf 5 Minuten aufgerundet. Lieber wenige längere Touren als viele kurze (bis ca. 6 Std plus Pausen). Danach weist du Fahrer und Fahrzeug zu.')}
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     <select class="t" id="pd-p" style="margin-top:8px"><option value="">Fahrer: automatisch</option><option value="max" ${pd.P==='max'?'selected':''}>Fahrer: unbegrenzt (alle Touren gleichzeitig)</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${String(pd.P)===String(n)?'selected':''}>${n} Fahrer</option>`).join('')}</select>
@@ -3411,7 +3411,7 @@ function tourForm(){
     <select class="t" id="tr-packer"><option value="">Packer offen</option>${S.people.map(x=>`<option ${sel(x,f.packer)}>${esc(x)}</option>`).join('')}</select>
     <select class="t" id="tr-codriver"><option value="">Beifahrer offen</option>${S.people.map(x=>`<option ${sel(x,f.codriver)}>${esc(x)}</option>`).join('')}</select></div>
     ${(f.crewN||0)>=3||f.codriver2?`<select class="t" id="tr-codriver2" style="margin-top:8px"><option value="">2. Beifahrer offen</option>${S.people.map(x=>`<option ${sel(x,f.codriver2)}>${esc(x)}</option>`).join('')}</select>`:''}
-    <select class="t" id="tr-size" style="margin-top:8px"><option value="klein" ${sel('klein',f.size)}>Kleine Bäume</option><option value="gross" ${sel('gross',f.size)}>Große Bäume</option><option value="" ${sel('',f.size)}>Tourart offen</option></select>
+    <select class="t" id="tr-size" style="margin-top:8px"><option value="klein" ${sel('klein',f.size)}>Kleine Bäume (bis 2,5 m)</option><option value="mittel" ${sel('mittel',f.size)}>Mittlere Bäume (2,5 bis 3,5 m)</option><option value="gross" ${sel('gross',f.size)}>Große Bäume</option><option value="" ${sel('',f.size)}>Tourart offen</option></select>
     <select class="t" id="tr-vehicle" style="margin-top:8px"><option value="">Fahrzeug später zuweisen</option>${vlist(f.date).map(v=>`<option ${sel(v,f.vehicle)}>${esc(v)}</option>`).join('')}</select>
     <select class="t" id="tr-trailer" style="margin-top:8px"><option value="">Anhänger später zuweisen</option>${trailersList().map(v=>`<option ${sel(v,f.trailer)}>${esc(v)}</option>`).join('')}</select>
     <input class="t" id="tr-note" placeholder="Notiz zur Tour (optional)" value="${esc(f.note)}" style="margin-top:8px">
