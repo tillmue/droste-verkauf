@@ -431,3 +431,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 M:** Platten-Regel (nBigTrees): nur Bäume ab 3,5 m MIT großem Ständer/Platten zählen zur Grenze 4 (24 Waschbeton-Platten, Gewicht). Räumliche Sektoraufteilung in buildToursV2: braucht eine Gruppe mehrere Touren, werden sie nach Himmelsrichtung vom Hof geschnitten (try/catch, sonst übersprungen), danach improve(). Ungetestet im echten Plan.
 
 - **22.11.2026 N:** Gruppen im Planer: groß (ab 3,5 m) strikt getrennt; klein (bis 2,5) und mittel (bis <3,5, u.a. bis 2,8 m) dürfen sich eine Tour teilen (Kosten entscheiden). Ersetzt die Dreiertrennung aus J.
+
+- **22.11.2026 O:** Zurück zur strikten Dreitrennung (klein/mittel/groß nie gemischt), weil beim Mischen keine reine Kleine-Bäume-Tour mehr entstand (N verworfen).
