@@ -1417,6 +1417,10 @@ window.PT_DICT={
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
 "Bild öffnen": "Abrir imagem",
+"Duplikate bereinigen": "Limpar duplicados",
+"Nichts zu bereinigen": "Nada para limpar",
+"Bereinigt": "Limpo",
+"Diese Aufträge sind schon in einer Tour. Nichts doppelt angelegt.": "Estes pedidos já estão em uma rota. Nada foi criado em duplicado.",
 };
 const _pl=(n,a,b)=>+n===1?a:b;
 window.PT_PATTERNS=[

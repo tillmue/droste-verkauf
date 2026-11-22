@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-22 D';
+const APP_VERSION='2026-11-22 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2143,6 +2143,9 @@ document.addEventListener('click',ev=>{
   if(a==='plock'){const pd=cur.pd;pd.locks=pd.locks||{};pd.locks[+v]=!pd.locks[+v];return render()}
   if(a==='plrest'){planRest();return}
   if(a==='planauto'){(async()=>{planPickups(cur.pd.date);if(!Object.values(cur.pd.sel).some(Boolean))planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
+  if(a==='tdedupe'){const {dups,orph}=dupStops(v);if(!dups.length&&!orph.length)return toast('Nichts zu bereinigen');
+    if(!confirm('Entfernen: '+dups.length+' doppelte und '+orph.length+' verwaiste Stopps? Jeder Auftrag bleibt in genau einer Tour.'))return;
+    [...dups,...orph].forEach(x=>{x.s.deleted=true;x.t.updated=Date.now()});save();toast('Bereinigt');return render()}
   if(a==='planok'){applyPlan(v==='all'?null:+v);return}
   if(a==='topt'){const t=S.tours.find(x=>x.id===v);if(t){toast('Reihenfolge wird optimiert …');optimizeTour(t)}return}
   if(a==='tlegs'){const t=S.tours.find(x=>x.id===v);if(t){toast('Fahrzeiten werden berechnet …');computeLegs(t,false)}return}
@@ -2871,13 +2874,39 @@ async function runPlan(){
   }catch(e){pd.err=(e&&(e.message||e.code))||'Fehler'}
   pd.busy=false;render();
 }
+/* Doppelte und verwaiste Stopps eines Tages: derselbe Auftrag in zwei Touren, Stopp ohne Auftrag */
+function dupStops(day){
+  const m={},orph=[];
+  S.tours.filter(t=>!t.deleted&&t.date===day).forEach(t=>tourStops(t).forEach(s=>{
+    if(!s.orderId)return;const o=S.orders.find(x=>x.id===s.orderId);
+    if(!o||o.deleted){if(!s.done)orph.push({t,s});return}
+    (m[s.orderId]=m[s.orderId]||[]).push({t,s,o})}));
+  const dups=[];Object.values(m).forEach(l=>{if(l.length<2)return;
+    const keep=l.find(x=>x.s.done)||l.find(x=>x.o.stopId===x.s.id)||l.find(x=>orderPickup(x.o)?x.s.pickup:!x.s.pickup)||l[0];
+    l.forEach(x=>{if(x!==keep&&!x.s.done)dups.push(x)})});
+  return {dups,orph}
+}
+function planGaps(day,list){
+  const open=S.orders.filter(o=>orderOpen(o)&&inWindow(o,day));if(!open.length)return '';
+  const names=open.map(o=>esc(o.name)+(orderPickup(o)?' (Abholung)':'')).slice(0,12).join(', ');
+  return `<div class="warn" style="margin:10px 0"><b>${open.length} ${open.length===1?'Auftrag ist':'Aufträge sind'} für diesen Tag noch in keiner Tour:</b> ${names}${open.length>12?' …':''}</div>`
+}
+function dupBanner(day){
+  const {dups,orph}=dupStops(day),n=dups.length+orph.length;if(!n)return '';
+  return `<div class="warn" style="margin:10px 0"><b>${dups.length?dups.length+' doppelte':''}${dups.length&&orph.length?' und ':''}${orph.length?orph.length+' verwaiste':''} Stopps an diesem Tag.</b> Derselbe Auftrag steht in zwei Touren oder der Auftrag existiert nicht mehr.<button class="btn sec" data-pl="tdedupe" data-v="${day}" style="margin:8px 0 0">Duplikate bereinigen</button></div>`
+}
 function applyPlan(idx){
   const pd=cur.pd;if(!pd||!pd.res)return;
   const list=idx==null?pd.res.tours.map((t,i)=>i):[idx];
   list.forEach(i=>{const pt=pd.res.tours[i];if(!pt||pt.applied)return;
     const free=TCOL.find(c=>!S.tours.some(y=>!y.deleted&&y.type!=='abholung'&&y.date===pd.date&&y.color===c[0]));
     const t={id:uid(),date:pd.date,driver:'',codriver:'',vehicle:'',color:(free||TCOL[0])[0],size:pt.size,note:pt.solo?'Einzelfahrt (große Lieferung)':'',stops:{},legs:pt.legs,backSec:(pt.backMin||0)*60,depart:pt.depart,slots:pt.slots,bfPre:!!pt.bfPre,luPre:!!pt.luPre,crewN:pt.crewN,createdBy:S.me,created:Date.now()};
-    pt.stops.forEach((s,k)=>{const lo=S.orders.find(x=>x.id===s.o.id)||s.o,stop=orderToStop(lo,k+1);t.stops[stop.id]=stop;lo.status='geplant';lo.tourId=t.id;lo.stopId=stop.id;lo.plannedFor=pd.date});
+    const have=new Set();S.tours.filter(y=>!y.deleted&&y.date===pd.date&&y.type!=='abholung').forEach(y=>tourStops(y).forEach(z=>{if(z.orderId)have.add(z.orderId)}));
+    const fresh=pt.stops.filter(s=>!have.has(s.o.id));
+    if(!fresh.length){pt.applied=true;toast('Diese Aufträge sind schon in einer Tour. Nichts doppelt angelegt.');return}
+    if(fresh.length<pt.stops.length)toast((pt.stops.length-fresh.length)+' Stopp(s) übersprungen, schon in einer anderen Tour');
+    fresh.forEach((s,k)=>{const lo=S.orders.find(x=>x.id===s.o.id)||s.o,stop=orderToStop(lo,k+1);t.stops[stop.id]=stop;lo.status='geplant';lo.tourId=t.id;lo.stopId=stop.id;lo.plannedFor=pd.date});
+    if(fresh.length<pt.stops.length){t.legs=[];t.backSec=0}
     t.legsSig=tourStops(t).map(s=>s.address||'').join('|');
     S.tours.push(t);pt.applied=true;});
   save();cur.lday=pd.date;cur.lcal=pd.date.slice(0,7);
@@ -3423,7 +3452,7 @@ function vLieferungen(){
     const sseg=`<div class="seg stg">${[['plan','Planung',cnt.plan],['pack','Packen',cnt.pack],['run','In Auslieferung',cnt.run],['done','Erledigt',cnt.done]].map(([k,l,n])=>`<button class="${stage===k?'on':''}" data-pl="lstage" data-v="${k}">${l}<span class="sc">${n||'0'}</span></button>`).join('')}</div>`;
     let inner;
     const list=lt.filter(t=>stg(t)===stage);
-    if(stage==='plan')inner=auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>';
+    if(stage==='plan')inner=dupBanner(day)+(list.length?planGaps(day,list):'')+auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>';
     else inner=(list.map(t=>tourCard(t,plan)).join('')||`<div class="hint">${stage==='pack'?'Keine Touren zum Packen.':stage==='run'?'Keine Touren in Auslieferung.':'Noch nichts erledigt.'}</div>`)+(stage==='pack'?packSummary(day):'')
     dayBlock=dayTitle+sseg+inner;
   }else dayBlock=dayTitle+(on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`)+(plan&&kind!=='abh'?packSummary(day):'')+add;

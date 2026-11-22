@@ -413,3 +413,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 C:** Baumstandorte mit Bild: Feld photo (Pfad aufgaben/spot-<id>.jpg, kein Rules-Deploy nötig), Foto-Auswahl im Formular, Knopf "Bild öffnen" in der Liste (fzoom). Anja Wildhagen und Susanne Kamradek per Skript mit Bild nachgetragen.
 
 - **22.11.2026 D:** planViewer (Bildansicht): runder Schließen-Knopf oben rechts (.pvx, z-index 70) und großer Schließen-Knopf unten (.pvc), zusätzlich zur oberen Leiste.
+
+- **22.11.2026 E:** Tourplanung: applyPlan prüft vorher, ob der Auftrag am Tag schon einen aktiven Stopp hat (kein Doppelanlegen); Banner "Duplikate bereinigen" (dupStops/dupBanner, behält Stopp laut order.stopId, löscht doppelte und verwaiste Stopps); Banner "noch in keiner Tour" (planGaps) im Planungsreiter. Wildhagen ls-2826 als Selbstabholung ab 18:00 am 23.11. von Hand gesetzt.

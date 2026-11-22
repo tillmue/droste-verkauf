@@ -1418,6 +1418,10 @@ window.RO_DICT={
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
 "Bild öffnen": "Deschide imaginea",
+"Duplikate bereinigen": "Curăță dublurile",
+"Nichts zu bereinigen": "Nimic de curățat",
+"Bereinigt": "Curățat",
+"Diese Aufträge sind schon in einer Tour. Nichts doppelt angelegt.": "Aceste comenzi sunt deja într-un tur. Nimic creat dublu.",
 };
 
 window.RO_PATTERNS=[
