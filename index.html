@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-24 C';
+const APP_VERSION='2026-11-24 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2726,7 +2726,7 @@ const tmin=(a,b,P)=>{
   const m=Math.round(havKm(a,b)*1.3/40*60);return m<1?1:m};
 function orderCrewInfo(o,ds){
   const L=orderMaxTree(o),n=nTrees(o),aufst=/aufstellen/i.test(orderService(o));
-  let k=L>=3.5?3:L>2.5?2:1,win=null;
+  let k=L>=3.5?((L<=4&&!aufst)?2:3):L>2.5?2:1,win=null;
   if(k<2&&n>=30){const st=standByName(o.name);if(standOpenOk(st,ds))win=[timeToMin(st.openFrom),timeToMin(st.openTo)];else k=2}
   return {k,win,L,n,sehr:L>5?2:L>4?1:0,kraeftig:k===1&&aufst&&L<=2.5};
 }
@@ -2757,10 +2757,13 @@ function buildToursV2(orders,dep,P){
   const items=orders.map(o=>planItem(o,P,orders.indexOf(o)+1));
   items.sort((a,b)=>(b.k-a.k)||(b.must-a.must)||((a.we==null)-(b.we==null))||((a.we||0)-(b.we||0)));
   const tours=[],hist={};let tid=0;
+  /* Gruppen nie mischen, Ausnahme: ein kleiner Auftrag weit draußen (ab 20 km vom Hof) fährt auf einer großen Tour mit, wenn dort ein Stopp höchstens 6 km entfernt liegt */
+  const farOK=(list,it)=>it.k<3&&list[0].k>=3&&dep.lat!=null&&it.lat!=null&&havKm(dep,it)>=20&&Math.min(...list.map(x=>havKm(x,it)))<=6;
+  const canJoin=(list,it)=>list[0].k===it.k||farOK(list,it);
   const addH=(o,t)=>{(hist[o.id]=hist[o.id]||[]).push(t)};
   for(const it of items){
     let best=null;const rej=[];
-    tours.forEach((T,ti)=>{if(T.list.length&&T.list[0].k!==it.k)return;let ok=false,why='';for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);P._why='';const e=evalTour(l,P);if(!e){why=P._why||why;continue}ok=true;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}if(!ok&&why)rej.push(`Nicht möglich in {T${T.id}}: ${why}`)});
+    tours.forEach((T,ti)=>{if(T.list.length&&!canJoin(T.list,it))return;let ok=false,why='';for(let p=0;p<=T.list.length;p++){const l=T.list.slice();l.splice(p,0,it);P._why='';const e=evalTour(l,P);if(!e){why=P._why||why;continue}ok=true;const d=e.cost-T.e.cost;if(!best||d<best.d)best={d,ti,p,e}}if(!ok&&why)rej.push(`Nicht möglich in {T${T.id}}: ${why}`)});
     let solo=evalTour([it],P),late=false;if(!solo){solo=evalTour([it],P,true);late=true}
     if(it.n>=BULK)addH(it.o,`Großabnehmer (${it.n} Bäume, ab ${BULK}): die Ladung fährt nur so lange mit, wie es sich lohnt (Ladungskosten in der Rechnung)`);
     rej.slice(0,3).forEach(x=>addH(it.o,x));
@@ -2774,7 +2777,7 @@ function buildToursV2(orders,dep,P){
       for(let i=0;i<A.list.length&&!moved;i++){
         const it=A.list[i],A2=A.list.slice();A2.splice(i,1);const eA=A2.length?evalTour(A2,P):{cost:0,eta:[],crew:0,dur:0};if(!eA)continue;
         let best=null;
-        tours.forEach((B,bi)=>{if(bi===ai)return;if(B.list.length&&B.list[0].k!==it.k)return;for(let p=0;p<=B.list.length;p++){const l=B.list.slice();l.splice(p,0,it);const eB=evalTour(l,P);if(!eB)continue;const delta=(eA.cost-A.e.cost)+(eB.cost-B.e.cost)-(A2.length?0:A.e.crew*NEWTOUR);if(delta<-2&&(!best||delta<best.delta))best={delta,bi,p,eB}}});
+        tours.forEach((B,bi)=>{if(bi===ai)return;if(B.list.length&&!canJoin(B.list,it))return;for(let p=0;p<=B.list.length;p++){const l=B.list.slice();l.splice(p,0,it);const eB=evalTour(l,P);if(!eB)continue;const delta=(eA.cost-A.e.cost)+(eB.cost-B.e.cost)-(A2.length?0:A.e.crew*NEWTOUR);if(delta<-2&&(!best||delta<best.delta))best={delta,bi,p,eB}}});
         if(best){const B=tours[best.bi];B.list.splice(best.p,0,it);B.e=best.eB;A.list=A2;A.e=eA;moved=true;addH(it.o,`Später verschoben von {T${A.id}} nach {T${B.id}}: spart ${Math.round(-best.delta)} Personenminuten`)}
       }}
     for(let ti=tours.length-1;ti>=0;ti--)if(!tours[ti].list.length)tours.splice(ti,1);
@@ -2807,7 +2810,7 @@ function buildToursV2(orders,dep,P){
     const req=crew===3?'3 Personen':crew===2?'2 Personen':'1 Person';
     const txt=req;
     const mx=T.list.filter(x=>x.k===crew).slice(0,3).map(x=>{const c=x.ci;return `${x.o.name} (${c.L>=3.5?'längster Baum '+mFmt(c.L):c.L>2.5?'längster Baum '+mFmt(c.L)+', 2,5 bis 3,5 m':c.n>=30&&!c.win?c.n+' Bäume, ab 30 zu zweit':c.L?'längster Baum '+mFmt(c.L):'wenige kleine Bäume'})`});
-    return {orders:T.list.map(x=>x.o),crew,reqTxt:txt,late:!!T.late,bid:T.id,cost:Math.round(T.e.cost),crewWhy:mx,stopsWhy:T.list.map(x=>({id:x.o.id,hist:hist[x.o.id]||[],ws:x.ws,we:x.we}))};});
+    return {orders:T.list.map(x=>x.o),crew,reqTxt:txt,late:!!T.late,bid:T.id,cost:Math.round(T.e.cost),dur:Math.round(T.e.dur||0),crewWhy:mx,stopsWhy:T.list.map(x=>({id:x.o.id,hist:hist[x.o.id]||[],ws:x.ws,we:x.we}))};});
 }
 function assemblePlan(pd,tours){
   const cx=pd.ctx,missing=cx.missing,matNote=cx.matNote;let P=+pd.P||0;
@@ -3330,9 +3333,14 @@ const SVC_B1={1:[12,13,14],2:[12,10,12],3:[12,10,12]};
 const svcInterp=(pts,t,tail)=>{if(t<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++){if(t<=pts[i][0]){const a=pts[i-1],b=pts[i];return a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0])}}const a=pts[pts.length-2],b=pts[pts.length-1];return Math.min(90,b[1]+Math.max(0,tail)*(b[1]-a[1])/(b[0]-a[0])*(t-b[0]))};
 const stopMaxLen=x=>(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)).reduce((a,l)=>Math.max(a,+l.l||0),0);
 const svcExtra=nm=>/kirche|kirchen|pfarr|kapelle/i.test(nm||'')?5:/krankenhaus|klinik|hospital/i.test(nm||'')?10:0;
-const svcMin=(x,n)=>{n=[1,2,3].includes(n)?n:2;const aufst=/aufstellen/i.test(x.service||''),tr=Math.max(1,stopTrees(x)),L=stopMaxLen(x);
-  let v;if(aufst){if(tr===1){const k=L>4?2:L>2.5?1:0;v=SVC_B1[n][k]}else v=svcInterp(SVC_B[n],tr,0.6)}else{v=svcInterp(SVC_A[n],tr,0)}
-  if(!aufst&&tr>=10&&(x.standId||(x.name&&standByName(x.name))))v*={1:0.71,2:0.6,3:0.52}[n];
+/* Standzeiten (Tills Schätzung 24.11.2026): kleine/mittlere Bäume 15 Min je Stopp plus ca. 4 Min je weiterem Baum (5 Bäume = 30 Min);
+   große Bäume (ab 3,5 m) mit Aufstellen 20 Min je Baum bei 4 m, 30 Min bei 6 m, mehrere Bäume zusammen mit Abschlag (2 Bäume à 30 Min = 45 Min) */
+const svcTree=L=>Math.max(15,20+(Math.max(L,4)-4)*5);
+const svcMin=(x,n)=>{const aufst=/aufstellen/i.test(x.service||''),trl=(x.lines||[]).filter(l=>['Baum','Deko','Laternenbaum'].includes(l.c)),N=Math.max(1,trl.reduce((a,l)=>a+(+l.q||0),0)),L=stopMaxLen(x);
+  let v;
+  if(aufst&&L>=3.5){const raw=trl.reduce((a,l)=>a+(+l.q||1)*((+l.l||0)>=3.5?svcTree(+l.l):10),0);v=N===1?raw:raw*0.75}
+  else v=Math.min(aufst?60:60,15+(aufst?5:3.75)*(N-1));
+  if(!aufst&&N>=10&&(x.standId||(x.name&&standByName(x.name))))v*=0.6;
   const pc=parseInt((S.hofInfo||{}).svcPct);v=v*(isNaN(pc)||pc<=0?1:pc/100)+svcExtra(x.name);return Math.round(v)};
 const tourCrewN=t=>(t.slots&&t.slots.length)||(t.driver&&t.codriver2?3:t.driver&&t.codriver?2:crewNum(tourStops(t)));
 const itemsAt=(items,n)=>items.map(it=>({...it,svc:it.sv?it.sv[n]||it.sv[2]:Math.round(it.svc2*(CF[n]||1))}));
@@ -3424,7 +3432,7 @@ function tourCard(t,plan){
     <div class="p">${t.driver?'<span class="who">'+esc(t.driver)+'</span>':orange(sl[0]?'Fahrer '+sl[0]+' (offen)':'Fahrer offen')} · ${t.codriver?'<span class="who">'+esc(t.codriver)+'</span>':(sl[1]?'Beifahrer '+sl[1]+' (offen)':'Beifahrer offen')}${(t.crewN>=3||t.codriver2)?' · '+(t.codriver2?'<span class="who">'+esc(t.codriver2)+'</span>':orange('2. Beifahrer offen')):''}</div><div class="p">Packer: ${t.packer?'<span class="who">'+esc(t.packer)+'</span>':orange('offen')}</div>
     <div class="p">${t.vehicle?'<span class="who">'+esc(t.vehicle)+'</span>':orange('Fahrzeug offen')}${t.trailer?' · '+esc(t.trailer):''}${sm?' · zurück ca. '+hmMin(up5(sm.home)):''}</div>${stat}</div>`;
   const moreInfo=`${plan?recLine(t):''}${dur?`<div class="p">${dur}</div>`:''}${ps?`<div class="p">Packen: <span class="pbadge" style="color:${ps[1]}">${ps[0]}</span></div>`:''}${t.note?`<div class="p" style="font-style:italic">${esc(t.note)}</div>`:''}`;
-  const assign=plan?`<div class="mini" style="margin-top:8px">${tsel(t,'driver','Fahrer zuweisen',S.people)}${tsel(t,'codriver','Beifahrer zuweisen',S.people)}</div><div class="mini" style="margin-top:8px">${tsel(t,'packer','Packer zuweisen',S.people)}</div>${(t.crewN>=3||t.codriver2)?`<div class="mini" style="margin-top:8px">${tsel(t,'codriver2','2. Beifahrer zuweisen',S.people)}</div>`:''}<div class="mini" style="margin-top:8px">${tsel(t,'vehicle','Fahrzeug zuweisen',vlist(t.date))}${tsel(t,'trailer','Anhänger zuweisen',trailersList())}</div>`:'';
+  const assign=plan&&(t.toPack||t.packed||stt)?`${t.packed||stt?`<div class="mini" style="margin-top:8px">${tsel(t,'driver','Fahrer zuweisen',S.people)}${tsel(t,'codriver','Beifahrer zuweisen',S.people)}</div>`:''}<div class="mini" style="margin-top:8px">${tsel(t,'packer','Packer zuweisen',S.people)}</div>${(t.packed||stt)&&(t.crewN>=3||t.codriver2)?`<div class="mini" style="margin-top:8px">${tsel(t,'codriver2','2. Beifahrer zuweisen',S.people)}</div>`:''}<div class="mini" style="margin-top:8px">${tsel(t,'vehicle','Fahrzeug zuweisen',vlist(t.date))}${tsel(t,'trailer','Anhänger zuweisen',trailersList())}</div>`:'';
   const durBtns=plan&&st.length?`<div class="mini" style="margin:8px 0 4px"><button class="btn sec" data-pl="tlegs" data-v="${t.id}" style="margin:0">Fahrzeiten berechnen</button>${!stt&&st.length>1?`<button class="btn sec" data-pl="topt" data-v="${t.id}" style="margin:0">Reihenfolge optimieren</button>`:''}</div>`:'';
   const loadBox=(!stt&&run&&st.length)?`<details data-det="load-${t.id}"><summary>Beladung (${ld}/${st.length})</summary><div class="card">${st.map((x,i)=>`<div class="row"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${t.loaded&&t.loaded[x.id]?'on':''}" data-pl="tload" data-v="${t.id}|${x.id}">${t.loaded&&t.loaded[x.id]?'✓':''}</button><div style="min-width:0"><div class="n">${i+1}. ${esc(x.name)}</div><div class="p">${esc(mTxt(x.items)||'–')}</div></div></div></div>`).join('')}</div></details>`:'';
   const stgBtn=plan&&!stt&&!t.packed&&st.length?(t.toPack?`<button class="claim" data-pl="tpack" data-v="${t.id}" style="margin-top:8px">Zurück in die Planung</button>`:`<button class="btn sec" data-pl="tpack" data-v="${t.id}" style="margin-top:8px">Fertig geplant, zum Packen</button>`):'';
