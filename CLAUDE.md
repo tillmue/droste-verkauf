@@ -439,3 +439,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **24.11.2026 B:** Testnachricht pro Person: Cloud Function sendTestPush (onCall, nur Admin, europe-west1, deployt per firebase deploy --only functions:sendTestPush), cloud.testPush(userId), Team-Zeile (Admin) "Benachrichtigung testen / Testnachricht senden" mit Rückmeldung je Gerät; ungültige Tokens werden entfernt.
 
 - **24.11.2026 C:** Haken "Isst immer (Frühstück und Mittag)" pro Person (users.alwaysEat, Team-Zeile, nur Admin, cloud.setAlways). Cloud Functions: attAlwaysDaily (00:05 Berlin) und attUserChanged (beim Setzen des Hakens sofort für heute) tragen attendance days[Tag]="ja", locf/locm="unklar", chk, autoAlways ein, nur wenn die Person für den Tag nichts selbst eingetragen hat; Person kann bis 9:00 selbst ändern. Deployt: attAlwaysDaily, attUserChanged.
+
+- **24.11.2026 C2:** Automatische Anwesenheit (alwaysEat) legt jetzt heute UND morgen an (Küchenzahlen 17:00 für morgen); keine Benachrichtigung an die Person, kein attLog-Eintrag für neue Einträge (nur Änderungen bestehender Einträge landen im Digest an Rolf). Neu deployt: attAlwaysDaily, attUserChanged.

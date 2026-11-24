@@ -576,11 +576,12 @@ async function applyAlways(date, users) {
   return n;
 }
 exports.attAlwaysDaily = onSchedule({ schedule: '5 0 * * *', timeZone: TZ }, async () => {
-  await applyAlways(berlinDate(), await approvedUsers());
+  const us = await approvedUsers(), t = berlinDate();
+  await applyAlways(t, us); await applyAlways(addDays(t, 1), us);   // auch morgen, damit die Küchenzahlen um 17:00 stimmen
 });
 exports.attUserChanged = onDocumentWritten('users/{uid}', async event => {
   const a = event.data.after.exists ? event.data.after.data() : null, b = event.data.before.exists ? event.data.before.data() : null;
-  if (a && a.alwaysEat && !(b && b.alwaysEat)) await applyAlways(berlinDate(), [{ id: event.params.uid, ...a }]);
+  if (a && a.alwaysEat && !(b && b.alwaysEat)) { const t = berlinDate(), uu = [{ id: event.params.uid, ...a }]; await applyAlways(t, uu); await applyAlways(addDays(t, 1), uu); }
   if (!a || (b && (b.stand || '') === (a.stand || '') && !!b.bfHof === !!a.bfHof && b.name === a.name && !!b.alwaysEat === !!a.alwaysEat)) return;
   await recomputeAtt();
 });
