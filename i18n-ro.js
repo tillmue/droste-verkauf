@@ -1418,6 +1418,8 @@ window.RO_DICT={
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
 "Bild öffnen": "Deschide imaginea",
+"Isst immer (Frühstück und Mittag)": "Mănâncă mereu (mic dejun și prânz)",
+"ja, jeden Tag": "da, în fiecare zi",
 "Benachrichtigung testen": "Testează notificarea",
 "Testnachricht senden": "Trimite mesaj de test",
 "Mittlere Bäume (2,5 bis 3,5 m)": "Copaci medii (2,5 până la 3,5 m)",

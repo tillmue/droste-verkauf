@@ -1417,6 +1417,8 @@ window.PT_DICT={
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
 "Bild öffnen": "Abrir imagem",
+"Isst immer (Frühstück und Mittag)": "Come sempre (café da manhã e almoço)",
+"ja, jeden Tag": "sim, todos os dias",
 "Benachrichtigung testen": "Testar notificação",
 "Testnachricht senden": "Enviar mensagem de teste",
 "Mittlere Bäume (2,5 bis 3,5 m)": "Árvores médias (2,5 a 3,5 m)",

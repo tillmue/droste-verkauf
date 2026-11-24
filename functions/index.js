@@ -560,9 +560,28 @@ exports.attendanceWrite = onDocumentWritten('attendance/{id}', async event => {
   }
   await recomputeAtt();
 });
+/* Personen mit Haken "Isst immer": Anwesenheit "ja" (Frühstück und Mittag, Ort unklar) automatisch, nur wenn die Person für den Tag nichts selbst eingetragen hat */
+const nameKeyF = n => String(n || '').toLowerCase().replace(/[^a-zäöüß0-9]/g, '');
+async function applyAlways(date, users) {
+  const hof = (await db.doc('settings/hof').get()).data() || {};
+  if (date < (hof.attFrom || '2026-11-15') || date > (hof.attTo || '2026-12-24')) return 0;
+  let n = 0;
+  for (const u of users) {
+    if (!u.alwaysEat || u.approved !== true || !u.name) continue;
+    const ref = db.collection('attendance').doc(nameKeyF(u.name)), s = await ref.get(), d = s.exists ? s.data() : {};
+    if ((d.chk || {})[date]) continue;
+    await ref.set({ name: u.name, days: { [date]: 'ja' }, locf: { [date]: 'unklar' }, locm: { [date]: 'unklar' }, chk: { [date]: Date.now() }, autoAlways: { [date]: true }, updated: Date.now() }, { merge: true });
+    n++;
+  }
+  return n;
+}
+exports.attAlwaysDaily = onSchedule({ schedule: '5 0 * * *', timeZone: TZ }, async () => {
+  await applyAlways(berlinDate(), await approvedUsers());
+});
 exports.attUserChanged = onDocumentWritten('users/{uid}', async event => {
   const a = event.data.after.exists ? event.data.after.data() : null, b = event.data.before.exists ? event.data.before.data() : null;
-  if (!a || (b && (b.stand || '') === (a.stand || '') && !!b.bfHof === !!a.bfHof && b.name === a.name)) return;
+  if (a && a.alwaysEat && !(b && b.alwaysEat)) await applyAlways(berlinDate(), [{ id: event.params.uid, ...a }]);
+  if (!a || (b && (b.stand || '') === (a.stand || '') && !!b.bfHof === !!a.bfHof && b.name === a.name && !!b.alwaysEat === !!a.alwaysEat)) return;
   await recomputeAtt();
 });
 exports.attDigest = onSchedule({ schedule: '30 7 * * *', timeZone: TZ }, async () => {

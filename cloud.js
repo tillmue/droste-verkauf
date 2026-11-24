@@ -194,8 +194,8 @@ function initCloud(FB) {
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
-      S.people = arr.map(u => u.name); S.pstand = {}; S.pbf = {}; S.traits = {}; S.roles = {}; S.approved = {}; S.userIds = {}; S.emails = {}; S.emailVerified = {}; S.perms = {}; S.pushOn = {}; S.pushErr = {};
-      arr.forEach(u => { if ((u.fcmTokens || []).length) S.pushOn[u.name] = true; else if (u.pushErr) S.pushErr[u.name] = u.pushErr; S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emails[u.name] = u.email || ''; S.emailVerified[u.name] = u.emailVerified === true; if (u.perms) S.perms[u.name] = u.perms; if (u.stand) S.pstand[u.name] = u.stand; if (u.bfHof) S.pbf[u.name] = true; if (u.kraft || u.lizenz) S.traits[u.name] = { kraft: u.kraft || 'normal', lizenz: u.lizenz || '' }; });
+      S.people = arr.map(u => u.name); S.pstand = {}; S.pbf = {}; S.traits = {}; S.roles = {}; S.approved = {}; S.userIds = {}; S.emails = {}; S.emailVerified = {}; S.perms = {}; S.pushOn = {}; S.pushErr = {}; S.pAlways = {};
+      arr.forEach(u => { if (u.alwaysEat) S.pAlways[u.name] = true; if ((u.fcmTokens || []).length) S.pushOn[u.name] = true; else if (u.pushErr) S.pushErr[u.name] = u.pushErr; S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emails[u.name] = u.email || ''; S.emailVerified[u.name] = u.emailVerified === true; if (u.perms) S.perms[u.name] = u.perms; if (u.stand) S.pstand[u.name] = u.stand; if (u.bfHof) S.pbf[u.name] = true; if (u.kraft || u.lizenz) S.traits[u.name] = { kraft: u.kraft || 'normal', lizenz: u.lizenz || '' }; });
       T.softRender();
     }, err => console.error('users', err)));
     ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs', 'reports', 'stats', 'questions'].forEach(listen);
@@ -300,6 +300,7 @@ function initCloud(FB) {
       if (tok) await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayRemove(tok) }).catch(() => {});
       try { await FB.deleteToken(FB.getMessaging(app)); } catch (e) {}
     },
+    setAlways: (name, on) => FB.updateDoc(FB.doc(db, 'users', T.S.userIds[name]), { alwaysEat: !!on }),
     async testPush(userId) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'sendTestPush')({ userId }); return r.data; },
     async routeMatrix(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeMatrix')(p); return r.data; },
     async routeLegs(p) { const r = await FB.httpsCallable(FB.getFunctions(app, 'europe-west1'), 'routeLegs')(p); return r.data; },

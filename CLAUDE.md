@@ -437,3 +437,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **24.11.2026 A:** Push-Diagnose: saveToken merkt Fehlergrund im Profil (users.pushErr/pushErrAt/pushUa), Team (Admin) zeigt bei "Benachrichtigung: aus" den Grund. Befund 24.11.: alle 22 gespeicherten Tokens gültig (FCM dry_run), 17 Nutzer ohne Token.
 
 - **24.11.2026 B:** Testnachricht pro Person: Cloud Function sendTestPush (onCall, nur Admin, europe-west1, deployt per firebase deploy --only functions:sendTestPush), cloud.testPush(userId), Team-Zeile (Admin) "Benachrichtigung testen / Testnachricht senden" mit Rückmeldung je Gerät; ungültige Tokens werden entfernt.
+
+- **24.11.2026 C:** Haken "Isst immer (Frühstück und Mittag)" pro Person (users.alwaysEat, Team-Zeile, nur Admin, cloud.setAlways). Cloud Functions: attAlwaysDaily (00:05 Berlin) und attUserChanged (beim Setzen des Hakens sofort für heute) tragen attendance days[Tag]="ja", locf/locm="unklar", chk, autoAlways ein, nur wenn die Person für den Tag nichts selbst eingetragen hat; Person kann bis 9:00 selbst ändern. Deployt: attAlwaysDaily, attUserChanged.
