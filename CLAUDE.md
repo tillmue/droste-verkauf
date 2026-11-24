@@ -455,3 +455,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **25.11.2026 D:** Planer: braucht eine Gruppe mehrere Touren, werden die Aufträge in gleich lange Sektoren geschnitten (Gewicht je Stopp = Standzeit + Fahrt vom Hof, Ziel: gleiche Tourdauer, danach Kosten) statt eine volle und eine fast leere Tour; danach nur noch Umordnen innerhalb der Touren (improve(false)). Test 25.11.: klein 10 Stopps 3h51 und 9 Stopps 4h04 statt 16 und 3; groß 4h08 und 4h19.
 
 - **25.11.2026 E:** Aufteilung nicht erzwungen: der Planer nimmt je Gruppe die kleinste Tourzahl, bei der keine Tour länger als ca. 5,5 Stunden wird (bestSplit für 1..m Touren), sonst bleibt es bei der Zahl aus dem ersten Durchlauf. Test: 27.11. kleine Bäume eine Tour (6 Stopps), 25./26.11. zwei.
+
+- **25.11.2026 F (Admin-Ansicht prüfen):** Planungsliste "Kunden für diesen Tag": Baumangabe steht unter der Adresse statt rechts (vorher war die Namensspalte nur 39 px breit, Zeile 287 px hoch, jetzt 213 px und 133 px). Kasten "nicht geliefert" erscheint für heute erst ab 16 Uhr. Testaufbau: lokaler Server mit fakefb.js und Echtdaten-Auszug (nur lokal im Browser, nichts in Firestore).

@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 E';
+const APP_VERSION='2026-11-25 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2958,7 +2958,7 @@ function sizeBanner(day){
 /* Abends: alles, was an einem Tag nicht geliefert wurde, auf den nächsten Tag verschieben */
 function openOfDay(day){return S.orders.filter(o=>{if(o.deleted||o.status==='erledigt')return false;const t=o.tourId&&S.tours.find(x=>x.id===o.tourId&&!x.deleted);return inWindow(o,day)||(t&&t.date===day)})}
 function moveBar(day){
-  if(!has('lieferplanung')||day>todayStr())return '';
+  if(!has('lieferplanung')||day>todayStr()||(day===todayStr()&&new Date().getHours()<16))return '';
   const n=openOfDay(day).length;if(!n)return '';
   return `<div class="warn" style="margin:10px 0"><b>${n} ${n===1?'Auftrag':'Aufträge'} an diesem Tag nicht geliefert.</b><button class="btn sec" data-pl="shiftopen" data-v="${day}" style="margin:8px 0 0">Offene auf ${wdD(shiftDate(day,1))} verschieben</button></div>`
 }
@@ -3071,7 +3071,7 @@ function planBox(){
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     ${(()=>{const n=cands.filter(x=>pd.sel[x.o.id]&&!winTimes(x.o.window).length&&/vormittag|nachmittag/i.test(x.o.window||'')).length;return n?`<div class="hint" style="color:var(--orange)">${n} ${n===1?'Auftrag hat':'Aufträge haben'} nur "vormittags" oder "nachmittags" als Zeitfenster. Die Planung nimmt dafür die Zeiten aus den Einstellungen als Pflicht. Bitte beim Kunden klären, was genau gemeint ist.</div>`:''})()}
     <details data-det="plcust" ${cur.det.plcust===undefined||cur.det.plcust?'open':''} style="margin-top:8px"><summary style="padding:8px 0"><b>Kunden für diesen Tag</b> (${nSel} von ${cands.length} gewählt)</summary>
-    <div class="card">${cands.map(x=>`<div class="row" data-ordrow="${x.o.id}"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n" data-pl="ordopen" data-v="${x.o.id}" style="cursor:pointer;color:var(--link)">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div></div></div><span class="p" style="text-align:right">${orderTreeInfo(x.o)}</span><button class="rowedit" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Weitere Aktionen" style="margin-left:6px">⋯</button></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div></details>
+    <div class="card">${cands.map(x=>`<div class="row" data-ordrow="${x.o.id}"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n" data-pl="ordopen" data-v="${x.o.id}" style="cursor:pointer;color:var(--link)">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div></div></div><button class="rowedit" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Weitere Aktionen" style="margin-left:6px">⋯</button></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div></details>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button></div>
     <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`${nSel===cands.length?'Alle '+cands.length:nSel} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
     ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
