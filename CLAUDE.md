@@ -435,3 +435,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 O:** Zurück zur strikten Dreitrennung (klein/mittel/groß nie gemischt), weil beim Mischen keine reine Kleine-Bäume-Tour mehr entstand (N verworfen).
 
 - **24.11.2026 A:** Push-Diagnose: saveToken merkt Fehlergrund im Profil (users.pushErr/pushErrAt/pushUa), Team (Admin) zeigt bei "Benachrichtigung: aus" den Grund. Befund 24.11.: alle 22 gespeicherten Tokens gültig (FCM dry_run), 17 Nutzer ohne Token.
+
+- **24.11.2026 B:** Testnachricht pro Person: Cloud Function sendTestPush (onCall, nur Admin, europe-west1, deployt per firebase deploy --only functions:sendTestPush), cloud.testPush(userId), Team-Zeile (Admin) "Benachrichtigung testen / Testnachricht senden" mit Rückmeldung je Gerät; ungültige Tokens werden entfernt.

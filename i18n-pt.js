@@ -1417,6 +1417,8 @@ window.PT_DICT={
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
 "Bild öffnen": "Abrir imagem",
+"Benachrichtigung testen": "Testar notificação",
+"Testnachricht senden": "Enviar mensagem de teste",
 "Mittlere Bäume (2,5 bis 3,5 m)": "Árvores médias (2,5 a 3,5 m)",
 "Kleine Bäume (bis 2,5 m)": "Árvores pequenas (até 2,5 m)",
 "Diesen Tag zurücksetzen": "Redefinir este dia",

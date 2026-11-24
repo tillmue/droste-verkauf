@@ -1418,6 +1418,8 @@ window.RO_DICT={
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
 "Bild öffnen": "Deschide imaginea",
+"Benachrichtigung testen": "Testează notificarea",
+"Testnachricht senden": "Trimite mesaj de test",
 "Mittlere Bäume (2,5 bis 3,5 m)": "Copaci medii (2,5 până la 3,5 m)",
 "Kleine Bäume (bis 2,5 m)": "Copaci mici (până la 2,5 m)",
 "Diesen Tag zurücksetzen": "Resetează această zi",

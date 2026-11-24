@@ -88,6 +88,39 @@ async function pushTo(user, text) {
   return ok;
 }
 
+
+/* Testnachricht an eine Person (nur Admin): meldet je Gerät, ob der Versand klappte */
+T.testPush = {
+  de: 'Testnachricht vom Hof Droste: Wenn du das liest, funktionieren deine Benachrichtigungen.',
+  ro: 'Mesaj de test de la Hof Droste: dacă citești asta, notificările tale funcționează.',
+  pt: 'Mensagem de teste do Hof Droste: se você está lendo isto, suas notificações funcionam.'
+};
+exports.sendTestPush = onCall(async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Bitte anmelden');
+  const me = await db.collection('users').doc(req.auth.uid).get();
+  if (!me.exists || me.data().approved !== true || me.data().role !== 'admin') throw new HttpsError('permission-denied', 'Nur Admin');
+  const id = String((req.data && req.data.userId) || '');
+  if (!id) throw new HttpsError('invalid-argument', 'Person fehlt');
+  const snap = await db.collection('users').doc(id).get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Person nicht gefunden');
+  const u = { id, ...snap.data() }, tokens = u.fcmTokens || [];
+  if (!tokens.length) return { sent: 0, devices: 0, failed: 0, note: 'Kein Gerät angemeldet' };
+  const lang = u.lang === 'ro' ? 'ro' : u.lang === 'pt' ? 'pt' : 'de';
+  let sent = 0, failed = 0; const errs = [];
+  for (const token of tokens) {
+    try {
+      await admin.messaging().send({ token, data: { title: T.title[lang] || T.title.de, body: T.testPush[lang], url: './' }, webpush: { headers: { Urgency: 'high', TTL: '3600' } } });
+      sent++;
+    } catch (e) {
+      failed++; errs.push(e.code || e.message);
+      if (e.code === 'messaging/registration-token-not-registered' || e.code === 'messaging/invalid-registration-token') {
+        await db.collection('users').doc(id).update({ fcmTokens: admin.firestore.FieldValue.arrayRemove(token) }).catch(() => {});
+      }
+    }
+  }
+  return { sent, devices: tokens.length, failed, errs: errs.slice(0, 3) };
+});
+
 /* 1. Neue Zuweisung */
 exports.taskAssigned = onDocumentWritten('tasks/{id}', async event => {
   const after = event.data.after.exists ? event.data.after.data() : null;
