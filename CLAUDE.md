@@ -476,3 +476,5 @@ Grundlage: Apple Human Interface Guidelines (Layout, Color, Dark Mode, Typograph
 - **25.11.2026 I:** Farbkontrast nach HIG (mind. 4,5:1): Text auf Karten in Rot und Grün war 3,0 und 3,1, jetzt über Tokens --red-t/--green-t (5,0 und 6,3); Füllungen --red-f/--green-f mit weißem Text über 5:1 (vorher 3,5 und 3,4); Seitentitel h2 größer und fett. Designregeln als Abschnitt in dieser Datei.
 
 - **25.11.2026 J (Gliederung Übersicht):** Übersicht in Abschnitte mit Überschrift gegliedert (.sec-h): Heute zu tun, Anwesenheit, Neu anlegen (Kacheln), Aufgaben und Meldungen (Meldungen, Aufgaben, Tour, Kalender), Auf dem Hof (Wetter, Feierabendbier, Essen, Verkauf), Zahlen im Aufklapper. Karten ruhiger (Rand 10 Prozent), Kartentitel 18 px, mehr Abstand zwischen Gruppen.
+
+- **25.11.2026 K:** Preise-Reiter in Abschnitte gegliedert (Rechner, Bäume, Schnittgrün, Zubehör und Service, Zahlung), per blockify(). Farbkonzept bewusst unverändert: Grün = Marke und Flächen, Blau = bedienbar (Auswahl, Links, Standardknopf, wie Apples Systemblau), Orange = Aufmerksamkeit, Rot = Löschen.
