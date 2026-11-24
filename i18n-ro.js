@@ -1418,6 +1418,7 @@ window.RO_DICT={
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
 "Bild öffnen": "Deschide imaginea",
+"Doch nicht geliefert: auf nächsten Tag": "Livrat? Nu: mută pe ziua următoare",
 "Isst immer (Frühstück und Mittag)": "Mănâncă mereu (mic dejun și prânz)",
 "ja, jeden Tag": "da, în fiecare zi",
 "Benachrichtigung testen": "Testează notificarea",

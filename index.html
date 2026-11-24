@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-24 E';
+const APP_VERSION='2026-11-25 A';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2150,6 +2150,12 @@ document.addEventListener('click',ev=>{
   if(a==='plock'){const pd=cur.pd;pd.locks=pd.locks||{};pd.locks[+v]=!pd.locks[+v];return render()}
   if(a==='plrest'){planRest();return}
   if(a==='planauto'){(async()=>{planPickups(cur.pd.date);if(!Object.values(cur.pd.sel).some(Boolean))planCandidates(cur.pd.date).forEach(x=>cur.pd.sel[x.o.id]=true);await runPlan();if(cur.pd.res&&cur.pd.res.tours.length&&!cur.pd.err)applyPlan(null)})();return}
+  if(a==='shiftopen'){const L=openOfDay(v),nx=shiftDate(v,1);if(!L.length)return toast('Nichts offen');
+    return askConfirm(L.length+' nicht gelieferte Aufträge von '+wdD(v)+' auf '+wdD(nx)+' verschieben?','Ja, verschieben',()=>{L.forEach(o=>{const t=S.tours.find(x=>x.id===o.tourId),st=t&&t.stops&&t.stops[o.stopId];if(st)st.deleted=true;o.status='offen';o.from=nx;o.to=nx;o.tourId='';o.stopId='';delete o.plannedFor});save();cur.lday=nx;toast(L.length+' Aufträge auf '+wdD(nx)+' verschoben');render()})}
+  if(a==='stopundo'){const f=cur.stop,t=S.tours.find(x=>x.id===f.tourId),x=t&&t.stops[f.id];if(!x)return;const nx=shiftDate(t.date,1);
+    return askConfirm('„'+(x.name||x.address)+'“ doch nicht geliefert? Der Stopp wird auf '+wdD(nx)+' verschoben.','Ja, verschieben',()=>{x.done=false;delete x.outcome;delete x.doneBy;delete x.doneAt;const o=x.orderId&&S.orders.find(y=>y.id===x.orderId);
+      if(o){orderMove(o,nx)}else{const t2=S.tours.find(y=>!y.deleted&&y.type!=='abholung'&&y.date===nx&&!y.status)||newTourOn(nx,t.size);moveStopTo(t,f.id,t2);save()}
+      cur.stopOpen=false;cur.sheet='';render()})}
   if(a==='tdedupe'){const {dups,orph}=dupStops(v);if(!dups.length&&!orph.length)return toast('Nichts zu bereinigen');
     if(!confirm('Entfernen: '+dups.length+' doppelte und '+orph.length+' verwaiste Stopps? Jeder Auftrag bleibt in genau einer Tour.'))return;
     [...dups,...orph].forEach(x=>{x.s.deleted=true;x.t.updated=Date.now()});save();toast('Bereinigt');return render()}
@@ -2946,6 +2952,13 @@ function sizeBanner(day){
   if(!L.length)return '';
   return `<div class="warn" style="margin:10px 0"><b>${L.length} ${L.length===1?'Auftrag':'Aufträge'} mit unsicherer Größe, bitte vor dem Planen prüfen:</b><br>${L.slice(0,10).map(x=>esc(x.o.name)+' ('+esc(x.g[0])+')').join('<br>')}${L.length>10?'<br>…':''}</div>`
 }
+/* Abends: alles, was an einem Tag nicht geliefert wurde, auf den nächsten Tag verschieben */
+function openOfDay(day){return S.orders.filter(o=>{if(o.deleted||o.status==='erledigt')return false;const t=o.tourId&&S.tours.find(x=>x.id===o.tourId&&!x.deleted);return inWindow(o,day)||(t&&t.date===day)})}
+function moveBar(day){
+  if(!has('lieferplanung')||day>todayStr())return '';
+  const n=openOfDay(day).length;if(!n)return '';
+  return `<div class="warn" style="margin:10px 0"><b>${n} ${n===1?'Auftrag':'Aufträge'} an diesem Tag nicht geliefert.</b><button class="btn sec" data-pl="shiftopen" data-v="${day}" style="margin:8px 0 0">Offene auf ${wdD(shiftDate(day,1))} verschieben</button></div>`
+}
 function dupBanner(day){
   const {dups,orph}=dupStops(day),n=dups.length+orph.length;if(!n)return '';
   return `<div class="warn" style="margin:10px 0"><b>${dups.length?dups.length+' doppelte':''}${dups.length&&orph.length?' und ':''}${orph.length?orph.length+' verwaiste':''} Stopps an diesem Tag.</b> Derselbe Auftrag steht in zwei Touren oder der Auftrag existiert nicht mehr.<button class="btn sec" data-pl="tdedupe" data-v="${day}" style="margin:8px 0 0">Duplikate bereinigen</button></div>`
@@ -3489,6 +3502,7 @@ function stopForm(){
     ${pk?'':`<select class="t" id="sp-callBefore" style="margin-top:8px"><option value="">Nicht vorher anrufen</option>${['15','30','60'].map(m=>`<option value="${m}" ${f.callBefore===m?'selected':''}>${m} Min vorher anrufen</option>`).join('')}</select>`}
     <div class="mini" style="margin-top:8px"><button class="btn" data-pl="stopsave" style="margin:0">${f.id?'Speichern':(pk?'Abholung hinzufügen':'Stopp hinzufügen')}</button><button class="btn sec" data-pl="stopcancel" style="margin:0">Abbrechen</button></div>
     ${(f.id&&!pk)?'<button class="btn green" data-pl="stopmark" style="margin-top:10px">Als geliefert markieren</button>':''}
+    ${(f.id&&!pk&&f.tourId&&(()=>{const t=S.tours.find(x=>x.id===f.tourId),x=t&&t.stops&&t.stops[f.id];return x&&x.done&&x.outcome==='geliefert'})())?'<button class="btn sec" data-pl="stopundo" style="margin-top:10px">Doch nicht geliefert: auf nächsten Tag</button>':''}
     ${f.id?`<button class="btn red" data-pl="stopdel">${pk?'Abholung entfernen':'Stopp entfernen'}</button>`:''}</div>`;
 }
 function vLieferungen(){
@@ -3513,7 +3527,7 @@ function vLieferungen(){
   const hint=kind==='abh'?'Zahl = Abholungen pro Tag':kind==='lief'?'Zahl = Stopps pro Tag'+(plan?', grau = offene Aufträge':''):'Stopps und Abholungen pro Tag';
   const empty=kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':kind==='lief'?'Für diesen Tag sind keine Touren geplant.':'Für diesen Tag steht nichts an.';
   const add=plan?((kind!=='abh'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn add" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
-  const dayTitle=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>`;
+  const dayTitle=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>`+moveBar(day);
   const stg=t=>t.status==='beendet'?'done':(t.status==='gestartet'||t.packed)?'run':t.toPack?'pack':'plan';
   const stagesOn=plan&&kind==='lief'&&!fahrer,stage=['plan','pack','run','done'].includes(cur.lstage)?cur.lstage:'plan';
   let dayBlock;

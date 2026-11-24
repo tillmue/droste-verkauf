@@ -1417,6 +1417,7 @@ window.PT_DICT={
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
 "Bild öffnen": "Abrir imagem",
+"Doch nicht geliefert: auf nächsten Tag": "Não entregue: mover para o próximo dia",
 "Isst immer (Frühstück und Mittag)": "Come sempre (café da manhã e almoço)",
 "ja, jeden Tag": "sim, todos os dias",
 "Benachrichtigung testen": "Testar notificação",
