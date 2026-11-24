@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 A';
+const APP_VERSION='2026-11-25 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2654,6 +2654,9 @@ const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),
 /* Platten-Regel: höchstens 4 Bäume ab 3,50 m mit großem Ständer (Waschbeton-Platten) pro Fahrzeug, wegen des Gewichts (24 Platten) */
 const nBigTrees=o=>{const P=o.positions||[],big=P.filter(p=>['Baum','Laternenbaum'].includes(p.cat)&&(+p.len||0)>=3.5).reduce((a,p)=>a+(+p.qty||1),0);if(!big)return 0;
   const st=P.filter(p=>p.cat==='Ständer'&&/gro(ß|ss)|platte/i.test((p.text||'')+' '+(p.detail||''))).reduce((a,p)=>a+(+p.qty||1),0);return Math.min(big,st)};
+/* Gruppenwahl: Spanne (z.B. 3,5 bis 4 m) mit Untergrenze höchstens 3,5 m und Obergrenze höchstens 4 m darf auf die mittlere Tour (Tills Regel 25.11.2026) */
+const treeRange=p=>{const m=((p.text||'')+' '+(p.detail||'')).replace(/,/g,'.').match(/(\d+(?:\.\d+)?)\s*(?:m\s*)?(?:-|–|bis)\s*(\d+(?:\.\d+)?)\s*m\b/i);return m?{lo:+m[1],hi:+m[2]}:null};
+const orderGroupTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>{const L=+p.len||0,r=treeRange(p);return(r&&L>=3.5&&r.lo<=3.5&&r.hi<=4)?3.49:L}));
 const orderMaxTree=o=>Math.max(0,...(o.positions||[]).filter(p=>['Baum','Laternenbaum'].includes(p.cat)).map(p=>+p.len||0));
 const orderSvx=o=>({service:orderService(o),name:o.name,lines:orderLines(o).map(p=>({q:+p.qty||1,c:p.cat,l:p.len||null}))});
 const orderSvc=o=>svcMin(orderSvx(o),2);
@@ -2731,8 +2734,8 @@ const tmin=(a,b,P)=>{
   if(P&&P.mat&&a.mi!=null&&b.mi!=null){const s=P.mat[a.mi]&&P.mat[a.mi][b.mi];if(s!=null){const m=Math.ceil(s/60*1.05);return m<1?1:m}}
   const m=Math.round(havKm(a,b)*1.3/40*60);return m<1?1:m};
 function orderCrewInfo(o,ds){
-  const L=orderMaxTree(o),n=nTrees(o),aufst=/aufstellen/i.test(orderService(o));
-  let k=L>=3.5?((L<=4&&!aufst)?2:3):L>2.5?2:1,win=null;
+  const L=orderMaxTree(o),Lg=orderGroupTree(o),n=nTrees(o),aufst=/aufstellen/i.test(orderService(o));
+  let k=Lg>=3.5?((L<=4&&!aufst)?2:3):Lg>2.5?2:1,win=null;
   if(k<2&&n>=30){const st=standByName(o.name);if(standOpenOk(st,ds))win=[timeToMin(st.openFrom),timeToMin(st.openTo)];else k=2}
   return {k,win,L,n,sehr:L>5?2:L>4?1:0,kraeftig:k===1&&aufst&&L<=2.5};
 }
@@ -2940,10 +2943,7 @@ function sizeIssues(o){
     const L=+p.len||0,t=((p.text||'')+' '+(p.detail||'')).replace(/,/g,'.');
     if(!L){g.push('Größe fehlt');return}
     if(L<1||L>8)g.push('Größe unplausibel ('+mFmt(L)+')');
-    const m=t.match(/(\d+(?:\.\d+)?)\s*(?:m\s*)?(?:-|–|bis)\s*(\d+(?:\.\d+)?)\s*m\b/i);
-    if(m){const lo=+m[1],hi=+m[2];if([2.5,3.5,4].some(b=>lo<=b&&b<hi))g.push('Spanne '+mFmt(lo)+' bis '+mFmt(hi)+', gerechnet mit '+mFmt(hi))}
     if(/\b\d{2,3}\s*\/\s*\d{2,3}\b/.test(t))g.push('Zentimeter-Angabe');
-    if(L>=3.5&&aufst&&!stand)g.push('großer Baum mit Aufstellen, aber kein großer Ständer');
   });
   return [...new Set(g)];
 }
