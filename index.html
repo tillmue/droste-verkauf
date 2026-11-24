@@ -385,6 +385,11 @@ summary{min-height:44px;box-sizing:border-box}
 .pers{border-bottom:1px solid var(--line)}.pers>summary{display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer;list-style:none}.pers>summary::-webkit-details-marker{display:none}.pers>summary .pn{font-weight:600;flex:1;min-width:0}.pers>summary .dot{width:8px;height:8px;border-radius:50%;flex:none}.pers[open]>summary{margin-bottom:6px}
 .wkbar{display:flex;align-items:center;gap:8px;margin:4px 0 8px}.wkbar b{flex:1;text-align:center;font-size:16px}.wkbar button{min-width:44px;min-height:44px;border:0;border-radius:12px;background:var(--fill);color:var(--text);font:inherit;font-size:20px}.wkbar .mt{font-size:14px;font-weight:600;color:var(--link);padding:0 12px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Gliederung: Abschnittsüberschriften, ruhigere Karten, mehr Luft zwischen Gruppen (HIG: gruppieren, Hierarchie) */
+.sec-h{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:28px 4px 10px}.sec-h.first{margin-top:20px}
+.blk{border-color:rgba(255,255,255,.10);margin-bottom:12px}
+.blk-h h3{font-size:18px}
 </style>
 </head>
 <body>
@@ -424,7 +429,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 I';
+const APP_VERSION='2026-11-25 J';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -1248,19 +1253,21 @@ function vIch(){
   const blk=(title,body,o={})=>`<section class="blk${o.tone?' t-'+o.tone:''}${o.go?' click':''}"${o.go?` data-pl="${o.go}"`:''}><div class="blk-h"><h3>${title}</h3>${o.pill||''}</div>${body}</section>`;
   const nQ=isAdmin()?S.questions.filter(q=>!q.deleted&&!q.done).length:0;
   const myTours=S.tours.filter(t=>!t.deleted&&t.type!=='abholung'&&t.status!=='beendet'&&t.date>=td&&t.date<=shiftDate(td,7)&&isCrew(t,me)).sort((a,b)=>a.date<b.date?-1:1).slice(0,3);
-  $('#app').innerHTML=`${backupWarn()}${canApprove()?freigabeBig():''}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>${adminTodo()}${gateStatus()}${gateList()}
-  <div id="wx" style="margin:8px 0 14px">${wxHtml()}</div>${beerBlock()}
-  <div class="mini" style="margin-bottom:14px"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
+  $('#app').innerHTML=`${backupWarn()}${canApprove()?freigabeBig():''}<h2 style="margin-top:4px">Hallo ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${hello}</div>${adminTodo()}<div class="sec-h first">Anwesenheit</div>${gateStatus()}${gateList()}
+  <div class="mini" style="margin:14px 0 0"><button class="qtile g" data-pl="dtask"><b>+</b>Aufgabe hinzufügen</button><button class="qtile o" data-pl="drep"><b>!</b>Meldung machen</button></div>
   ${nQ?`<div class="tbanner" data-go="einstellungen">${nQ} Frage${nQ>1?'n':''} zur App, tippen zum Lesen →</div>`:''}
+  <div class="sec-h">Aufgaben und Meldungen</div>
   ${blk('Aktive Meldungen',`<div class="p" style="padding:2px 0 10px">${nRep?'Tippen zum Ansehen und Bearbeiten':'Gerade ist nichts gemeldet.'}</div>`,{go:'gomeld',tone:nRep?'o':'',pill:pill(nRep,nRep?'o':'g')})}
-  ${abendBlock()}
-  ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(trF(e,'title'))}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(trF(t,'title'))}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
-  ${mealToday?blk('Essen heute',`<div class="p" style="padding:2px 0 10px;font-size:16px;color:var(--text)">${esc(mealToday)}</div>`,{pill:pill('heute','g')}):''}
   ${blk('Meine Aufgaben heute',`${attDue?`<div class="row" data-pl="goatt" style="cursor:pointer"><div style="min-width:0"><div class="n">Anwesenheit ausfüllen</div><div class="p">${attDue} ${attDue===1?'Tag':'Tage'} noch offen, tippen zum Ausfüllen</div></div></div>`:''}${today.map(t=>taskRow(t,true,true)).join('')||(attDue?'':'<div class="row"><span class="p">Nichts offen. Gut gemacht.</span></div>')}
     ${doneTodayL.length?`<div class="p" style="margin:12px 0 2px;font-weight:600">Heute erledigt (${doneTodayL.length}), zum Zurückholen antippen</div>${doneTodayL.map(t=>taskRow(t,true,true)).join('')}`:''}
     ${free?`<div class="tbanner o" data-pl="gopen" style="margin:10px 0 6px">${free} offene Aufgabe${free>1?'n':''} ohne Zuständigen, such dir eine aus →</div>`:''}
     <button class="btn sec" data-pl="goarch" style="margin:10px 0 6px">Aufgabenarchiv</button>`,{pill:pill(today.length+(attDue?1:0),today.length||attDue?'o':'g')})}
   ${myTours.length?blk('Meine Tour',myTours.map(t=>{const st=tourStops(t);return `<div class="row" data-pl="goliefer" data-v="${t.date}|lief" style="cursor:pointer;display:block"><div class="n"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div><div class="p">${wdD(t.date)} · ${esc(t.vehicle||'')}</div><div class="p"><b>${t.driver===me?'Fahrer':'Beifahrer'}</b> · ${st.length} Stopps${t.status==='gestartet'?' · <b style="color:var(--orange)">läuft</b>':''}</div></div>`}).join(''),{pill:pill(myTours.length)}):''}
+  ${(has('kalender')||evs.length)?blk('Heute im Kalender',evs.map(e=>`<div class="row" data-pl="goevt" data-v="${e.id}"><div style="min-width:0"><div class="n">${esc(trF(e,'title'))}</div><div class="p">${CAL[e.cal]||''}${e.time?' · '+esc(e.time):''}${e.note?' · '+esc(e.note.slice(0,40)):''}</div></div></div>`).join('')+`<div class="row" data-pl="gomine" style="cursor:pointer"><div class="n">Meine Aufgaben</div><span class="p"><b style="color:${today.length?'var(--orange)':'var(--green)'}">${today.length?today.length+' offen':'nichts offen'}</b> ${today.length?(cur.mineOpen?'⌃':'⌄'):''}</span></div>${cur.mineOpen&&today.length?today.map(t=>`<div class="row"><div style="min-width:0"><div class="n">${esc(trF(t,'title'))}</div><div class="p">${t.time?esc(t.time)+' · ':''}${t.stand?esc(standNm(t.stand)):''}</div></div></div>`).join(''):''}`,{pill:pill(evs.length+(today.length?1:0))}):''}
+  <div class="sec-h">Auf dem Hof</div>
+  <div id="wx" style="margin:8px 0 14px">${wxHtml()}</div>${beerBlock()}
+  ${abendBlock()}
+  ${mealToday?blk('Essen heute',`<div class="p" style="padding:2px 0 10px;font-size:16px;color:var(--text)">${esc(mealToday)}</div>`,{pill:pill('heute','g')}):''}
   ${sb?blk('Verkauf heute',`<div class="kv" style="padding:6px 0 10px"><span>Alle Stände</span><span>${sb.q} Stk. · ${eur0(sb.r)}</span></div>`,{tone:'',pill:pill('heute','g')}):''}
   <details data-det="ovfun" ${cur.det.ovfun?'open':''} class="card pad" style="margin-top:6px"><summary style="padding:4px 0"><b>Zahlen, Spitzenreiter, Strafbierkisten</b></summary>
   ${blk('Meine Zahlen',`<div class="tiles" style="margin:6px 0 10px">

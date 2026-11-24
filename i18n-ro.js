@@ -1418,6 +1418,8 @@ window.RO_DICT={
 "Benachrichtigung: aus": "Notificare: oprită",
 "Meinen Standort verwenden": "Folosește locația mea",
 "Bild öffnen": "Deschide imaginea",
+"Aufgaben und Meldungen": "Sarcini și raportări",
+"Auf dem Hof": "La fermă",
 "Mehr": "Mai mult",
 "Push an": "Push pornit",
 "Push aus": "Push oprit",

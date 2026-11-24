@@ -1417,6 +1417,8 @@ window.PT_DICT={
 "Benachrichtigung: aus": "Notificação: desligada",
 "Meinen Standort verwenden": "Usar minha localização",
 "Bild öffnen": "Abrir imagem",
+"Aufgaben und Meldungen": "Tarefas e avisos",
+"Auf dem Hof": "Na fazenda",
 "Mehr": "Mais",
 "Push an": "Push ligado",
 "Push aus": "Push desligado",
