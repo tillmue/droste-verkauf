@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 C';
+const APP_VERSION='2026-11-25 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2779,10 +2779,10 @@ function buildToursV2(orders,dep,P){
     if(best&&best.d<=solo.cost+solo.crew*NEWTOUR){const T=tours[best.ti];T.list.splice(best.p,0,it);T.e=best.e;addH(it.o,`Kommt in {T${T.id}}: kostet dort nur +${Math.round(best.d)} Personenminuten, eine eigene Fahrt hätte ${Math.round(solo.cost+solo.crew*NEWTOUR)} gekostet (inklusive ${NEWTOUR} Min Beladen am Hof je Person)`)}
     else{const T={id:++tid,list:[it],e:solo,late};tours.push(T);addH(it.o,best?`Eröffnet {T${T.id}}: Anschluss an eine andere Tour hätte +${Math.round(best.d)} Personenminuten gekostet, eine eigene Fahrt ${Math.round(solo.cost+solo.crew*NEWTOUR)}`:`Eröffnet {T${T.id}}: passt in keine bestehende Tour (Zeitfenster mit ${BUF} Min Puffer, Dauer, ${treeCap()} Bäume oder ${MAXSTOPS} Stopps)`);if(late)addH(it.o,'Das Zeitfenster ist auch allein nicht sicher einzuhalten (Puffer)')}
   }
-  const improve=()=>{
+  const improve=(allowMoves=true)=>{
   for(let pass=0;pass<5;pass++){
     let moved=false;
-    for(let ai=0;ai<tours.length&&!moved;ai++){const A=tours[ai];
+    for(let ai=0;ai<tours.length&&!moved&&allowMoves;ai++){const A=tours[ai];
       for(let i=0;i<A.list.length&&!moved;i++){
         const it=A.list[i],A2=A.list.slice();A2.splice(i,1);const eA=A2.length?evalTour(A2,P):{cost:0,eta:[],crew:0,dur:0};if(!eA)continue;
         let best=null;
@@ -2801,19 +2801,21 @@ function buildToursV2(orders,dep,P){
     const groups={};tours.forEach(T=>{const k=T.list[0].k;(groups[k]=groups[k]||[]).push(T)});
     Object.values(groups).forEach(G=>{
       if(G.length<2)return;const its=G.flatMap(T=>T.list);if(its.some(x=>x.lat==null||x.lng==null))return;
-      const ang=x=>Math.atan2(x.lng-dep.lng,x.lat-dep.lat),sorted=its.slice().sort((a,b)=>ang(a)-ang(b)),n=sorted.length,m=G.length,tot=x=>x.e.cost+x.e.crew*NEWTOUR;
-      const cur=G.reduce((a,T)=>a+tot(T),0);let best=null;
+      /* Gleichmäßig aufteilen: Sektoren nach Himmelsrichtung, gleich viel Arbeit je Tour (Fahrt zum Gebiet plus Standzeiten), nicht eine volle und eine fast leere Tour */
+      const ang=x=>Math.atan2(x.lng-dep.lng,x.lat-dep.lat),sorted=its.slice().sort((a,b)=>ang(a)-ang(b)),n=sorted.length,m=G.length;
+      const wt=x=>(x.svc2||15)+tmin(dep,x,P),score=ts=>Math.max(...ts.map(x=>x.e.dur))+0.02*ts.reduce((a,x)=>a+x.e.cost+x.e.crew*NEWTOUR,0);
+      const cur=score(G);let best=null;
       const feas=c=>{let e=evalTour(c,P);if(e)return {l:c,e};const w=c.slice().sort((a,b)=>((a.we==null)-(b.we==null))||((a.we||0)-(b.we||0)));e=evalTour(w,P);return e?{l:w,e}:null};
       for(let r=0;r<n;r++){
-        const rot=sorted.slice(r).concat(sorted.slice(0,r)),ch=[[]];let ok=true;
-        for(const it of rot){const c=ch[ch.length-1];if(!c.length||feas(c.concat([it])))c.push(it);else{if(ch.length>=m){ok=false;break}ch.push([it])}}
-        if(!ok)continue;const res=ch.map(feas);if(res.some(x=>!x))continue;
-        const cost=res.reduce((a,x)=>a+x.e.cost+x.e.crew*NEWTOUR,0);if(!best||cost<best.cost)best={cost,res}}
-      if(best&&best.cost<cur-2){
+        const rot=sorted.slice(r).concat(sorted.slice(0,r)),tot=rot.reduce((a,x)=>a+wt(x),0),ch=[[]];let cum=0;
+        for(const it of rot){const w=wt(it);if(ch.length<m&&ch[ch.length-1].length&&cum+w/2>=ch.length*tot/m)ch.push([]);ch[ch.length-1].push(it);cum+=w}
+        if(ch.length<m||ch.some(c=>!c.length))continue;const res=ch.map(feas);if(res.some(x=>!x))continue;
+        const sc=score(res);if(!best||sc<best.sc)best={sc,res}}
+      if(best&&best.sc<cur-5){
         G.forEach(T=>{const i=tours.indexOf(T);if(i>=0)tours.splice(i,1)});
-        best.res.forEach(x=>{const T={id:++tid,list:x.l,e:x.e,late:false};tours.push(T);x.l.forEach(it=>addH(it.o,`Räumlich aufgeteilt: {T${T.id}} fährt einen zusammenhängenden Sektor, damit nicht jede Tour durch die ganze Stadt fährt`))})}
+        best.res.forEach(x=>{const T={id:++tid,list:x.l,e:x.e,late:false};tours.push(T);x.l.forEach(it=>addH(it.o,`Gleichmäßig nach Gebiet aufgeteilt: {T${T.id}} fährt einen zusammenhängenden Sektor, die Touren sind ähnlich lang`))})}
     });
-    improve();
+    improve(false);
   }catch(e){console.warn('Sektoraufteilung übersprungen',e)}
   return tours.map(T=>{const crew=T.e.crew||Math.max(...T.list.map(x=>x.k)),sehr=Math.max(0,...T.list.map(x=>x.ci.sehr)),kr=crew===1&&T.list.some(x=>x.ci.kraeftig);
     const req=crew===3?'3 Personen':crew===2?'2 Personen':'1 Person';
