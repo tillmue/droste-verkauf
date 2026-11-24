@@ -15,7 +15,7 @@
 :root{
   color-scheme:dark;
   --bg:#365443; --page:#111d17; --fill:rgba(0,0,0,.32); --card:#2b4338; --card2:#365443; --text:#f5f7f6; --mut:#b9ccc7; --line:rgba(255,255,255,.17);
-  --green:#2e9e4f; --red:#f0503c; --blue:#0071e3; --link:#7cc0ff; --panel:rgba(124,192,255,.16); --orange:#ffae42;
+  --green:#2e9e4f; --red:#f0503c; --green-f:#1c7f37; --green-t:#6fdc8c; --red-f:#cc3524; --red-t:#ff9484; --blue:#0071e3; --link:#7cc0ff; --panel:rgba(124,192,255,.16); --orange:#ffae42;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
@@ -42,7 +42,7 @@ body.authed #lang{display:none}
 .zx{position:fixed;top:calc(10px + env(safe-area-inset-top));right:14px;z-index:61;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:26px}
 .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 10px}
 .rtile{border:2px solid var(--line);background:var(--fill);color:var(--text);border-radius:14px;padding:20px 6px;font:inherit;font-size:17px;font-weight:700}.rtile.on{border-color:var(--blue);background:var(--panel)}
-.bdg{display:inline-block;background:var(--red);color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin-right:6px}
+.bdg{display:inline-block;background:var(--red-f);color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin-right:6px}
 .urg{border:1px solid var(--red)}.chkrow{display:flex;gap:10px;align-items:center;margin:10px 0;font-size:16px}.chkrow input{width:22px;height:22px}
 .rimg{width:100%;border-radius:10px;margin-top:8px;display:block}
 .row.pk{padding:5px 0}.row.pk .n{font-size:15px}.row.pk .chk{width:26px;height:26px;font-size:14px}
@@ -58,7 +58,7 @@ body.run header,body.run #nav{display:none}
 .btn.add{background:transparent;border:2px dashed var(--blue);color:var(--link)}
 .btn.sec{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.green{background:transparent;border:2px solid var(--green);color:#7fe0a0}
-.btn.green.go,.cheers .btn.green{background:var(--green);border:0;color:#fff}
+.btn.green.go,.cheers .btn.green{background:var(--green-f);border:0;color:#fff}
 .formc{border:1px solid rgba(0,113,227,.6)!important;background:rgba(0,113,227,.08)!important}
 .qtile{display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid var(--line);background:var(--fill);color:var(--text);border-radius:16px;padding:16px 8px;font:inherit;font-size:15px;font-weight:700}
 .qtile b{font-size:26px;line-height:1}
@@ -96,12 +96,12 @@ em.d{display:inline-block;width:6px;height:6px;border-radius:50%;font-style:norm
 .md>b{font-size:11px;text-align:right;padding-right:3px;font-weight:600}
 .md.out{opacity:.4}.md.today{background:rgba(255,214,10,.26)}.md.today>b{color:#ffd60a}.md.sel{background:var(--panel);box-shadow:inset 0 0 0 2px var(--blue)}.md.today.sel{background:rgba(255,214,10,.26)}
 .md i{display:block;font-style:normal;font-size:9px;line-height:1.25;padding:1px 2px;border:1px solid var(--link);border-radius:3px;overflow:hidden;white-space:nowrap;text-overflow:clip;color:var(--text)}
-.md i.c-x{border-color:#8e99a0}.md i.c-g{border-color:var(--green)}.md i.c-o{border-color:var(--orange)}.md i.c-t{border-color:#3fc7b0}.md i.c-v{border-color:#c06be8}
+.md i.c-x{border-color:#8e99a0}.md i.c-g{border-color:var(--green-t)}.md i.c-o{border-color:var(--orange)}.md i.c-t{border-color:#3fc7b0}.md i.c-v{border-color:#c06be8}
 .md em.more{font-style:normal;font-size:9px;color:var(--mut);padding-left:2px}
 .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .calhead button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:18px}
 .chk{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:none;color:#fff;font-size:15px;padding:0}
-.chk.on{background:var(--green);border-color:var(--green)}
+.chk.on{background:var(--green);border-color:var(--green-t)}
 .done{text-decoration:line-through;color:var(--mut)}
 .dim{opacity:.6}
 .sug{background:var(--panel);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}.sug small{color:var(--mut)}
@@ -124,7 +124,7 @@ details[open] summary::after{transform:rotate(90deg)}
 .wxd small{display:block;color:var(--mut);font-size:12px;line-height:1.35}
 .wxd .ic{font-size:30px;line-height:1.25}.wxd b{font-size:15px}
 .pk{display:flex;gap:10px;align-items:center;padding:8px 6px;font-size:15px}
-.pk input{width:22px;height:22px;accent-color:var(--green)}
+.pk input{width:22px;height:22px;accent-color:var(--green-t)}
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
 .dy{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid transparent;border-radius:12px;background:var(--fill);color:var(--text);padding:6px 0;font:inherit}
 .dy small{color:var(--mut);font-size:11px}.dy b{font-size:16px}.dy span{height:7px;display:flex;gap:2px}
@@ -172,8 +172,8 @@ input.t,textarea.t,select.t{width:100%;border:1px solid var(--line);border-radiu
 textarea.t{min-height:76px}
 .btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;margin:8px 0}
 .btn.sec{background:var(--card);color:var(--link);border:1px solid var(--line)}
-.btn.red{background:var(--red)}
-.btn.green{background:var(--green)}
+.btn.red{background:var(--red-f)}
+.btn.green{background:var(--green-f)}
 .hint{color:var(--mut);font-size:15px;margin:6px 2px 8px}
 .warn{background:rgba(255,174,66,.18);color:#ffd08a;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -181,7 +181,7 @@ th{background:var(--panel);color:var(--link);text-align:left;padding:8px 6px;fon
 td{padding:8px 6px;border-bottom:1px solid var(--line)}
 td.r,th.r{text-align:right}
 tr.tot td{font-weight:700;border-top:2px solid var(--text)}
-h2{font-size:20px;margin:18px 0 8px;letter-spacing:-.01em}
+h2{font-size:24px;font-weight:700;margin:20px 0 10px;letter-spacing:-.02em;line-height:1.2}
 h3{font-size:15px;margin:14px 0 4px;color:var(--mut);font-weight:600}
 .mini{display:flex;gap:8px}.mini>*{flex:1}
 nav{position:fixed;bottom:0;left:0;right:0;background:#0e1813;border-top:1px solid var(--line);display:flex;
@@ -193,16 +193,16 @@ nav button.on{color:var(--link)}
   padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .saved.show{opacity:.92}
 .edit{display:flex;gap:8px;margin-bottom:8px;align-items:center}.edit input{min-width:0}
-.edit .x{flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--fill);color:var(--red);font-size:20px}
+.edit .x{flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--fill);color:var(--red-t);font-size:20px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .tile{background:var(--fill);border-radius:16px;padding:12px 14px}
 .tile small{display:block;color:var(--mut);font-size:12px}
 .tile b{font-size:22px;letter-spacing:-.02em}
-.tile.g b{color:var(--green)}.tile.r b{color:var(--red)}.tile.b b{color:var(--link)}
+.tile.g b{color:var(--green-t)}.tile.r b{color:var(--red-t)}.tile.b b{color:var(--link)}
 .kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
 .kv:last-child{border-bottom:0}.kv span:last-child{font-weight:600}
 .kv.hl{font-weight:700;background:var(--panel);margin:0;padding:9px 10px;border-radius:8px}
-.neg{color:var(--red)}.pos{color:var(--green)}
+.neg{color:var(--red-t)}.pos{color:var(--green-t)}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hb{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}
 .hb .l{width:96px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -245,7 +245,7 @@ nav button.on{background:var(--green);color:#fff}
 .blk>details{border-top:0}.blk>details>summary{padding:0;color:var(--link);font-weight:700}.blk>details[open]>summary{margin-bottom:8px}
 .btn.no{background:transparent;border:2px solid var(--red);color:#ff8a7a}
 .blk.t-o{border-color:var(--orange)}.blk.t-o .blk-h h3{color:var(--orange)}
-.blk.t-r{border-color:var(--red)}
+.blk.t-r{border-color:var(--red-t)}
 .pill{display:inline-block;border-radius:999px;padding:3px 11px;font-size:13px;font-weight:700;background:rgba(124,192,255,.2);color:var(--link);white-space:nowrap}
 .pill.o{background:rgba(255,174,66,.22);color:var(--orange)}.pill.g{background:rgba(46,158,79,.25);color:#7fe0a0}.pill.r{background:rgba(240,80,60,.22);color:#ff8a7a}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -265,7 +265,7 @@ nav button.on{background:var(--green);color:#fff}
 .btn.sec{background:rgba(124,192,255,.14);color:var(--link);border:1px solid rgba(124,192,255,.4)}
 .btn.add{background:transparent;border:2px dashed rgba(124,192,255,.65);color:var(--link)}
 .btn.green{background:var(--green);border:0;color:#fff}
-.btn.red{background:var(--red);color:#fff}
+.btn.red{background:var(--red-f);color:#fff}
 .btn[data-pl$="cancel"]{background:transparent;border:2px solid var(--red);color:#ff8a7a}
 nav button.on{background:var(--blue);color:#fff}
 .tbanner{background:rgba(255,174,66,.15);color:var(--orange)}
@@ -274,7 +274,7 @@ nav button.on{background:var(--blue);color:#fff}
 .rowedit{flex:none;width:42px;height:42px;border-radius:13px;border:1px solid rgba(124,192,255,.4);background:rgba(124,192,255,.12);color:var(--link);display:flex;align-items:center;justify-content:center;padding:0}
 .thumb{flex:none;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--fill);color:var(--mut);display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.chk.del{display:flex;align-items:center;justify-content:center;border-color:var(--red);color:#ff8a7a;font-weight:700}
+.chk.del{display:flex;align-items:center;justify-content:center;border-color:var(--red-t);color:#ff8a7a;font-weight:700}
 .row .rowedit,.row .thumb{margin-left:8px}
 .seg.ptabs button{font-size:13px;padding:9px 1px}
 .standpick{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin:4px 0 14px;color:var(--text);font:inherit}
@@ -424,7 +424,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 H';
+const APP_VERSION='2026-11-25 I';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -856,7 +856,7 @@ function vErfassen(){
   ${blk('Liste eintippen oder diktieren',`<textarea class="t" id="qtext" rows="3" placeholder="10 blau 3 gelb 5 holzscheibe 4 bunde nobilis 4 41€ 3 25€">${esc(cur.qtext)}</textarea>
     <button class="btn" id="qParse" style="margin-bottom:6px">Auslesen</button>${parsed}`)}
   ${(sold.length||(e.extra||[]).length)?`<section class="blk"><div class="blk-h"><h3>Erfasst</h3></div><div class="card">${sold.map(prow).join('')}
-    ${(e.extra||[]).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div><div class="p">${exq(x)} × ${eur(x.price)}</div></div><div class="ctr"><b>${eur(x.price*exq(x))}</b><button data-delx="${x.id}" style="color:var(--red)">×</button></div></div>`).join('')}</div></section>`:''}
+    ${(e.extra||[]).map(x=>`<div class="row"><div><div class="n">${esc(pname(x.pid))}</div><div class="p">${exq(x)} × ${eur(x.price)}</div></div><div class="ctr"><b>${eur(x.price*exq(x))}</b><button data-delx="${x.id}" style="color:var(--red-t)">×</button></div></div>`).join('')}</div></section>`:''}
   ${dt('zaehl','Einzeln zählen',`<div class="card">${S.products.filter(p=>!p.free).map(prow).join('')}</div>`)}
   ${dt('preis','Einzelpreis mit Drehrad',`<div class="card pad">
     <select class="t" id="xp">${S.products.map(p=>`<option value="${p.id}" ${p.id===cur.xp?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
@@ -868,7 +868,7 @@ function vErfassen(){
     <label class="f">Lieferung oder Retoure (Stück) · Soll-Bestand: <b class="${sa.soll<0?'neg':''}">${sa.soll}</b></label>${sa.autoLief?`<div class="hint" style="margin:0 0 8px">${sa.autoLief} Stk. davon automatisch aus Logistik (geliefert). Hier nur zusätzliche Lieferungen oder Retouren eintragen.</div>`:''}
     <input class="t" id="mqty" inputmode="numeric" placeholder="Anzahl">
     <div class="mini" style="margin-top:8px"><button class="btn green" data-mv="L" style="margin:0">+ Lieferung</button><button class="btn sec" data-mv="R" style="margin:0">+ Retoure</button></div>
-    ${mv.map(m=>`<div class="row"><div class="n">${m.type==='L'?'Lieferung':'Retoure'}</div><div class="ctr"><b>${m.qty} Stk.</b><button data-delm="${m.id}" style="color:var(--red)">×</button></div></div>`).join('')}
+    ${mv.map(m=>`<div class="row"><div class="n">${m.type==='L'?'Lieferung':'Retoure'}</div><div class="ctr"><b>${m.qty} Stk.</b><button data-delm="${m.id}" style="color:var(--red-t)">×</button></div></div>`).join('')}
     <label class="f">Ist-Bestand heute (gezählt)</label>
     <input class="t" type="number" inputmode="numeric" id="rest" value="${esc(e.rest)}" placeholder="optional">
     <label class="f">Notiz zum Tag</label>
@@ -1087,12 +1087,12 @@ function freigaben(){
   const p=pendingNames();if(!p.length)return '';
   return `<h2 style="margin-top:4px">Freigaben</h2>${p.map(n=>`<div style="background:var(--fill);border-radius:14px;padding:14px;margin-bottom:10px"><div class="n" style="font-size:18px">${esc(n)}</div>
     <div class="p">${S.emailVerified&&S.emailVerified[n]?'E-Mail bestätigt':'E-Mail noch nicht bestätigt'}</div>
-    <div class="mini" style="margin-top:12px"><button class="btn green" data-appr="${esc(n)}" style="margin:0">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;color:var(--red)">Ablehnen</button></div></div>`).join('')}`;
+    <div class="mini" style="margin-top:12px"><button class="btn green" data-appr="${esc(n)}" style="margin:0">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;color:var(--red-t)">Ablehnen</button></div></div>`).join('')}`;
 }
 /* Neue Nutzer zur Freigabe: groß ganz oben auf der Übersicht */
 function freigabeBig(){
   const p=pendingNames();if(!p.length)return '';
-  return `<section class="blk t-o" style="padding:20px;border-width:2px"><div class="blk-h"><h3 style="font-size:24px">${p.length} Freigabe${p.length>1?'n':''} offen</h3></div>${p.map(n=>`<div style="background:var(--fill);border-radius:14px;padding:16px;margin-top:12px"><div class="n" style="font-size:22px">${esc(n)}</div><div class="p" style="font-size:15px">${S.emailVerified&&S.emailVerified[n]?'E-Mail bestätigt':'E-Mail noch nicht bestätigt'}</div><div class="mini" style="margin-top:14px"><button class="btn green" data-appr="${esc(n)}" style="margin:0;min-height:54px;font-size:18px">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;min-height:54px;font-size:18px;color:var(--red)">Ablehnen</button></div></div>`).join('')}</section>`;
+  return `<section class="blk t-o" style="padding:20px;border-width:2px"><div class="blk-h"><h3 style="font-size:24px">${p.length} Freigabe${p.length>1?'n':''} offen</h3></div>${p.map(n=>`<div style="background:var(--fill);border-radius:14px;padding:16px;margin-top:12px"><div class="n" style="font-size:22px">${esc(n)}</div><div class="p" style="font-size:15px">${S.emailVerified&&S.emailVerified[n]?'E-Mail bestätigt':'E-Mail noch nicht bestätigt'}</div><div class="mini" style="margin-top:14px"><button class="btn green" data-appr="${esc(n)}" style="margin:0;min-height:54px;font-size:18px">Freigeben</button><button class="btn sec" data-deny="${esc(n)}" style="margin:0;min-height:54px;font-size:18px;color:var(--red-t)">Ablehnen</button></div></div>`).join('')}</section>`;
 }
 function vProfil(){
   $('#app').innerHTML=`<h2 style="margin-top:4px">Profil</h2><div class="card pad">${accountBlock()}</div>${canApprove()?freigaben():''}${anwBlock()}`;
@@ -1373,7 +1373,7 @@ function delivBox(){
   const d=cur.dl||(cur.dl={addr:'',val:'',res:null,busy:false,err:''}),r=d.res;
   let out='';
   if(d.busy)out='<div class="hint">Strecke wird berechnet …</div>';
-  else if(d.err)out=`<div class="hint" style="color:var(--red)">${esc(d.err)}</div>`;
+  else if(d.err)out=`<div class="hint" style="color:var(--red-t)">${esc(d.err)}</div>`;
   else if(r){
     const belm=r.belm!=null?r.belm:/\bbelm\b|49191/i.test(d.addr),p=delivPrice(r.km,belm),vr=vatRate(),netto=Math.round(p/(1+vr/100)*100)/100,val=pf(d.val);
     out=`${r.addr?`<div class="p" style="color:var(--text)">Gefunden: <b>${esc(r.addr)}</b></div>${r.partial?'<div class="p" style="color:var(--orange)">Die Adresse wurde nur ungefähr gefunden. Bitte mit Postleitzahl und Ort eingeben.</div>':''}`:''}<div class="kv"><span>Strecke ab Hof (einfach, gefahren)</span><b>${String(r.km).replace('.',',')} km${r.min?' · ca. '+r.min+' Min':''}</b></div>
@@ -1609,7 +1609,7 @@ function taskDetail(){
   const f=cur.sdf||(cur.sdf={title:t.title,date:t.date||'',time:t.time||'',person:t.person||'',stand:t.stand||'',note:''}),sel=(a,b)=>a===b?'selected':'';
   const by=t.assignedBy||t.createdBy,pu=t.photo?imgUrl(t.photo):'';
   return `${canEdit?`<input class="t" id="sd-title" value="${esc(f.title)}" style="font-weight:700;font-size:20px">`:`<div class="n" style="font-size:21px">${esc(trF(t,'title'))}</div>`}
-    <div class="p" style="margin:6px 0 0">${by?'Von '+esc(by):''}${t.done?' · <b style="color:var(--green)">erledigt</b>':''}${canMove?'':` · ${t.person?esc(t.person):'Offen'}${t.date?' · '+esc(wdD(t.date)):''}${t.stand?' · '+esc(standNm(t.stand)):''}`}</div>
+    <div class="p" style="margin:6px 0 0">${by?'Von '+esc(by):''}${t.done?' · <b style="color:var(--green-t)">erledigt</b>':''}${canMove?'':` · ${t.person?esc(t.person):'Offen'}${t.date?' · '+esc(wdD(t.date)):''}${t.stand?' · '+esc(standNm(t.stand)):''}`}</div>
     ${canMove?`<div class="mini" style="margin-top:12px"><input class="t" type="date" id="sd-date" value="${esc(f.date)}" style="min-width:0"><input class="t" type="time" id="sd-time" value="${esc(f.time)}" style="min-width:0"></div>
     <div class="mini" style="margin-top:10px">${give?`<select class="t" id="sd-person"><option value="">Offen (jeder kann übernehmen)</option>${S.people.map(p=>`<option ${sel(p,f.person)}>${esc(p)}</option>`).join('')}</select>`:''}
     <select class="t" id="sd-stand">${standOpts(f.stand)}</select></div>`:''}
@@ -1728,7 +1728,7 @@ function vGate(){
   document.body.classList.add('gate');
   $('#app').innerHTML=`<h2 style="margin-top:4px">Guten Morgen, ${esc(me)}</h2><div class="hint" style="margin-top:-4px">${fmtD(g)}</div>
     <section class="blk"><div class="blk-h"><h3>Bist du heute da?</h3></div>
-      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'<b style="color:var(--red)">Es ist nach 9:00 Uhr.</b> Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
+      <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'<b style="color:var(--red-t)">Es ist nach 9:00 Uhr.</b> Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
       ${meal('fr','locf','Frühstück')}${meal('mi','locm','Mittagessen')}
       <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button>${ok?'':'<div class="p" style="text-align:center;margin-top:8px">Bitte Frühstück und Mittagessen beantworten'+((o.fr===true&&!o.locf)||(o.mi===true&&!o.locm)?' und den Ort wählen':'')+'.</div>'}</section>
     <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
@@ -2624,7 +2624,7 @@ function vPacken(t){
   const nm=l=>l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t);
   const rev=stops.map((s,i)=>({s,nr:i+1})).reverse(),isTree=l=>['Baum','Deko','Laternenbaum'].includes(l.c);
   const labels=`<div class="card pad"><div class="ihead"><b>1. Etiketten schreiben</b>${infoBtn('pklabel')}</div>${infoBox('pklabel','Eine Zeile pro Baum, in der Reihenfolge zum Schreiben: der letzte Stopp zuerst. Ø = Stammdurchmesser, X = Baum wird gebohrt. Schreibe die Etiketten der Reihe nach und lege sie zu den Bäumen.')}
-    ${rev.map(({s,nr})=>labelItems(s).map(it=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(it.text)}</b>${it.x?' <b style="color:var(--red)">X</b>':''}</span><span class="p">Stopp ${nr}</span></div>`).join('')).join('')||'<div class="p">Keine Bäume.</div>'}</div>`;
+    ${rev.map(({s,nr})=>labelItems(s).map(it=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(it.text)}</b>${it.x?' <b style="color:var(--red-t)">X</b>':''}</span><span class="p">Stopp ${nr}</span></div>`).join('')).join('')||'<div class="p">Keine Bäume.</div>'}</div>`;
   const sp=rev.map(({s,nr})=>{const ds=[...(s.lines||[]).filter(l=>isTree(l)&&l.d).map(l=>`${lineLabel(l)}: ${l.d}`),s.note].filter(Boolean);return ds.length?`<div style="margin-bottom:8px"><b ${s.orderId?`data-pl="ordopen" data-v="${s.orderId}" style="cursor:pointer;color:var(--link)"`:''}>${nr}. ${esc(s.name)}</b><div class="p" style="color:var(--orange)">${ds.map(esc).join('<br>')}</div></div>`:''}).join('');
   const special=sp?`<div class="card pad"><div class="n">Sonderwünsche und Hinweise</div><div class="hint" style="margin-top:2px">Zum Beispiel Stamm vorher passend sägen.</div>${sp}</div>`:'';
   const lastStop={};
@@ -2634,12 +2634,12 @@ function vPacken(t){
       <div class="row pk" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(lab)}</div><span class="p">Etikett ${u.nr}${u.bohren?' · X':''}</span></div>
       ${u.line.d?`<div class="p" style="color:var(--orange)"><b>${esc(u.line.d)}</b></div>`:''}
       <div class="pkrow">${u.bohren?chk(u,'b','Gebohrt'):''}${chk(u,'a','Geladen')}</div></div>`}).join('');
-  const fin=t.packed?`<div class="card pad" style="border:2px solid var(--green)"><div class="n" style="color:var(--green)">✓ Gepackt${t.packedBy?' von '+esc(t.packedBy):''}${t.packedAt?' um '+hm(t.packedAt):''}</div><button class="btn sec" data-pl="pkreopen" data-v="${t.id}" style="margin:8px 0 0">Wieder öffnen</button></div>`
+  const fin=t.packed?`<div class="card pad" style="border:2px solid var(--green)"><div class="n" style="color:var(--green-t)">✓ Gepackt${t.packedBy?' von '+esc(t.packedBy):''}${t.packedAt?' um '+hm(t.packedAt):''}</div><button class="btn sec" data-pl="pkreopen" data-v="${t.id}" style="margin:8px 0 0">Wieder öffnen</button></div>`
     :`<button class="btn green go" data-pl="pkdone" data-v="${t.id}" style="margin-top:14px">Packen abgeschlossen</button>`;
   $('#app').innerHTML=`<button class="btn sec" data-pl="pkclose" style="margin-top:4px">‹ Zurück zur Tour</button>
-    <h2 style="margin-top:4px"><span class="tdot" style="background:${tcol(t)}"></span>Packen: ${tourName(t)}${t.packed?' <span style="color:var(--green)">✓</span>':''}</h2>
+    <h2 style="margin-top:4px"><span class="tdot" style="background:${tcol(t)}"></span>Packen: ${tourName(t)}${t.packed?' <span style="color:var(--green-t)">✓</span>':''}</h2>
     ${t.vehicle?`<div class="p">Fahrzeug: <span class="who">${esc(t.vehicle)}</span>${t.trailer?' · Anhänger: <span class="who">'+esc(t.trailer)+'</span>':''}</div>`:(plan?`<select class="t" data-tveh="${t.id}" style="margin:4px 0"><option value="">Fahrzeug zuweisen</option>${vlist(t.date).map(v=>`<option>${esc(v)}</option>`).join('')}</select>`:'<div class="p">Fahrzeug offen</div>')}
-    <div class="card pad"><div class="kv"><span>Besetzung (Vorschlag)</span><b>${crewHint(t)}</b></div><div class="kv"><span>Bäume</span><b>${units.reduce((a,u)=>a+u.mult,0)}</b></div>${nBoh?`<div class="kv"><span>Bäume bohren</span><b style="color:var(--red)">${nBoh}</b></div>`:''}
+    <div class="card pad"><div class="kv"><span>Besetzung (Vorschlag)</span><b>${crewHint(t)}</b></div><div class="kv"><span>Bäume</span><b>${units.reduce((a,u)=>a+u.mult,0)}</b></div>${nBoh?`<div class="kv"><span>Bäume bohren</span><b style="color:var(--red-t)">${nBoh}</b></div>`:''}
       ${Object.entries(stand).map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><b>${v}</b></div>`).join('')}<div class="kv"><span>Ersatzständer (Reserve)</span><b>${res}</b></div></div>
     ${special}${labels}
     <h3 style="margin-bottom:2px">2. Laden</h3>
@@ -2659,7 +2659,7 @@ function orderCard(o){
     ${b?`<div style="margin-top:6px"><span class="bdg">Baum bohren${b>1?' ×'+b:''}</span></div>`:''}
     ${sv?`<div class="p">Service: ${esc(sv)}</div>`:''}
     <select class="t" data-oplace="${o.id}" style="margin-top:8px"><option value="" ${!o.place?'selected':''}>Ort der Aufstellung offen</option><option value="drinnen" ${o.place==='drinnen'?'selected':''}>Drinnen</option><option value="draußen" ${o.place==='draußen'?'selected':''}>Draußen</option></select>
-    <div class="mini" style="margin-top:8px">${o.status==='erledigt'?'<div class="p" style="color:var(--green)"><b>Geliefert</b></div>':o.status==='geplant'?`<button class="btn sec" data-pl="ordunplan" data-v="${o.id}" style="margin:0">Aus Tour nehmen</button>`:`<button class="btn" data-pl="ordplan" data-v="${o.id}" style="margin:0">In Tour</button>`}</div></div>`;
+    <div class="mini" style="margin-top:8px">${o.status==='erledigt'?'<div class="p" style="color:var(--green-t)"><b>Geliefert</b></div>':o.status==='geplant'?`<button class="btn sec" data-pl="ordunplan" data-v="${o.id}" style="margin:0">Aus Tour nehmen</button>`:`<button class="btn" data-pl="ordplan" data-v="${o.id}" style="margin:0">In Tour</button>`}</div></div>`;
 }
 const toRad=d=>d*Math.PI/180;
 const havKm=(a,b)=>{const R=6371,dl=toRad(b.lat-a.lat),dg=toRad(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
@@ -3125,7 +3125,7 @@ function planBox(){
     <div class="card">${cands.map(x=>`<div class="row" data-ordrow="${x.o.id}"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n" data-pl="ordopen" data-v="${x.o.id}" style="cursor:pointer;color:var(--link)">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div></div></div><button class="rowedit" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Weitere Aktionen" style="margin-left:6px">⋯</button></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div></details>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button></div>
     <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`${nSel===cands.length?'Alle '+cands.length:nSel} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
-    ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red)">${esc(pd.err)}</div>`:''}</div>
+    ${pd.msg?`<div class="hint">${pd.msg}</div>`:''}${pd.err?`<div class="hint" style="color:var(--red-t)">${esc(pd.err)}</div>`:''}</div>
     ${res?`<h3>Vorschlag (${res.tours.length} ${res.tours.length===1?'Tour':'Touren'})</h3><div class="hint">Du kannst einzelne Stopps unter "Verschieben nach …" in eine andere Tour legen, Touren fixieren und den Rest neu rechnen lassen.</div><button class="btn sec" data-pl="plrest" style="margin:0 0 8px" ${pd.busy||res.tours.every(t=>t.applied||(pd.locks&&pd.locks[t.bid]))?'disabled':''}>Rest neu berechnen (ohne fixierte Touren)</button>${res.warn?`<div class="hint" style="color:var(--orange)">${esc(res.warn)}</div>`:''}${fplan(res)}${res.missing.length?`<div class="hint" style="color:var(--orange)">Ohne Standort, nicht eingeplant: ${res.missing.map(o=>esc(o.name)).join(', ')}</div>`:''}${res.tours.map(tourCard2).join('')}${res.tours.some(t=>!t.applied)?`<button class="btn" data-pl="planok" data-v="all">Alle Touren übernehmen</button>`:''}`:''}`;
 }
 const crewHintTxt=c=>c;
@@ -3190,7 +3190,7 @@ function bfExtra(f){
 }
 function bestCard(b){
   const tr=b.pos.reduce((a,p)=>a+(numOf(p.anzahl)||0),0),srv=[['sk','Ständer klein'],['sg','Ständer groß'],['auf','Aufstellen'],['lie','Lieferung'],['abh','Abholung']].filter(([k])=>b.leist[k].jn==='ja').map(x=>x[1]);
-  return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.status==='uebernommen'?'<b style="color:var(--green)">In Planung</b>':'Aufgenommen'}</span></div>
+  return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:8px"><div class="n">${esc(b.name)}</div><span class="p">${b.status==='uebernommen'?'<b style="color:var(--green-t)">In Planung</b>':'Aufgenommen'}</span></div>
     <div class="p">${b.datum?wdD(b.datum):'Termin offen'}${b.zeitwunsch?' · '+esc(b.zeitwunsch):b.tageszeit?' · '+esc(b.tageszeit):''}${b.phone?' · '+esc(b.phone):''}</div>
     <div class="p">${tr?tr+' Bäume':'Keine Bäume'}${srv.length?' · '+srv.join(', '):''}${b.gesamt?' · '+esc(b.gesamt):''}</div>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="bfedit" data-v="${b.id}" style="margin:0">Bearbeiten</button></div></div>`;
@@ -3508,7 +3508,7 @@ function tourCard(t,plan){
   const svSum=st.reduce((a,s)=>a+svcMin(s),0);
   const sm=(t.legs&&t.legs.length)?planSim(t):null;
   const dur=st.length?(sm?`Abfahrt ca. ${hmMin(up5(sm.start))}, zurück am Hof ca. ${hmMin(up5(sm.home))} (${fmtMin(sm.dur)})</div><div class="p">Fahrt ${fmtMin(sm.drive)} · Aufenthalt ${fmtMin(sm.stay)} · Pausen ${sm.pb} Min${sm.wait?' · Warten '+fmtMin(sm.wait):''}</div><div class="p">${brkTxt(sm.road,t,sm.home)}`:`Stoppzeiten ca. ${fmtMin(svSum)}, Fahrzeit noch offen`):'';
-  const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green)">Tour beendet</b></div>`:'';
+  const stat=stt==='gestartet'&&t.paused?`<div class="p"><b style="color:var(--orange)">Tour pausiert</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='gestartet'?`<div class="p"><b style="color:var(--orange)">Tour läuft</b> · gestartet um ${hm(t.startedAt)}</div>`:stt==='beendet'?`<div class="p"><b style="color:var(--green-t)">Tour beendet</b></div>`:'';
   const ps=!stt?packStatus(t):null;
   const orange=v=>`<span style="color:var(--orange);font-weight:600">${v}</span>`,sl=t.slots||[];
   const head=`<div class="thead" data-pl="ttog" data-v="${t.id}"><span class="chev">${open?'▴':'▾'}</span><div class="n" style="font-size:18px"><span class="tdot" style="background:${tcol(t)}"></span>${tourName(t)}</div>
@@ -3588,7 +3588,7 @@ function vLieferungen(){
     const sseg=`<div class="seg stg">${[['plan','Planung',cnt.plan],['pack','Packen',cnt.pack],['run','In Auslieferung',cnt.run],['done','Erledigt',cnt.done]].map(([k,l,n])=>`<button class="${stage===k?'on':''}" data-pl="lstage" data-v="${k}">${l}<span class="sc">${n||'0'}</span></button>`).join('')}</div>`;
     let inner;
     const list=lt.filter(t=>stg(t)===stage);
-    if(stage==='plan')inner=dupBanner(day)+sizeBanner(day)+(list.length?planGaps(day,list):'')+auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>'+(isAdmin()?'<div style="text-align:center;margin-top:14px"><button class="linkb" data-pl="resettest" style="color:var(--red)">Diesen Tag zurücksetzen</button></div>':'');
+    if(stage==='plan')inner=dupBanner(day)+sizeBanner(day)+(list.length?planGaps(day,list):'')+auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>'+(isAdmin()?'<div style="text-align:center;margin-top:14px"><button class="linkb" data-pl="resettest" style="color:var(--red-t)">Diesen Tag zurücksetzen</button></div>':'');
     else inner=(list.map(t=>tourCard(t,plan)).join('')||`<div class="hint">${stage==='pack'?'Keine Touren zum Packen.':stage==='run'?'Keine Touren in Auslieferung.':'Noch nichts erledigt.'}</div>`)+(stage==='pack'?packSummary(day):'')
     dayBlock=dayTitle+sseg+inner;
   }else dayBlock=dayTitle+(on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`)+(plan&&kind!=='abh'?packSummary(day):'')+add;
@@ -3888,7 +3888,7 @@ function vDaten(){
   ${isAdmin()&&CLOUD?(()=>{const ok=S.people.filter(n=>S.approved[n]!==false&&(S.pushOn||{})[n]);return `<div class="hint">Benachrichtigungen an: ${ok.length} von ${S.people.filter(n=>S.approved[n]!==false).length}. Wer „aus“ hat, bekommt keine Erinnerung und keine Meldungen. Die Person muss im Profil Benachrichtigungen aktivieren.</div>`})():''}
   ${appUsers()}
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  <input class="t" id="team-q" placeholder="Person suchen" value="${esc(cur.teamq||'')}" autocomplete="off" style="margin:10px 0 6px">${S.people.map((p,i)=>`<details data-det="pe-${i}" class="pers" data-nm="${esc(p.toLowerCase())}" ${cur.det['pe-'+i]?'open':''} ${cur.teamq&&!p.toLowerCase().includes(String(cur.teamq).toLowerCase())?'style="display:none"':''}><summary><span class="pn">${esc(p)}</span><span class="p">${esc(ROLE[roleOf(p)]||roleOf(p))}</span>${isAdmin()&&CLOUD?`<span class="p" style="font-size:12px;color:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}">${(S.pushOn||{})[p]?'Push an':'Push aus'}</span><span class="dot" style="background:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}"></span>`:''}</summary><div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}${isAdmin()&&CLOUD?((S.pushOn||{})[p]?' · <span style="color:var(--green)">Benachrichtigung: an</span>':' · <span style="color:var(--red)">Benachrichtigung: aus'+(((S.pushErr||{})[p])?' ('+esc(S.pushErr[p])+')':'')+'</span>'):''}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${isAdmin()&&CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst immer (Frühstück und Mittag)</span><select class="t" style="width:170px" data-palways="${i}"><option value="">nein</option><option value="1" ${(S.pAlways||{})[p]?'selected':''}>ja, jeden Tag</option></select></div>`:''}${isAdmin()&&CLOUD&&(S.userIds||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Benachrichtigung testen</span><button class="btn sec" data-pl="pushtest" data-v="${esc(p)}" style="margin:0;width:170px">Testnachricht senden</button></div>`:''}${permBlock(p,i)}</details>`).join('')}
+  <input class="t" id="team-q" placeholder="Person suchen" value="${esc(cur.teamq||'')}" autocomplete="off" style="margin:10px 0 6px">${S.people.map((p,i)=>`<details data-det="pe-${i}" class="pers" data-nm="${esc(p.toLowerCase())}" ${cur.det['pe-'+i]?'open':''} ${cur.teamq&&!p.toLowerCase().includes(String(cur.teamq).toLowerCase())?'style="display:none"':''}><summary><span class="pn">${esc(p)}</span><span class="p">${esc(ROLE[roleOf(p)]||roleOf(p))}</span>${isAdmin()&&CLOUD?`<span class="p" style="font-size:12px;color:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}">${(S.pushOn||{})[p]?'Push an':'Push aus'}</span><span class="dot" style="background:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}"></span>`:''}</summary><div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}${isAdmin()&&CLOUD?((S.pushOn||{})[p]?' · <span style="color:var(--green-t)">Benachrichtigung: an</span>':' · <span style="color:var(--red-t)">Benachrichtigung: aus'+(((S.pushErr||{})[p])?' ('+esc(S.pushErr[p])+')':'')+'</span>'):''}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${isAdmin()&&CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst immer (Frühstück und Mittag)</span><select class="t" style="width:170px" data-palways="${i}"><option value="">nein</option><option value="1" ${(S.pAlways||{})[p]?'selected':''}>ja, jeden Tag</option></select></div>`:''}${isAdmin()&&CLOUD&&(S.userIds||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Benachrichtigung testen</span><button class="btn sec" data-pl="pushtest" data-v="${esc(p)}" style="margin:0;width:170px">Testnachricht senden</button></div>`:''}${permBlock(p,i)}</details>`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
@@ -3974,7 +3974,7 @@ function vDaten(){
   <h2>Beispieldaten</h2>
   <div class="card pad"><div class="hint">Zum Ausprobieren: pro Benutzer 2 Aufgaben pro Tag bis 24.12., dazu offene Aufgaben, Saison-Termine und Lieferungen. Für neue Benutzer den Knopf später noch einmal tippen. Beispiele sind mit "Beispiel" oder "(offen)" gekennzeichnet und lassen sich mit einem Tipp entfernen.</div>
   <button class="btn sec" id="bDemoOn">Beispieldaten erzeugen</button>
-  <button class="btn sec" id="bDemoOff" style="color:var(--red)">Beispieldaten entfernen</button></div>
+  <button class="btn sec" id="bDemoOff" style="color:var(--red-t)">Beispieldaten entfernen</button></div>
   <h2>Gefahrenzone</h2>
   <div class="card pad"><button class="btn red" id="reset">Alle Daten löschen</button></div>`;
 }
