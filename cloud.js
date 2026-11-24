@@ -194,8 +194,8 @@ function initCloud(FB) {
     unsubs.push(FB.onSnapshot(FB.collection(db, 'users'), snap => {
       const arr = []; snap.forEach(ds => arr.push({ id: ds.id, ...ds.data() }));
       arr.sort((a, b) => (a.created || 0) - (b.created || 0));
-      S.people = arr.map(u => u.name); S.pstand = {}; S.pbf = {}; S.traits = {}; S.roles = {}; S.approved = {}; S.userIds = {}; S.emails = {}; S.emailVerified = {}; S.perms = {}; S.pushOn = {};
-      arr.forEach(u => { if ((u.fcmTokens || []).length) S.pushOn[u.name] = true; S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emails[u.name] = u.email || ''; S.emailVerified[u.name] = u.emailVerified === true; if (u.perms) S.perms[u.name] = u.perms; if (u.stand) S.pstand[u.name] = u.stand; if (u.bfHof) S.pbf[u.name] = true; if (u.kraft || u.lizenz) S.traits[u.name] = { kraft: u.kraft || 'normal', lizenz: u.lizenz || '' }; });
+      S.people = arr.map(u => u.name); S.pstand = {}; S.pbf = {}; S.traits = {}; S.roles = {}; S.approved = {}; S.userIds = {}; S.emails = {}; S.emailVerified = {}; S.perms = {}; S.pushOn = {}; S.pushErr = {};
+      arr.forEach(u => { if ((u.fcmTokens || []).length) S.pushOn[u.name] = true; else if (u.pushErr) S.pushErr[u.name] = u.pushErr; S.roles[u.name] = u.role; S.approved[u.name] = u.approved === true; S.userIds[u.name] = u.id; S.emails[u.name] = u.email || ''; S.emailVerified[u.name] = u.emailVerified === true; if (u.perms) S.perms[u.name] = u.perms; if (u.stand) S.pstand[u.name] = u.stand; if (u.bfHof) S.pbf[u.name] = true; if (u.kraft || u.lizenz) S.traits[u.name] = { kraft: u.kraft || 'normal', lizenz: u.lizenz || '' }; });
       T.softRender();
     }, err => console.error('users', err)));
     ['tasks', 'events', 'notes', 'penalties', 'products', 'stands', 'settings', 'packs', 'reports', 'stats', 'questions'].forEach(listen);
@@ -212,12 +212,17 @@ function initCloud(FB) {
   /* Push: Token holen und am Profil speichern (iPhone nur, wenn die App auf dem Home-Bildschirm liegt) */
   let pushChecked = false;
   const curLang = () => { try { return (['ro', 'pt'].includes(localStorage.getItem('droste-lang')) ? localStorage.getItem('droste-lang') : 'de'); } catch (e) { return 'de'; } };
+  /* Grund merken, warum ein Gerät keine Benachrichtigungen bekommen kann (Admin sieht ihn im Team) */
+  const pushNote = (msg, ua) => FB.updateDoc(FB.doc(db, 'users', uid), { pushErr: String(msg || '').slice(0, 70), pushErrAt: Date.now(), pushUa: String(ua || '').slice(0, 90) }).catch(() => {});
   async function saveToken() {
+    try { return await saveToken0(); } catch (e) { pushNote(e && (e.code || e.message), navigator.userAgent); throw e; }
+  }
+  async function saveToken0() {
     if (!(FB.isSupported && FB.getMessaging && await FB.isSupported())) throw new Error('unsupported');
     const reg = await navigator.serviceWorker.ready;
     const token = await FB.getToken(FB.getMessaging(app), { vapidKey: window.FIREBASE_CONFIG.vapidKey, serviceWorkerRegistration: reg });
     if (!token) throw new Error('no-token');
-    await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayUnion(token), lang: curLang() });
+    await FB.updateDoc(FB.doc(db, 'users', uid), { fcmTokens: FB.arrayUnion(token), lang: curLang(), pushErr: '', pushErrAt: 0 });
     try { localStorage.setItem('droste-fcm', token); } catch (e) {}
     return token;
   }

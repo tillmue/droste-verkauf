@@ -433,3 +433,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **22.11.2026 N:** Gruppen im Planer: groß (ab 3,5 m) strikt getrennt; klein (bis 2,5) und mittel (bis <3,5, u.a. bis 2,8 m) dürfen sich eine Tour teilen (Kosten entscheiden). Ersetzt die Dreiertrennung aus J.
 
 - **22.11.2026 O:** Zurück zur strikten Dreitrennung (klein/mittel/groß nie gemischt), weil beim Mischen keine reine Kleine-Bäume-Tour mehr entstand (N verworfen).
+
+- **24.11.2026 A:** Push-Diagnose: saveToken merkt Fehlergrund im Profil (users.pushErr/pushErrAt/pushUa), Team (Admin) zeigt bei "Benachrichtigung: aus" den Grund. Befund 24.11.: alle 22 gespeicherten Tokens gültig (FCM dry_run), 17 Nutzer ohne Token.
