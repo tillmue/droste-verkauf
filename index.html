@@ -453,7 +453,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-26 A';
+const APP_VERSION='2026-11-26 B';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -841,7 +841,7 @@ function blockify(){
     }
   }
   document.querySelectorAll('#app .btn').forEach(b=>{const t=(b.textContent||'').trim();
-    if(/^(Abbrechen|Verwerfen|Zurücksetzen|Löschen)/.test(t)&&!b.classList.contains('red')){b.classList.remove('sec');b.classList.add('no')}});
+    if(/^(Zurücksetzen|Löschen)/.test(t)&&!b.classList.contains('red')){b.classList.remove('sec');b.classList.add('no')}});
   /* Preise: Blöcke in Abschnitte gliedern */
   if(tab==='preise'&&!document.body.classList.contains('run')){
     const G=[['Rechner',['Netto']],['Bäume',['Nordmann nach Etikett','Weitere']],['Schnittgrün',['Nordmanngrün','Nobilisgrün','Kiefergrün']],['Zubehör und Service',['Topfbäume und Ständer','Lieferung und Service']],['Zahlung',['Bezahlen per PayPal']]];
