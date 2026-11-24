@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-24 D';
+const APP_VERSION='2026-11-24 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2927,6 +2927,25 @@ function planGaps(day,list){
   const names=open.map(o=>esc(o.name)+(orderPickup(o)?' (Abholung)':'')).slice(0,12).join(', ');
   return `<div class="warn" style="margin:10px 0"><b>${open.length} ${open.length===1?'Auftrag ist':'Aufträge sind'} für diesen Tag noch in keiner Tour:</b> ${names}${open.length>12?' …':''}</div>`
 }
+/* Prüfliste Baumgrößen: Aufträge, bei denen Größe oder Ständer unsicher sind (vor dem Planen kurz prüfen) */
+function sizeIssues(o){
+  const P=o.positions||[],g=[],aufst=/aufstellen/i.test(orderService(o)),stand=P.some(p=>p.cat==='Ständer'&&/gro(ß|ss)|platte/i.test((p.text||'')+' '+(p.detail||'')));
+  P.filter(p=>['Baum','Deko','Laternenbaum'].includes(p.cat)).forEach(p=>{
+    const L=+p.len||0,t=((p.text||'')+' '+(p.detail||'')).replace(/,/g,'.');
+    if(!L){g.push('Größe fehlt');return}
+    if(L<1||L>8)g.push('Größe unplausibel ('+mFmt(L)+')');
+    const m=t.match(/(\d+(?:\.\d+)?)\s*(?:m\s*)?(?:-|–|bis)\s*(\d+(?:\.\d+)?)\s*m\b/i);
+    if(m){const lo=+m[1],hi=+m[2];if([2.5,3.5,4].some(b=>lo<=b&&b<hi))g.push('Spanne '+mFmt(lo)+' bis '+mFmt(hi)+', gerechnet mit '+mFmt(hi))}
+    if(/\b\d{2,3}\s*\/\s*\d{2,3}\b/.test(t))g.push('Zentimeter-Angabe');
+    if(L>=3.5&&aufst&&!stand)g.push('großer Baum mit Aufstellen, aber kein großer Ständer');
+  });
+  return [...new Set(g)];
+}
+function sizeBanner(day){
+  const L=S.orders.filter(o=>!o.deleted&&o.status!=='erledigt'&&inWindow(o,day)&&!orderPickup(o)).map(o=>({o,g:sizeIssues(o)})).filter(x=>x.g.length);
+  if(!L.length)return '';
+  return `<div class="warn" style="margin:10px 0"><b>${L.length} ${L.length===1?'Auftrag':'Aufträge'} mit unsicherer Größe, bitte vor dem Planen prüfen:</b><br>${L.slice(0,10).map(x=>esc(x.o.name)+' ('+esc(x.g[0])+')').join('<br>')}${L.length>10?'<br>…':''}</div>`
+}
 function dupBanner(day){
   const {dups,orph}=dupStops(day),n=dups.length+orph.length;if(!n)return '';
   return `<div class="warn" style="margin:10px 0"><b>${dups.length?dups.length+' doppelte':''}${dups.length&&orph.length?' und ':''}${orph.length?orph.length+' verwaiste':''} Stopps an diesem Tag.</b> Derselbe Auftrag steht in zwei Touren oder der Auftrag existiert nicht mehr.<button class="btn sec" data-pl="tdedupe" data-v="${day}" style="margin:8px 0 0">Duplikate bereinigen</button></div>`
@@ -3503,7 +3522,7 @@ function vLieferungen(){
     const sseg=`<div class="seg stg">${[['plan','Planung',cnt.plan],['pack','Packen',cnt.pack],['run','In Auslieferung',cnt.run],['done','Erledigt',cnt.done]].map(([k,l,n])=>`<button class="${stage===k?'on':''}" data-pl="lstage" data-v="${k}">${l}<span class="sc">${n||'0'}</span></button>`).join('')}</div>`;
     let inner;
     const list=lt.filter(t=>stg(t)===stage);
-    if(stage==='plan')inner=dupBanner(day)+(list.length?planGaps(day,list):'')+auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>';
+    if(stage==='plan')inner=dupBanner(day)+sizeBanner(day)+(list.length?planGaps(day,list):'')+auftraegeBody(day)+(list.length?`<h3>Touren (${list.length})</h3>`:'')+list.map(t=>tourCard(t,plan)).join('')+(list.length?`<button class="btn green" data-pl="topackall" style="margin-top:8px">Planung fertig: alle Touren zum Packen</button>`:'')+'<button class="btn add" data-pl="tournew" style="margin-top:8px">+ Neue Tour für diesen Tag</button>';
     else inner=(list.map(t=>tourCard(t,plan)).join('')||`<div class="hint">${stage==='pack'?'Keine Touren zum Packen.':stage==='run'?'Keine Touren in Auslieferung.':'Noch nichts erledigt.'}</div>`)+(stage==='pack'?packSummary(day):'')
     dayBlock=dayTitle+sseg+inner;
   }else dayBlock=dayTitle+(on(day).map(t=>tourCard(t,plan)).join('')||`<div class="hint">${empty}</div>`)+(plan&&kind!=='abh'?packSummary(day):'')+add;
