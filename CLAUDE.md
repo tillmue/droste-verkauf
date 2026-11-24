@@ -453,3 +453,5 @@ Prüfmethode: statisch (alle `data-pl` haben Handler, ESLint no-undef ohne Funde
 - **25.11.2026 C:** Planungsansicht ohne Fahrer-/Besetzungsempfehlung (Tills Wunsch: übersichtlich): kein Fahrer-Auswahlfeld im Planungsfeld, keine Teamgröße/Fahrer-Slots in Vorschlagskarten, keine Warnungen zu Personen/Fahrern, keine Besetzung im Infotext, gespeicherte Touren zeigen Fahrer/Beifahrer/Packer/Fahrzeug und die Besetzungsempfehlung erst ab "Zum Packen" (toPack).
 
 - **25.11.2026 D:** Planer: braucht eine Gruppe mehrere Touren, werden die Aufträge in gleich lange Sektoren geschnitten (Gewicht je Stopp = Standzeit + Fahrt vom Hof, Ziel: gleiche Tourdauer, danach Kosten) statt eine volle und eine fast leere Tour; danach nur noch Umordnen innerhalb der Touren (improve(false)). Test 25.11.: klein 10 Stopps 3h51 und 9 Stopps 4h04 statt 16 und 3; groß 4h08 und 4h19.
+
+- **25.11.2026 E:** Aufteilung nicht erzwungen: der Planer nimmt je Gruppe die kleinste Tourzahl, bei der keine Tour länger als ca. 5,5 Stunden wird (bestSplit für 1..m Touren), sonst bleibt es bei der Zahl aus dem ersten Durchlauf. Test: 27.11. kleine Bäume eine Tour (6 Stopps), 25./26.11. zwei.

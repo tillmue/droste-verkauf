@@ -407,7 +407,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 D';
+const APP_VERSION='2026-11-25 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -2804,16 +2804,21 @@ function buildToursV2(orders,dep,P){
       /* Gleichmäßig aufteilen: Sektoren nach Himmelsrichtung, gleich viel Arbeit je Tour (Fahrt zum Gebiet plus Standzeiten), nicht eine volle und eine fast leere Tour */
       const ang=x=>Math.atan2(x.lng-dep.lng,x.lat-dep.lat),sorted=its.slice().sort((a,b)=>ang(a)-ang(b)),n=sorted.length,m=G.length;
       const wt=x=>(x.svc2||15)+tmin(dep,x,P),score=ts=>Math.max(...ts.map(x=>x.e.dur))+0.02*ts.reduce((a,x)=>a+x.e.cost+x.e.crew*NEWTOUR,0);
-      const cur=score(G);let best=null;
+      const cur=score(G);
       const feas=c=>{let e=evalTour(c,P);if(e)return {l:c,e};const w=c.slice().sort((a,b)=>((a.we==null)-(b.we==null))||((a.we||0)-(b.we||0)));e=evalTour(w,P);return e?{l:w,e}:null};
-      for(let r=0;r<n;r++){
-        const rot=sorted.slice(r).concat(sorted.slice(0,r)),tot=rot.reduce((a,x)=>a+wt(x),0),ch=[[]];let cum=0;
-        for(const it of rot){const w=wt(it);if(ch.length<m&&ch[ch.length-1].length&&cum+w/2>=ch.length*tot/m)ch.push([]);ch[ch.length-1].push(it);cum+=w}
-        if(ch.length<m||ch.some(c=>!c.length))continue;const res=ch.map(feas);if(res.some(x=>!x))continue;
-        const sc=score(res);if(!best||sc<best.sc)best={sc,res}}
-      if(best&&best.sc<cur-5){
+      const bestSplit=mm=>{let best=null;
+        for(let r=0;r<n;r++){
+          const rot=sorted.slice(r).concat(sorted.slice(0,r)),tot=rot.reduce((a,x)=>a+wt(x),0),ch=[[]];let cum=0;
+          for(const it of rot){const w=wt(it);if(ch.length<mm&&ch[ch.length-1].length&&cum+w/2>=ch.length*tot/mm)ch.push([]);ch[ch.length-1].push(it);cum+=w}
+          if(ch.length<mm||ch.some(c=>!c.length))continue;const res=ch.map(feas);if(res.some(x=>!x))continue;
+          const sc=score(res);if(!best||sc<best.sc)best={sc,res};if(mm===1)break}
+        return best};
+      /* So wenige Touren wie sinnvoll: nicht zwanghaft aufteilen. Es zählt die kleinste Tourzahl, bei der keine Tour länger als ca. 5,5 Stunden wird; sonst bleibt es bei der bisherigen Zahl. */
+      let best=null;
+      for(let mm=1;mm<=m&&!best;mm++){const b=bestSplit(mm);if(b&&(mm===m||Math.max(...b.res.map(x=>x.e.dur))<=330))best=b}
+      if(best&&(best.res.length<m||best.sc<cur-5)){
         G.forEach(T=>{const i=tours.indexOf(T);if(i>=0)tours.splice(i,1)});
-        best.res.forEach(x=>{const T={id:++tid,list:x.l,e:x.e,late:false};tours.push(T);x.l.forEach(it=>addH(it.o,`Gleichmäßig nach Gebiet aufgeteilt: {T${T.id}} fährt einen zusammenhängenden Sektor, die Touren sind ähnlich lang`))})}
+        best.res.forEach(x=>{const T={id:++tid,list:x.l,e:x.e,late:false};tours.push(T);x.l.forEach(it=>addH(it.o,best.res.length<2?`Eine Tour reicht: alles in {T${T.id}}, kein Aufteilen nötig`:`Gleichmäßig nach Gebiet aufgeteilt: {T${T.id}} fährt einen zusammenhängenden Sektor, die Touren sind ähnlich lang`))})}
     });
     improve(false);
   }catch(e){console.warn('Sektoraufteilung übersprungen',e)}
