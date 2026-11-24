@@ -25,7 +25,7 @@ body{background:transparent;color:var(--text);font:16px/1.4 -apple-system,"SF Pr
   padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 header{flex-wrap:wrap;background:#0e1813;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
-header img{height:38px;display:block;border-radius:4px;background:#fff}
+header img{height:38px;display:block;border-radius:4px;background:#fff;cursor:pointer}
 #hofbar{order:3;flex-basis:100%;margin-top:6px;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.25);color:var(--text);text-decoration:none;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sw{flex:none;width:20px;height:20px;border-radius:6px;border:1px solid rgba(255,255,255,.35)}
 .fn{min-width:32px;text-align:center;font-size:18px}
@@ -424,7 +424,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-25 G';
+const APP_VERSION='2026-11-25 H';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
@@ -662,7 +662,8 @@ function render(){
     if(tab==='home'){nav.style.display='none';$('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();$('#hstat').textContent=headerStat();vHome(items,oc);return}
     nav.innerHTML=`<button data-t="home" style="flex:1"><b>⊞</b>Startbildschirm</button>`;
   }else{if(tab==='home')tab='ich';
-  nav.innerHTML=items.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('')}
+  const navItems=items.length>5?items.slice(0,4):items,more=items.length>5?items.slice(4):[];cur.moreItems=more;
+  nav.innerHTML=navItems.map(i=>`<button data-t="${i[0]}" class="${(i[0]===tab||(i[0]==='staende'&&(tab==='erfassen'||tab==='zahlen')))?'on':''}"><b>${i[1]}</b>${i[2]}${i[0]==='plan'&&oc?` (${oc})`:''}</button>`).join('')+(more.length?`<button data-t="mehr" class="${more.some(i=>i[0]===tab)?'on':''}"><b><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg></b>Mehr</button>`:'')}
   $('#pname').textContent=S.me;$('#av').textContent=S.me.trim().charAt(0).toUpperCase();
   $('#hstat').textContent=headerStat();hofbarUpdate();
   ({ich:vIch,staende:vStaende,lieferungen:vLieferungen,feld:vFeld,erfassen:vErfassen,plan:vPlan,zahlen:()=>cur.zst?vStand():vGesamt(),preise:vPreise,kueche:vKueche,einstellungen:vDaten,anleitung:vAnleitung,auswertung:vAuswertung})[tab]();
@@ -956,6 +957,7 @@ document.addEventListener('click',ev=>{
     const e=entry(cur.stand,cur.date,true),p=t.dataset.p;
     e.counts[p]=Math.max(0,(+e.counts[p]||0)+(t.dataset.a==='plus'?1:-1));save();return render();
   }
+  if(t.parentElement&&t.parentElement.id==='nav'&&t.dataset.t==='mehr'){cur.sheet='mehr';return render()}
   if(t.parentElement&&t.parentElement.id==='nav'){if(tab===t.dataset.t&&tab==='zahlen')cur.zst=false;const inS=['staende','erfassen','zahlen'].includes(tab);tab=t.dataset.t;if(tab==='staende'&&!inS&&salesStarted()){tab=has('verkauf')?'erfassen':has('zahlen')?'zahlen':'staende'};window.scrollTo(0,0);return render()}
 });
 document.addEventListener('change',ev=>{
@@ -1272,7 +1274,7 @@ function vIch(){
     ${paidPen.length?`<details data-det="penpaid"><summary>Bezahlt (${paidPen.length})</summary>${paidPen.map(p=>penRow(p,true)).join('')}</details>`:''}
     <div style="border-top:1px solid var(--line);margin:10px 0 0;padding-top:12px"><label class="f" style="margin:0 0 6px">Kiste vergeben</label>
     <select class="t" id="pn-person">${S.people.map(n=>`<option ${n===(pn.person||S.people[0])?'selected':''}>${esc(n)}</option>`).join('')}</select>
-    <input class="t" id="pn-reason" placeholder="Grund" value="${esc(pn.reason||'')}" style="margin-top:8px">
+    <label class="f" style="margin:8px 0 4px">Grund</label><input class="t" id="pn-reason" placeholder="Grund" value="${esc(pn.reason||'')}">
     <button class="btn" data-pl="penadd" style="margin:10px 0 8px">Strafbierkiste vergeben</button></div>`,{tone:openPen.length?'r':'',pill:openPen.length?pill(openPen.length,'r'):''})}</details>`;
   loadWx().then(()=>{const e=$('#wx');if(e)e.innerHTML=wxHtml()});
 }
@@ -1626,7 +1628,7 @@ function renderSheet(){
   if(!cur.sheet){if(el)el.remove();return}
   if(!el){el=document.createElement('div');el.id='sheet';el.className='sheet fresh';setTimeout(()=>el.classList.remove('fresh'),280);el.addEventListener('click',e=>{if(e.target===el){if(cur.sheet==='task'){cur.tf=newTf(todayStr());cur.tf.person=S.me}if(cur.sheet==='rep'){cur.rf=newRf();cur.rfile=null}if(cur.sheet==='event')cur.ef=newEf(calOf(cur.ctab),cur.cday);if(cur.sheet==='stopf')cur.stopOpen=false;if(cur.sheet==='tourf')cur.tourOpen=false;closeSheet()}});document.body.appendChild(el)}
   const old=el.querySelector('.sheetbox'),st=old?old.scrollTop:0;
-  const body=cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='schsel'?schonSel():cur.sheet==='fkarte'?fKarte():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():cur.sheet==='ord'?ordDetail():'';
+  const body=cur.sheet==='mehr'?mehrSheet():cur.sheet==='task'?taskForm(true):cur.sheet==='rep'?reportForm():cur.sheet==='taskd'?taskDetail():cur.sheet==='event'?eventForm():cur.sheet==='shop'?shopForm():cur.sheet==='bes'?besSheet():cur.sheet==='standsel'?standSel():cur.sheet==='schsel'?schonSel():cur.sheet==='fkarte'?fKarte():cur.sheet==='evview'?evView():cur.sheet==='einst'?einstSheet():cur.sheet==='stopf'?stopForm():cur.sheet==='tourf'?tourForm():cur.sheet==='spot'?spotForm():cur.sheet==='ord'?ordDetail():'';
   el.innerHTML=`<div class="sheetbox">${body}</div>`;
   const nb=el.querySelector('.sheetbox');if(nb)nb.scrollTop=st;
 }
@@ -1644,6 +1646,14 @@ function besSheet(){
     <ul class="bul" style="margin:0 0 16px;padding-left:22px">${its.map(i=>`<li style="font-size:20px;line-height:1.45;margin:10px 0">${esc(i.text)}</li>`).join('')}</ul>
     <button class="btn" data-pl="besclose">Schließen</button>`;
 }
+function mehrSheet(){return `<div class="n" style="font-size:20px;margin-bottom:10px">Mehr</div>${(cur.moreItems||[]).map(i=>`<button class="btn sec" data-mt="${i[0]}" style="display:flex;align-items:center;gap:14px;text-align:left;margin:0 0 8px;min-height:54px"><span style="width:28px;display:inline-flex;justify-content:center">${i[1]}</span><span style="font-size:17px;font-weight:600">${i[2]}</span></button>`).join('')}<button class="btn sec" data-pl="sselclose" style="margin:8px 0 0">Schließen</button>`}
+/* Zurück-Taste (Android) und Wischen (iPhone): erst Fenster schließen, dann zur Übersicht, erst dort verlässt man die App */
+{try{history.replaceState({b:0},'');history.pushState({b:1},'');
+  window.addEventListener('popstate',e=>{
+    const pv=document.querySelector('.planview'),zv=document.querySelector('.zoomv');
+    if(pv||zv||cur.sheet||cur.stopOpen||cur.tourOpen){if(pv)pv.remove();else if(zv)zv.remove();else{cur.stopOpen=false;cur.tourOpen=false;closeSheet()}history.pushState({b:1},'');return}
+    if(typeof tab!=='undefined'&&tab!=='ich'&&document.body.classList.contains('authed')){tab='ich';window.scrollTo(0,0);render();history.pushState({b:1},'');return}
+    history.back()})}catch(err){}}
 function closeSheet(){cur.sheet='';cur.sd='';cur.sdf=null;cur.sfile=null;cur.shf=null;cur.hfile=null;cur.tfile=null;cur.tfOpen=false;render()}
 function taskForm(inSheet){
   const f=cur.tf,sel=(a,b)=>a===b?'selected':'',give=canGive(),pu=f.photo?imgUrl(f.photo):'';
@@ -1720,7 +1730,7 @@ function vGate(){
     <section class="blk"><div class="blk-h"><h3>Bist du heute da?</h3></div>
       <div class="hint gcd" style="margin:0 0 12px">${gateLocked()?'<b style="color:var(--red)">Es ist nach 9:00 Uhr.</b> Nach dem Speichern kannst du es heute nicht mehr ändern.':gateCd()}</div>
       ${meal('fr','locf','Frühstück')}${meal('mi','locm','Mittagessen')}
-      <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button></section>
+      <button class="btn" data-pl="gsave" style="margin-top:16px;min-height:54px;font-size:18px" ${ok?'':'disabled'}>Speichern und starten</button>${ok?'':'<div class="p" style="text-align:center;margin-top:8px">Bitte Frühstück und Mittagessen beantworten'+((o.fr===true&&!o.locf)||(o.mi===true&&!o.locm)?' und den Ort wählen':'')+'.</div>'}</section>
     <section class="blk"><button class="btn sec" data-pl="gno" style="margin:0;min-height:54px;font-size:17px">Ich bin heute nicht da</button><div class="hint" style="margin-top:8px">Dann kannst du die App trotzdem ansehen. Das wird jeden Tag ab 0 Uhr neu abgefragt, eintragen geht bis 9:00 Uhr.</div></section>${cur.gateOpen?'<button class="btn sec" data-pl="gcancel">Abbrechen</button>':''}`;
 }
 function gateStatus(){const g=gateDay(),d=attDoc(S.me)||{};if(g<attFrom()||g>attTo()||!(d.chk||{})[g])return '';
@@ -1954,6 +1964,8 @@ document.addEventListener('click',ev=>{
     if(S.people.some(p=>p.toLowerCase()===n.toLowerCase()))return alert('Diesen Namen gibt es schon.');
     S.people.push(n);S.roles[n]='team';S.approved[n]=false;S.me=n;save();tab='plan';cur.ptab='aufg';return render();
   }
+  {const mt=ev.target.closest&&ev.target.closest('[data-mt]');if(mt){tab=mt.dataset.mt;cur.sheet='';window.scrollTo(0,0);return render()}}
+  if(ev.target.closest&&ev.target.closest('header img')){if(tab==='ich'){window.scrollTo(0,0)}else{tab='ich';window.scrollTo(0,0);render()}return}
   const go=ev.target.closest('[data-go]');if(go){tab=go.dataset.go;window.scrollTo(0,0);return render()}
   if(ev.target.id==='whoBack'){S.me='';save();return render()}
   if(ev.target.dataset.appr){
@@ -3707,12 +3719,13 @@ function spotsList(){
 function spotForm(){
   const f=cur.spf||(cur.spf=spotNew());
   return `<div class="card pad formc"><label class="f">${f.id?'Standort bearbeiten':'Neuer Baumstandort'}</label>
-    <input class="t" id="spf-name" placeholder="Kunde" value="${esc(f.name)}">
+    <label class="f" style="margin-top:6px">Kunde</label><input class="t" id="spf-name" placeholder="Kunde" value="${esc(f.name)}">
+    <label class="f" style="margin-top:10px">Standort</label>
     <textarea class="t" id="spf-link" rows="3" placeholder="Standort aus WhatsApp einfügen (Google-Maps-Link oder Koordinaten)" style="margin-top:8px">${esc(f.link)}</textarea>
     <button class="btn sec" data-pl="spgps" style="margin:8px 0 0">Meinen Standort verwenden</button>
-    <div class="mini" style="margin-top:8px"><input class="t" id="spf-sorte" placeholder="Sorte" value="${esc(f.sorte)}" style="min-width:0"><input class="t" id="spf-groesse" placeholder="Größe" value="${esc(f.groesse)}" style="min-width:0"></div>
+    <div class="mini" style="margin-top:8px"><div style="flex:1;min-width:0"><label class="f" style="margin-top:0">Sorte</label><input class="t" id="spf-sorte" placeholder="Sorte" value="${esc(f.sorte)}" style="min-width:0"></div><div style="flex:1;min-width:0"><label class="f" style="margin-top:0">Größe</label><input class="t" id="spf-groesse" placeholder="Größe" value="${esc(f.groesse)}" style="min-width:0"></div></div>
     <label class="f" style="margin-top:10px">Lieferdatum (optional)</label><input class="t" type="date" id="spf-lieferdatum" value="${esc(f.lieferdatum||'')}">
-    <input class="t" id="spf-note" placeholder="Notiz (optional)" value="${esc(f.note)}" style="margin-top:8px">
+    <label class="f" style="margin-top:10px">Notiz (optional)</label><input class="t" id="spf-note" placeholder="Notiz (optional)" value="${esc(f.note)}">
     ${photoPick('spf-photo',!!f.photo,cur.spfile)}
     ${f.id?'<button class="btn red" data-pl="spdel" style="margin-top:10px">Löschen</button>':''}
     <div class="mini" style="margin-top:10px"><button class="btn sec" data-pl="spcancel" style="margin:0">Abbrechen</button><button class="btn" data-pl="spsave" style="margin:0">Speichern</button></div></div>`}
@@ -3875,7 +3888,7 @@ function vDaten(){
   ${isAdmin()&&CLOUD?(()=>{const ok=S.people.filter(n=>S.approved[n]!==false&&(S.pushOn||{})[n]);return `<div class="hint">Benachrichtigungen an: ${ok.length} von ${S.people.filter(n=>S.approved[n]!==false).length}. Wer „aus“ hat, bekommt keine Erinnerung und keine Meldungen. Die Person muss im Profil Benachrichtigungen aktivieren.</div>`})():''}
   ${appUsers()}
   <div class="card pad"><div class="hint">Rollen: Admin, Chef, Verkauf, Team (Standard), Schonung, Fahrer, Demo. Was jede Rolle darf, stellst du weiter unten unter Berechtigungen ein.</div>
-  <input class="t" id="team-q" placeholder="Person suchen" value="${esc(cur.teamq||'')}" autocomplete="off" style="margin:10px 0 6px">${S.people.map((p,i)=>`<details data-det="pe-${i}" class="pers" data-nm="${esc(p.toLowerCase())}" ${cur.det['pe-'+i]?'open':''} ${cur.teamq&&!p.toLowerCase().includes(String(cur.teamq).toLowerCase())?'style="display:none"':''}><summary><span class="pn">${esc(p)}</span><span class="p">${esc(ROLE[roleOf(p)]||roleOf(p))}</span>${isAdmin()&&CLOUD?`<span class="dot" style="background:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}" title="Benachrichtigung"></span>`:''}</summary><div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}${isAdmin()&&CLOUD?((S.pushOn||{})[p]?' · <span style="color:var(--green)">Benachrichtigung: an</span>':' · <span style="color:var(--red)">Benachrichtigung: aus'+(((S.pushErr||{})[p])?' ('+esc(S.pushErr[p])+')':'')+'</span>'):''}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${isAdmin()&&CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst immer (Frühstück und Mittag)</span><select class="t" style="width:170px" data-palways="${i}"><option value="">nein</option><option value="1" ${(S.pAlways||{})[p]?'selected':''}>ja, jeden Tag</option></select></div>`:''}${isAdmin()&&CLOUD&&(S.userIds||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Benachrichtigung testen</span><button class="btn sec" data-pl="pushtest" data-v="${esc(p)}" style="margin:0;width:170px">Testnachricht senden</button></div>`:''}${permBlock(p,i)}</details>`).join('')}
+  <input class="t" id="team-q" placeholder="Person suchen" value="${esc(cur.teamq||'')}" autocomplete="off" style="margin:10px 0 6px">${S.people.map((p,i)=>`<details data-det="pe-${i}" class="pers" data-nm="${esc(p.toLowerCase())}" ${cur.det['pe-'+i]?'open':''} ${cur.teamq&&!p.toLowerCase().includes(String(cur.teamq).toLowerCase())?'style="display:none"':''}><summary><span class="pn">${esc(p)}</span><span class="p">${esc(ROLE[roleOf(p)]||roleOf(p))}</span>${isAdmin()&&CLOUD?`<span class="p" style="font-size:12px;color:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}">${(S.pushOn||{})[p]?'Push an':'Push aus'}</span><span class="dot" style="background:${(S.pushOn||{})[p]?'var(--green)':'var(--red)'}"></span>`:''}</summary><div class="p" style="margin:12px 0 -2px;word-break:break-all">${esc((S.emails||{})[p]||"")}${isAdmin()&&CLOUD?((S.pushOn||{})[p]?' · <span style="color:var(--green)">Benachrichtigung: an</span>':' · <span style="color:var(--red)">Benachrichtigung: aus'+(((S.pushErr||{})[p])?' ('+esc(S.pushErr[p])+')':'')+'</span>'):''}</div><div class="edit"><input class="t" data-pe="${i}" value="${esc(p)}" ${CLOUD&&!isAdmin()?'readonly':''}><select class="t" style="width:110px" data-role="${i}" ${CLOUD&&p===S.me?'disabled':''}>${Object.keys(ROLE).map(r=>`<option value="${r}" ${roleOf(p)===r?'selected':''}>${ROLE[r]}</option>`).join('')}</select>${CLOUD&&p===S.me?'':`<button class="x" data-del-pe="${i}">×</button>`}</div>${CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Steht am Stand</span><select class="t" style="width:170px" data-pstand="${i}"><option value="">kein fester Stand</option>${S.stands.map(s=>`<option value="${s.id}" ${(S.pstand||{})[p]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${(S.pstand||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst Frühstück am Hof</span><select class="t" style="width:170px" data-pbf="${i}"><option value="">nein</option><option value="1" ${(S.pbf||{})[p]?'selected':''}>ja</option></select></div>`:''}`:''}${isAdmin()&&CLOUD?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Isst immer (Frühstück und Mittag)</span><select class="t" style="width:170px" data-palways="${i}"><option value="">nein</option><option value="1" ${(S.pAlways||{})[p]?'selected':''}>ja, jeden Tag</option></select></div>`:''}${isAdmin()&&CLOUD&&(S.userIds||{})[p]?`<div class="edit" style="margin-top:-2px"><span class="p" style="flex:1;align-self:center">Benachrichtigung testen</span><button class="btn sec" data-pl="pushtest" data-v="${esc(p)}" style="margin:0;width:170px">Testnachricht senden</button></div>`:''}${permBlock(p,i)}</details>`).join('')}
   ${CLOUD?'':'<button class="btn sec" id="addPe">+ Person</button>'}<button class="btn sec" data-pl="einstopen">Einstand-Strafbierkiste vergeben</button></div>
   ${rightsMatrix()}
   <h2>Import (Kalender, Aufgaben, Packlisten)</h2>
