@@ -488,3 +488,5 @@ Grundlage: Apple Human Interface Guidelines (Layout, Color, Dark Mode, Typograph
 - **26.11.2026 D:** Zurück-Pfeil größer und deutlicher (48 px, blauer Kreis, weißer dicker Pfeil), ersetzt solange sichtbar das Logo (Kopfzeile bleibt einzeilig, auch bei 360 px Breite und langen Namen). Nebenbei: Absturz beim Start behoben, wenn der lokale Speicher keine Stände enthält (cur.stand=S.stands[0].id).
 
 - **26.11.2026 E:** Neue Oberfläche für ALLE freigegeben (Till, 26.11.2026): uiNeu() gilt für jede angemeldete Person. Alle Rollen im Test ohne Fehler (alle Reiter, Mehr). Alte Ansichten (vIchAlt, vLieferungenAlt) bleiben als Rückweg: in uiNeu() wieder isAdmin() ergänzen. Künftige Design-Änderungen weiterhin zuerst nur für Till, bis er sie freigibt.
+
+- **26.11.2026 F:** Alle Aufklapper (details) starten geschlossen (Till): auch Nicht eingetragen nach 9:00, Freigaben in den Einstellungen, Packlisten-Gruppen, Kunden in der Planung und Packen fuer diesen Tag. Innerhalb eines Reiters bleibt Geoeffnetes offen, beim Reiterwechsel wird cur.det geleert. Neue details immer als ${cur.det[key]?'open':''} schreiben, nie fest offen.

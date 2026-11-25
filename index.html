@@ -459,7 +459,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-26 E';
+const APP_VERSION='2026-11-26 F';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 /* Neue Oberfläche (25./26.11.2026), seit 26.11.2026 für alle freigegeben. Zurück zur alten Ansicht für alle außer Admin: isAdmin() ergänzen */
 const uiNeu=()=>{try{return !!(S&&S.me)}catch(e){return false}};
@@ -683,7 +683,7 @@ function render(){
   }
   document.body.classList.add('authed');
   {const n=uiNeu(),st=document.getElementById('uineu');if(st)st.media=n?'all':'not all';document.body.classList.toggle('ui-neu',n)}
-  if(tab!==lastTab){if(lastTab&&!navBacking){navHist.push(lastTab);if(navHist.length>20)navHist.shift()}lastTab=tab;navBacking=false}
+  if(tab!==lastTab){if(lastTab&&!navBacking){navHist.push(lastTab);if(navHist.length>20)navHist.shift()}lastTab=tab;navBacking=false;cur.det={}}
   {const bb=document.getElementById('backbtn');if(bb)bb.hidden=(tab==='ich'||tab==='home')}
   document.body.classList.remove('gate');
   if(gateNeed()){$('#nav').style.display='none';vGate();return}
@@ -817,7 +817,7 @@ function settingsGroup(app){
       const sec=document.createElement('section');sec.className='blk';
       if(base==='Profil'){const hd=document.createElement('div');hd.className='blk-h';const h3=document.createElement('h3');h3.textContent=base;hd.appendChild(h3);sec.appendChild(hd);app.insertBefore(sec,el);el.remove();cd=sec;return}
       const d=document.createElement('details');d.dataset.det=key;sec.dataset.k=key;
-      if(cur.det[key]!==undefined?cur.det[key]:/Freigabe/.test(base))d.open=true;
+      if(cur.det[key])d.open=true;
       const sm=document.createElement('summary'),sp=document.createElement('span');sp.textContent=base==='Einstellungen'?'Hof und Planung':base;sm.appendChild(sp);
       if(m){const p=document.createElement('span');p.className='pill o';p.style.marginLeft='auto';p.style.marginRight='10px';p.textContent=m[2];sm.appendChild(p)}
       d.appendChild(sm);sec.appendChild(d);app.insertBefore(sec,el);el.remove();cd=d;
@@ -1930,7 +1930,7 @@ function gateList(){
   const open=gateLocked();
   return `<section class="blk"><div class="blk-h"><h3>Eingetragen heute</h3>${pill(yes.length+' von '+ppl.length,no.length?'o':'g')}</div>
     <div class="hint" style="margin:0 0 8px">${open?'Ab 9:00 Uhr: Wer ohne Eintrag gefrühstückt oder zu Mittag gegessen hat, kann hier markiert werden. Die Liste zum Aushängen liegt als PDF in OneDrive, Ordner Hof-Droste_Büro.':'Bis 9:00 Uhr kann man sich noch eintragen. Danach erscheint hier die Liste mit den Nachträgen.'}</div>
-    <details data-det="gl-no" ${open?'open':''}><summary style="padding:8px 0"><b>Nicht eingetragen (${no.length})</b></summary>${no.map(nrow).join('')||'<div class="p">Alle eingetragen.</div>'}</details>
+    <details data-det="gl-no" ${cur.det['gl-no']?'open':''}><summary style="padding:8px 0"><b>Nicht eingetragen (${no.length})</b></summary>${no.map(nrow).join('')||'<div class="p">Alle eingetragen.</div>'}</details>
     <details data-det="gl-yes"><summary style="padding:8px 0"><b>Eingetragen (${yes.length})</b></summary>${yes.map(yrow).join('')||'<div class="p">Noch niemand.</div>'}</details></section>`}
 /* Liste aller, die die App haben (Admin) */
 function appUsers(){
@@ -2659,7 +2659,7 @@ function vStaende(){
   const row=i=>`<div class="row pk"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1"><button class="chk ${on(i)?'on':''}" data-pl="packck" data-v="${i.id}">${on(i)?'✓':''}</button><div class="n ${on(i)?'done':''}" style="min-width:0">${esc(i.text)}</div></div>${i.qty?`<b style="flex:none">${esc(i.qty)}</b>`:''}</div>`;
   const sec=g=>{const dn=g.items.filter(on).length,key='pk-'+sid+'-'+g.key,all=g.items.length&&dn===g.items.length;
     const master=g.key==='avobox'?`<div class="row pk" style="background:var(--panel);border-radius:10px;padding:8px"><div style="display:flex;gap:10px;align-items:center;flex:1"><button class="chk ${all?'on':''}" data-pl="packall" data-v="${g.key}">${all?'✓':''}</button><div class="n"><b>Avobox komplett (alles drin)</b></div></div></div>`:'';
-    return `<section class="blk ${all?'t-g':''}"><details data-det="${key}" ${cur.det[key]===false?'':'open'}><summary><span>${esc(g.name)}</span><span class="pill ${all?'g':''}" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${master}${g.items.map(row).join('')}</div></details></section>`};
+    return `<section class="blk ${all?'t-g':''}"><details data-det="${key}" ${cur.det[key]?'open':''}><summary><span>${esc(g.name)}</span><span class="pill ${all?'g':''}" style="margin-left:auto;margin-right:10px">${dn}/${g.items.length}</span></summary><div class="card">${master}${g.items.map(row).join('')}</div></details></section>`};
   const counterBox=(k,label)=>{const c=(pk.counter||{})[k]||{};return blk(label,`<input class="t" id="pk-counter-${k}" inputmode="numeric" value="${esc(c.v==null?'':c.v)}" placeholder="Zahl eintragen">${c.at?`<div class="hint" style="margin:6px 0 0">Eingetragen von ${esc(c.by||'?')} · ${new Date(c.at).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit'})}</div>`:''}<div style="height:6px"></div>`)};
   let body='';
   if(mode==='z'){
@@ -3267,7 +3267,7 @@ function planBox(){
     ${(()=>{const t0=todayStr(),ds=[...new Set([t0,shiftDate(t0,1),pd.date,...S.orders.filter(orderOpen).map(o=>o.from||o.to).filter(Boolean)])].filter(d=>d>=t0).sort().slice(0,9);return `<div class="chips">${ds.map(d=>`<button class="chip ${d===pd.date?'on':''}" data-pl="pdday" data-v="${d}">${wdD(d)} (${planCandidates(d).length})</button>`).join('')}</div>`})()}
     <div class="mini"><input class="t" type="date" id="pd-date" value="${pd.date}" style="min-width:0"><input class="t" type="time" id="pd-start" value="${pd.start}" style="min-width:0"></div>
     ${(()=>{const n=cands.filter(x=>pd.sel[x.o.id]&&!winTimes(x.o.window).length&&/vormittag|nachmittag/i.test(x.o.window||'')).length;return n?`<div class="hint" style="color:var(--orange)">${n} ${n===1?'Auftrag hat':'Aufträge haben'} nur "vormittags" oder "nachmittags" als Zeitfenster. Die Planung nimmt dafür die Zeiten aus den Einstellungen als Pflicht. Bitte beim Kunden klären, was genau gemeint ist.</div>`:''})()}
-    <details data-det="plcust" ${cur.det.plcust===undefined||cur.det.plcust?'open':''} style="margin-top:8px"><summary style="padding:8px 0"><b>Kunden für diesen Tag</b> (${nSel} von ${cands.length} gewählt)</summary>
+    <details data-det="plcust" ${cur.det.plcust?'open':''} style="margin-top:8px"><summary style="padding:8px 0"><b>Kunden für diesen Tag</b> (${nSel} von ${cands.length} gewählt)</summary>
     <div class="card">${cands.map(x=>`<div class="row" data-ordrow="${x.o.id}"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><button class="chk ${pd.sel[x.o.id]?'on':''}" data-pl="plsel" data-v="${x.o.id}">${pd.sel[x.o.id]?'✓':''}</button><div style="min-width:0"><div class="n" data-pl="ordopen" data-v="${x.o.id}" style="cursor:pointer;color:var(--link)">${esc(x.o.name)}${winTxt(x.o.window)?` <span class="p">· ${winTxt(x.o.window)}</span>`:''}</div><div class="p">${esc(orderAddr(x.o))}${x.o.to&&x.o.to!==x.o.from?' · bis '+wdD(x.o.to):''}</div><div class="p" style="color:var(--text)">${orderTreeInfo(x.o)}</div></div></div><button class="rowedit" data-pl="ordmenu" data-v="${x.o.id}" aria-label="Weitere Aktionen" style="margin-left:6px">⋯</button></div>`).join('')||'<div class="row"><span class="p">Für diesen Tag ist nichts geplant.</span></div>'}</div></details>
     <div class="mini" style="margin-top:8px"><button class="btn sec" data-pl="plall" style="margin:0" ${cands.length?'':'disabled'}>${allOn?'Alle abwählen':'Alle wählen'}</button></div>
     <button class="btn green go" data-pl="planauto" style="margin:10px 0 0" ${pd.busy||!cands.length?'disabled':''}>${pd.busy?'Rechnet …':cands.length?`${nSel===cands.length?'Alle '+cands.length:nSel} Aufträge automatisch planen`:'Keine Aufträge für diesen Tag'}</button>
@@ -3503,7 +3503,7 @@ function packSummary(ds){
     else{const k=(l.c==='Deko'?'Dekobaum':l.c==='Laternenbaum'?'Laternenbaum':(l.s||l.t))+(l.l?' '+mFmt(l.l):'');trees[k]=(trees[k]||0)+l.q}});boh+=+s.bohren||0}));
   if(!n)return '';
   const rows=m=>Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0],'de',{numeric:true})).map(([k,v])=>`<div class="kv"><span>${esc(k)}</span><b>${v}</b></div>`).join('');
-  return `<details data-det="packsum" open><summary>Packen für diesen Tag</summary><div class="card pad">${boh?`<div style="margin-bottom:8px"><span class="bdg">Bäume bohren: ${boh}</span></div>`:''}
+  return `<details data-det="packsum" ${cur.det.packsum?'open':''}><summary>Packen für diesen Tag</summary><div class="card pad">${boh?`<div style="margin-bottom:8px"><span class="bdg">Bäume bohren: ${boh}</span></div>`:''}
     ${Object.keys(trees).length?`<label class="f">Bäume</label>${rows(trees)}`:''}${Object.keys(stands).length?`<label class="f">Ständer</label>${rows(stands)}`:''}${Object.keys(gruen).length?`<label class="f">Grün</label>${rows(gruen)}`:''}</div></details>`;
 }
 const vehBar=ds=>{const sel=dayVeh(ds)||[];return `<div class="card pad"><label class="f">Fahrzeuge an diesem Tag</label><div class="chips">${vehiclesList().map(v=>`<button class="chip ${sel.includes(v)?'on':''}" data-pl="dayveh" data-v="${ds}|${esc(v)}">${esc(v)}</button>`).join('')}</div><div class="hint" style="margin:6px 0 0">Nichts gewählt: alle Fahrzeuge zur Auswahl. Zuweisen kannst du im Voraus oder beim Packen.</div></div>`};
