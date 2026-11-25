@@ -370,7 +370,7 @@ h2{font-size:22px;margin:22px 0 10px}
 .row{border-bottom-color:rgba(255,255,255,.12)}
 
 .cheers{z-index:35}
-#backbtn{flex:none;width:40px;height:40px;margin:0 6px 0 -6px;border:0;border-radius:50%;background:rgba(0,0,0,.28);color:var(--text);display:flex;align-items:center;justify-content:center;padding:0;position:relative}#backbtn::after{content:'';position:absolute;inset:-4px}#backbtn[hidden]{display:none}
+#backbtn{flex:none;width:48px;height:48px;margin:0 8px 0 -6px;border:0;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;padding:0;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.4)}header:has(#backbtn:not([hidden])) img{display:none}header:has(#backbtn:not([hidden])) #backbtn{margin-right:auto}#backbtn::after{content:'';position:absolute;inset:-4px}#backbtn[hidden]{display:none}
 </style>
 <style id="uineu" media="not all">
 /* Drück-Feedback, Tipp-Größen, sanfte Pop-ups (25.11.2026) */
@@ -423,7 +423,7 @@ h2{font-size:24px;font-weight:700;margin:20px 0 10px;letter-spacing:-.02em;line-
 </style>
 </head>
 <body>
-<header><button id="backbtn" aria-label="Zurück" hidden><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><img src="logo.svg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button><button data-lang="pt">PT</button></div><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="guide" aria-label="Anleitung" title="Anleitung"></button><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Einstellungen"><span id="av"></span></button><button id="who" aria-label="Einstellungen"><b id="pname"></b><small id="hstat"></small></button></header>
+<header><button id="backbtn" aria-label="Zurück" hidden><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button><img src="logo.svg" alt="Hof Droste"><div id="lang"><button data-lang="de">DE</button><button data-lang="ro">RO</button><button data-lang="pt">PT</button></div><select id="asrole" aria-label="Rolle ansehen als" style="display:none"></select><button id="guide" aria-label="Anleitung" title="Anleitung"></button><button id="help" aria-label="Frage zur App stellen" title="Frage zur App">?</button><button id="refresh" aria-label="Aktualisieren" title="Aktualisieren">⟳</button><button id="prof" aria-label="Einstellungen"><span id="av"></span></button><button id="who" aria-label="Einstellungen"><b id="pname"></b><small id="hstat"></small></button></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="saved" id="saved">Gespeichert</div>
@@ -459,7 +459,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-26 C';
+const APP_VERSION='2026-11-26 D';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 /* Neue Oberfläche (25./26.11.2026) vorerst nur für den Admin */
 const uiNeu=()=>{try{return !!(S&&S.me&&isAdmin())}catch(e){return false}};
@@ -532,7 +532,7 @@ if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 
 let tab='ich', cur={pen:{person:'',reason:''},det:{},zst:false,stand:null,date:todayStr(),xp:null,parsed:null,qtext:'',ptab:'aufg',cal:todayStr().slice(0,7),cday:todayStr(),pf:'',tfOpen:false,ntext:'',tf:null};
 try{const c=JSON.parse(localStorage.getItem(KEY+'-ui'));if(c&&(S.stands.some(s=>s.id===c.stand)||String(c.stand).startsWith('p:')))cur.stand=c.stand}catch(e){}
-if(!cur.stand)cur.stand=S.stands[0].id;
+if(!cur.stand)cur.stand=(S.stands[0]||{}).id||null;
 const keyOf=(st,d)=>st+'|'+d;
 const prod=id=>S.products.find(p=>p.id===id);
 const pname=id=>(prod(id)||{name:'?'}).name;
