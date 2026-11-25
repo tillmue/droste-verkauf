@@ -459,10 +459,10 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-26 D';
+const APP_VERSION='2026-11-26 E';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
-/* Neue Oberfläche (25./26.11.2026) vorerst nur für den Admin */
-const uiNeu=()=>{try{return !!(S&&S.me&&isAdmin())}catch(e){return false}};
+/* Neue Oberfläche (25./26.11.2026), seit 26.11.2026 für alle freigegeben. Zurück zur alten Ansicht für alle außer Admin: isAdmin() ergänzen */
+const uiNeu=()=>{try{return !!(S&&S.me)}catch(e){return false}};
 let navHist=[],lastTab=null,navBacking=false;
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,8);
