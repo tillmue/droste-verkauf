@@ -467,7 +467,7 @@ const LANG=(()=>{try{const l=localStorage.getItem('droste-lang');return l==='ro'
 const LOC=LANG==='ro'?'ro-RO':LANG==='pt'?'pt-BR':'de-DE';
 document.documentElement.lang=LANG;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('#lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG))});
-const APP_VERSION='2026-11-26 G';
+const APP_VERSION='2026-11-26 H';
 const CLOUD=!!(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey);
 /* Neue Oberfläche (25./26.11.2026), seit 26.11.2026 für alle freigegeben. Zurück zur alten Ansicht für alle außer Admin: isAdmin() ergänzen */
 const uiNeu=()=>{try{return !!(S&&S.me)}catch(e){return false}};
@@ -691,6 +691,7 @@ function render(){
   }
   document.body.classList.add('authed');
   {const n=uiNeu(),st=document.getElementById('uineu');if(st)st.media=n?'all':'not all';document.body.classList.toggle('ui-neu',n);document.documentElement.classList.toggle('shell',realRole(S.me)==='admin')}
+  syncDelivered();
   if(tab!==lastTab){if(lastTab&&!navBacking){navHist.push(lastTab);if(navHist.length>20)navHist.shift()}lastTab=tab;navBacking=false;cur.det={}}
   {const bb=document.getElementById('backbtn');if(bb)bb.hidden=(tab==='ich'||tab==='home')}
   document.body.classList.remove('gate');
@@ -2842,6 +2843,16 @@ function syncPickups(){
   cur.pkSync=true;try{[...new Set(L.map(dayOf))].forEach(d=>planPickups(d,L.filter(o=>dayOf(o)===d)))}finally{cur.pkSync=false}
 }
 const orderOpen=o=>!o.deleted&&o.status!=='geplant'&&o.status!=='erledigt';
+/* Abgehakter Stopp = Auftrag geliefert. Fahrer dürfen Aufträge nicht ändern, deshalb zieht jedes Gerät mit Planungsrecht den Status nach (und zurück, wenn der Haken wieder weg ist). */
+function syncDelivered(){
+  if(!has('lieferplanung')||!(S.orders||[]).length||!(S.tours||[]).length)return;
+  const by={};S.tours.forEach(t=>{if(t.deleted)return;Object.values(t.stops||{}).forEach(x=>{if(!x.deleted&&x.orderId)(by[x.orderId]=by[x.orderId]||[]).push(x)})});
+  let n=0;
+  S.orders.forEach(o=>{if(o.deleted)return;const L=by[o.id]||[],own=L.find(x=>x.id===o.stopId),hit=(own?[own]:L).find(x=>x.done&&x.outcome!=='nicht');
+    if(o.status==='geplant'&&hit){o.status='erledigt';o.doneStop=hit.id;o.doneAt=hit.doneAt||Date.now();n++}
+    else if(o.status==='erledigt'&&o.doneStop&&L.some(x=>x.id===o.doneStop&&(!x.done||x.outcome==='nicht'))){o.status='geplant';delete o.doneStop;delete o.doneAt;n++}});
+  if(n)save();
+}
 const orderTreeInfo=o=>{const tr=orderTrees(o),n=tr.reduce((a,p)=>a+(+p.qty||1),0),ls=tr.map(p=>+p.len||0).filter(Boolean),mn=ls.length?Math.min(...ls):0,mx=ls.length?Math.max(...ls):0;
   if(n<=0)return '';if(n===1)return mFmt(mx)||'1 Baum';return `${n} Stk.`+(mx?' · '+(mn===mx?mFmt(mx):mFmt(mn).replace(' m','')+' bis '+mFmt(mx)):'')};
 /* Platten-Regel: höchstens 4 Bäume ab 3,50 m mit großem Ständer (Waschbeton-Platten) pro Fahrzeug, wegen des Gewichts (24 Platten) */
@@ -3149,7 +3160,7 @@ function sizeBanner(day){
   return `<div class="warn" style="margin:10px 0"><b>${L.length} ${L.length===1?'Auftrag':'Aufträge'} mit unsicherer Größe, bitte vor dem Planen prüfen:</b><br>${L.slice(0,10).map(x=>esc(x.o.name)+' ('+esc(x.g[0])+')').join('<br>')}${L.length>10?'<br>…':''}</div>`
 }
 /* Abends: alles, was an einem Tag nicht geliefert wurde, auf den nächsten Tag verschieben */
-function openOfDay(day){return S.orders.filter(o=>{if(o.deleted||o.status==='erledigt')return false;const t=o.tourId&&S.tours.find(x=>x.id===o.tourId&&!x.deleted);return inWindow(o,day)||(t&&t.date===day)})}
+function openOfDay(day){return S.orders.filter(o=>{if(o.deleted||o.status==='erledigt')return false;const t=o.tourId&&S.tours.find(x=>x.id===o.tourId&&!x.deleted);return t?t.date===day:inWindow(o,day)})}
 function moveBar(day){
   if(!has('lieferplanung')||day>todayStr()||(day===todayStr()&&new Date().getHours()<16))return '';
   const n=openOfDay(day).length;if(!n)return '';
@@ -3160,7 +3171,7 @@ function adminTodo(){
   if(!has('lieferplanung'))return '';
   const td=todayStr(),tm=shiftDate(td,1),rows=[],add=(txt,sub,pl,v)=>rows.push(`<div class="row" data-pl="${pl}"${v?` data-v="${v}"`:''} style="cursor:pointer"><div style="min-width:0"><div class="n">${txt}</div><div class="p">${sub}</div></div><span style="color:var(--mut);font-size:20px">›</span></div>`);
   const openD=d=>S.orders.filter(o=>!o.deleted&&orderOpen(o)&&!orderPickup(o)&&inWindow(o,d)).length;
-  const late=S.orders.filter(o=>!o.deleted&&o.status!=='erledigt'&&(o.to||o.from||'9')<td).length;
+  const late=S.orders.filter(o=>{if(o.deleted||o.status==='erledigt')return false;const t=o.tourId&&S.tours.find(x=>x.id===o.tourId&&!x.deleted);return (t?t.date:(o.to||o.from||'9'))<td}).length;
   const nRep=openReports().length,n1=openD(td),n2=openD(tm);
   if(late)add(late+' '+(late===1?'Auftrag':'Aufträge')+' nicht geliefert','aus früheren Tagen, verschieben oder abhaken','goliefer',shiftDate(td,-1)+'|lief');
   if(n1)add(n1+' '+(n1===1?'Auftrag':'Aufträge')+' heute noch ungeplant','in keiner Tour','goliefer',td+'|lief');
@@ -3776,13 +3787,13 @@ function vLieferungen(){
   if(kind==='spot'){$('#app').innerHTML=`${backupWarn()}${kindSeg(kind,fahrer,plan)}${spotsView()}`;if(cur.spv==='karte')setTimeout(initSpotMap,0);return}
   const day=cur.lday,[y,m]=cur.lcal.split('-').map(Number),isP=t=>t.type==='abholung';
   const live=S.tours.filter(t=>!t.deleted&&(kind==='ges'||(kind==='abh')===isP(t))&&(!fahrer||isCrew(t,S.me)));
-  const nOf=t=>isP(t)?tourStops(t).length:Math.max(tourStops(t).length,1);
+  const nOf=t=>{const st=tourStops(t);return st.length?st.filter(x=>!x.done||x.outcome==='nicht').length:(isP(t)||t.status==='beendet'?0:1)};
   const cidx=t=>{const i=TCOL.findIndex(c=>c[0]===t.color);return i<0?99:i};
   const on=ds=>live.filter(t=>t.date===ds).sort((a,b)=>(isP(a)-isP(b))||(cidx(a)-cidx(b))||((a.created||0)-(b.created||0)));
   const nL=ds=>on(ds).filter(t=>!isP(t)).reduce((s,t)=>s+nOf(t),0),nA=ds=>on(ds).filter(isP).reduce((s,t)=>s+nOf(t),0);
   const oOpen={};if(plan&&kind!=='abh')S.orders.filter(o=>orderOpen(o)&&!orderPickup(o)).forEach(o=>{const d=o.from||o.to;if(d)oOpen[d]=(oOpen[d]||0)+1});
-  const badge=ds=>{const l=nL(ds),a=nA(ds),w=oOpen[ds]||0;return (w?`<i class="c-x" style="text-align:center;font-size:13px;font-weight:700">${w}</i>`:'')+(l&&kind!=='abh'?`<i class="c-t" style="text-align:center;font-size:13px;font-weight:700">${l}</i>`:'')+(a&&kind!=='lief'?`<i class="c-o" style="text-align:center;font-size:13px;font-weight:700">${a}</i>`:'')};
-  const hint=kind==='abh'?'Zahl = Abholungen pro Tag':kind==='lief'?'Zahl = Stopps pro Tag'+(plan?', grau = offene Aufträge':''):'Stopps und Abholungen pro Tag';
+  const badge=ds=>{const l=nL(ds),a=nA(ds),w=oOpen[ds]||0;if(!w&&!l&&!a&&on(ds).some(t=>tourStops(t).length))return '<i style="display:block;text-align:center;font-style:normal;font-size:14px;font-weight:800;color:var(--green-t);border:0;background:none">✓</i>';return (w?`<i class="c-x" style="text-align:center;font-size:13px;font-weight:700">${w}</i>`:'')+(l&&kind!=='abh'?`<i class="c-t" style="text-align:center;font-size:13px;font-weight:700">${l}</i>`:'')+(a&&kind!=='lief'?`<i class="c-o" style="text-align:center;font-size:13px;font-weight:700">${a}</i>`:'')};
+  const hint=kind==='abh'?'Zahl = offene Abholungen, ✓ = alles abgeholt':kind==='lief'?(plan?'Zahl = offene Stopps, ✓ = alles geliefert, grau = offene Aufträge':'Zahl = offene Stopps, ✓ = alles geliefert'):'Offene Stopps und Abholungen, ✓ = alles erledigt';
   const empty=kind==='abh'?'Für diesen Tag sind keine Abholungen eingetragen.':kind==='lief'?'Für diesen Tag sind keine Touren geplant.':'Für diesen Tag steht nichts an.';
   const add=plan?((kind!=='abh'?'<button class="btn add" data-pl="tournew">+ Neue Tour für diesen Tag</button>':'')+(kind!=='lief'?`<button class="btn add" data-pl="picknew">+ Abholung auf dem Hof</button>`:'')):'';
   const dayTitle=`<h2 style="margin-top:4px">${new Date(day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}</h2>`+moveBar(day);
